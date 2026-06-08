@@ -1,0 +1,184 @@
+@page
+@model DiamondsWeb.Pages.AntiLavado.IndexModel
+@{
+    ViewData["Title"] = "Control Anti-Lavado";
+}
+
+<!-- Info Panel: Umbrales vigentes -->
+<div class="info-panel">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h6><i class="fa-solid fa-scale-balanced me-2"></i>LFPIORPI Art. 17, Frac. VI - Comercializacion de Joyas y Metales Preciosos</h6>
+            <div class="row mt-2">
+                <div class="col-md-4">
+                    <small class="text-muted">UMA @Model.Config.AnioUMA:</small>
+                    <strong>@Model.Config.ValorUMA.ToString("C2")</strong>
+                </div>
+                <div class="col-md-4">
+                    <small class="text-muted">Identificacion (@Model.Config.UmasIdentificacion UMAS):</small>
+                    <strong class="text-warning">@Model.Config.MontoIdentificacion.ToString("C2")</strong>
+                </div>
+                <div class="col-md-4">
+                    <small class="text-muted">Aviso SAT (@Model.Config.UmasAvisoSAT UMAS):</small>
+                    <strong class="text-danger">@Model.Config.MontoAvisoSAT.ToString("C2")</strong>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <small class="text-muted">Periodo de acumulacion: <strong>@Model.Config.MesesAcumulacion meses</strong></small>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-primary-custom">
+            <div class="stat-number">@Model.Stats.TotalClientes</div>
+            <div class="stat-label"><i class="fa-solid fa-users me-1"></i>Clientes con ventas</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-warning-custom">
+            <div class="stat-number">@Model.Stats.ClientesIdentificacion</div>
+            <div class="stat-label"><i class="fa-solid fa-id-card me-1"></i>Requieren Identificacion</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-danger-custom">
+            <div class="stat-number">@Model.Stats.ClientesAvisoSAT</div>
+            <div class="stat-label"><i class="fa-solid fa-triangle-exclamation me-1"></i>Requieren Aviso SAT</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-success-custom">
+            <div class="stat-number">@Model.Stats.MontoTotalVentas.ToString("C0")</div>
+            <div class="stat-label"><i class="fa-solid fa-coins me-1"></i>Ventas totales del periodo</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="filter-panel">
+    <form method="get">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label"><small>Fecha desde</small></label>
+                <input type="date" class="form-control form-control-sm" name="FechaDesde"
+                       value="@Model.FechaDesde?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Fecha hasta</small></label>
+                <input type="date" class="form-control form-control-sm" name="FechaHasta"
+                       value="@Model.FechaHasta?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Agrupar por</small></label>
+                <select class="form-select form-select-sm" name="AgrupadorCliente">
+                    <option value="NombreCliente" selected="@(Model.AgrupadorCliente == "NombreCliente")">Nombre</option>
+                    <option value="RFC" selected="@(Model.AgrupadorCliente == "RFC")">RFC</option>
+                    <option value="Telefonos" selected="@(Model.AgrupadorCliente == "Telefonos")">Telefono</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Nivel de alerta</small></label>
+                <select class="form-select form-select-sm" name="NivelAlerta">
+                    <option value="Todos" selected="@(Model.NivelAlerta == "Todos" || Model.NivelAlerta == null)">Todos</option>
+                    <option value="AvisoSAT" selected="@(Model.NivelAlerta == "AvisoSAT")">Aviso SAT</option>
+                    <option value="Identificacion" selected="@(Model.NivelAlerta == "Identificacion")">Identificacion</option>
+                    <option value="Normal" selected="@(Model.NivelAlerta == "Normal")">Normal</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Buscar cliente</small></label>
+                <input type="text" class="form-control form-control-sm" name="BuscarCliente"
+                       value="@Model.BuscarCliente" placeholder="Nombre, RFC o tel..." />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Consultar
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla de Clientes -->
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-list me-2"></i>Clientes - Acumulado del periodo (@Model.Clientes.Count resultados)</span>
+        <span class="badge bg-light text-dark">
+            @Model.FechaDesde?.ToString("dd/MM/yyyy") - @Model.FechaHasta?.ToString("dd/MM/yyyy")
+        </span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-aml table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Cliente</th>
+                        <th>RFC</th>
+                        <th>Telefono</th>
+                        <th class="text-end">Total Acumulado</th>
+                        <th class="text-center">Operaciones</th>
+                        <th>Primera Op.</th>
+                        <th>Ultima Op.</th>
+                        <th class="text-center">Nivel</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Clientes.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="10" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron resultados para los filtros seleccionados
+                            </td>
+                        </tr>
+                    }
+                    @for (int i = 0; i < Model.Clientes.Count; i++)
+                    {
+                        var c = Model.Clientes[i];
+                        var montoClass = c.RequiereAvisoSAT ? "monto-alto" : c.RequiereIdentificacion ? "monto-medio" : "";
+                        <tr>
+                            <td>@(i + 1)</td>
+                            <td><strong>@c.NombreCliente</strong></td>
+                            <td>@(string.IsNullOrWhiteSpace(c.RFC) ? "-" : c.RFC)</td>
+                            <td>@(string.IsNullOrWhiteSpace(c.Telefonos) ? "-" : c.Telefonos)</td>
+                            <td class="text-end @montoClass">@c.TotalAcumulado.ToString("C2")</td>
+                            <td class="text-center">@c.NumeroOperaciones</td>
+                            <td><span class="utc-date" data-utc="@c.PrimeraOperacion.ToString("o")">@c.PrimeraOperacion.ToString("dd/MM/yyyy")</span></td>
+                            <td><span class="utc-date" data-utc="@c.UltimaOperacion.ToString("o")">@c.UltimaOperacion.ToString("dd/MM/yyyy")</span></td>
+                            <td class="text-center">
+                                @if (c.RequiereAvisoSAT)
+                                {
+                                    <span class="badge badge-aml-aviso">
+                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>Aviso SAT
+                                    </span>
+                                }
+                                else if (c.RequiereIdentificacion)
+                                {
+                                    <span class="badge badge-aml-identificacion">
+                                        <i class="fa-solid fa-id-card me-1"></i>Identificacion
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-aml-normal">Normal</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <a href="/AntiLavado/Detalle?cliente=@System.Net.WebUtility.UrlEncode(c.NombreCliente)&fechaDesde=@Model.FechaDesde?.ToString("yyyy-MM-dd")&fechaHasta=@Model.FechaHasta?.ToString("yyyy-MM-dd")&agrupador=@Model.AgrupadorCliente"
+                                   class="btn btn-sm btn-outline-primary" title="Ver detalle de operaciones">
+                                    <i class="fa-solid fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

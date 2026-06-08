@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../UserPortal/UserPortal.Domain/UserPortal.Domain.csproj" />
+    <ProjectReference Include="../UserPortal/UserPortal.Infrastructure/UserPortal.Infrastructure.csproj" />
+    <ProjectReference Include="../UserPortal/PowerEra.UserPortal.Component/PowerEra.UserPortal.Component.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.79" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.1" />
+  </ItemGroup>
+
+</Project>
