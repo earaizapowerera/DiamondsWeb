@@ -1,6 +1,12 @@
+using System.Globalization;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using PowerEra.UserPortal.Component.Extensions;
+
+// Forzar cultura es-MX para que los montos muestren $ en vez de ¤
+var culturaMx = new CultureInfo("es-MX");
+CultureInfo.DefaultThreadCurrentCulture = culturaMx;
+CultureInfo.DefaultThreadCurrentUICulture = culturaMx;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +39,12 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
+// SPPLD Config & Service
+var sppldConfig = new SppldConfig();
+builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
+builder.Services.AddSingleton(sppldConfig);
+builder.Services.AddScoped<SppldXmlService>();
+
 var app = builder.Build();
 
 // UserPortal middleware
@@ -45,6 +57,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles(); // Sirve static files del RCL (bootstrap, fontawesome, etc.)
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

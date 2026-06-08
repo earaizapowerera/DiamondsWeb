@@ -11,12 +11,18 @@ public class IndexModel : PageModel
 {
     private readonly AmlService _amlService;
     private readonly AmlConfig _config;
+    private readonly SppldXmlService _sppldService;
+    private readonly SppldConfig _sppldConfig;
     private readonly ILogger<IndexModel> _logger;
 
-    public IndexModel(AmlService amlService, AmlConfig config, ILogger<IndexModel> logger)
+    public IndexModel(AmlService amlService, AmlConfig config,
+        SppldXmlService sppldService, SppldConfig sppldConfig,
+        ILogger<IndexModel> logger)
     {
         _amlService = amlService;
         _config = config;
+        _sppldService = sppldService;
+        _sppldConfig = sppldConfig;
         _logger = logger;
     }
 
@@ -71,5 +77,32 @@ public class IndexModel : PageModel
             totalAcumulado, numOperaciones, nivelAlerta, reportadoPor, null);
 
         return RedirectToPage(new { Mes = mes, Anio = anio });
+    }
+
+    /// <summary>
+    /// Genera y descarga el XML para SPPLD (Anexo 6)
+    /// </summary>
+    public async Task<IActionResult> OnPostGenerarXmlAsync(int mes, int anio)
+    {
+        var clientes = await _amlService.ObtenerClientesParaReporteAsync(
+            mes, anio, null, null);
+
+        if (!clientes.Any())
+            return RedirectToPage(new { Mes = mes, Anio = anio });
+
+        // Obtener operaciones detalladas por cada cliente
+        var operacionesPorCliente = new Dictionary<string, List<NotaDetalle>>();
+        foreach (var cliente in clientes)
+        {
+            var notas = await _amlService.ObtenerNotasClienteAsync(
+                cliente.NombreCliente, mes, anio);
+            operacionesPorCliente[cliente.NombreCliente] = notas;
+        }
+
+        var xmlBytes = _sppldService.GenerarXmlAviso(
+            _sppldConfig, mes, anio, clientes, operacionesPorCliente);
+
+        var fileName = $"SPPLD_Anexo6_{anio}{mes:D2}.xml";
+        return File(xmlBytes, "application/xml", fileName);
     }
 }

@@ -103,7 +103,7 @@
                 <input type="text" class="form-control form-control-sm" name="BuscarCliente"
                        value="@Model.BuscarCliente" placeholder="Nombre, RFC o telefono..." />
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <button type="submit" class="btn btn-primary btn-sm w-100">
                     <i class="fa-solid fa-magnifying-glass me-1"></i>Consultar
                 </button>
@@ -111,6 +111,23 @@
         </div>
     </form>
 </div>
+
+<!-- Botón Generar XML para SPPLD -->
+@if (Model.Clientes.Any(c => !c.YaReportado))
+{
+<div class="mb-3 d-flex justify-content-end">
+    <form method="post" asp-page-handler="GenerarXml">
+        <input type="hidden" name="mes" value="@Model.Mes" />
+        <input type="hidden" name="anio" value="@Model.Anio" />
+        <button type="submit" class="btn btn-outline-danger btn-sm">
+            <i class="fa-solid fa-file-code me-1"></i>Generar XML para SPPLD (Anexo 6)
+        </button>
+    </form>
+    <a href="https://sppld.sat.gob.mx/pld/index.html" target="_blank" class="btn btn-outline-secondary btn-sm ms-2">
+        <i class="fa-solid fa-external-link-alt me-1"></i>Ir al portal SPPLD
+    </a>
+</div>
+}
 
 <!-- Tabla: Pendientes de reportar -->
 @if (pendientes.Any())

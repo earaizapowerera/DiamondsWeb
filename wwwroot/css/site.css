@@ -1,10 +1,5 @@
 /* Diamonds Web - Anti-Lavado Styles */
 
-body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background-color: #f5f6fa;
-}
-
 /* Dashboard Cards */
 .stat-card {
     border-radius: 12px;
