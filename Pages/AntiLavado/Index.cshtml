@@ -2,9 +2,19 @@
 @model DiamondsWeb.Pages.AntiLavado.IndexModel
 @{
     ViewData["Title"] = "Control Anti-Lavado";
+    var meses = new[] { "Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre" };
+    var pendientes = Model.Clientes.Where(c => !c.YaReportado).ToList();
+    var yaReportados = Model.Clientes.Where(c => c.YaReportado).ToList();
 }
 
-<!-- Info Panel: Umbrales vigentes -->
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+</div>
+}
+
+<!-- Info Panel -->
 <div class="info-panel">
     <div class="row align-items-center">
         <div class="col-md-8">
@@ -25,7 +35,7 @@
             </div>
         </div>
         <div class="col-md-4 text-end">
-            <small class="text-muted">Periodo de acumulacion: <strong>@Model.Config.MesesAcumulacion meses</strong></small>
+            <small class="text-muted">Periodo acumulado: <strong>@Model.PeriodoDesde.ToString("MMM yyyy") - @Model.PeriodoHasta.ToString("MMM yyyy")</strong></small>
         </div>
     </div>
 </div>
@@ -52,8 +62,8 @@
     </div>
     <div class="col-md-3 col-sm-6 mb-2">
         <div class="stat-card bg-success-custom">
-            <div class="stat-number">@Model.Stats.MontoTotalVentas.ToString("C0")</div>
-            <div class="stat-label"><i class="fa-solid fa-coins me-1"></i>Ventas totales del periodo</div>
+            <div class="stat-number">@pendientes.Count</div>
+            <div class="stat-label"><i class="fa-solid fa-clock me-1"></i>Pendientes de reportar</div>
         </div>
     </div>
 </div>
@@ -63,21 +73,21 @@
     <form method="get">
         <div class="row g-3 align-items-end">
             <div class="col-md-2">
-                <label class="form-label"><small>Fecha desde</small></label>
-                <input type="date" class="form-control form-control-sm" name="FechaDesde"
-                       value="@Model.FechaDesde?.ToString("yyyy-MM-dd")" />
+                <label class="form-label"><small>Mes</small></label>
+                <select class="form-select form-select-sm" name="Mes">
+                    @for (int i = 1; i <= 12; i++)
+                    {
+                        <option value="@i" selected="@(Model.Mes == i)">@meses[i - 1]</option>
+                    }
+                </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label"><small>Fecha hasta</small></label>
-                <input type="date" class="form-control form-control-sm" name="FechaHasta"
-                       value="@Model.FechaHasta?.ToString("yyyy-MM-dd")" />
-            </div>
-            <div class="col-md-2">
-                <label class="form-label"><small>Agrupar por</small></label>
-                <select class="form-select form-select-sm" name="AgrupadorCliente">
-                    <option value="NombreCliente" selected="@(Model.AgrupadorCliente == "NombreCliente")">Nombre</option>
-                    <option value="RFC" selected="@(Model.AgrupadorCliente == "RFC")">RFC</option>
-                    <option value="Telefonos" selected="@(Model.AgrupadorCliente == "Telefonos")">Telefono</option>
+                <label class="form-label"><small>Anio</small></label>
+                <select class="form-select form-select-sm" name="Anio">
+                    @for (int y = DateTime.UtcNow.Year; y >= 2013; y--)
+                    {
+                        <option value="@y" selected="@(Model.Anio == y)">@y</option>
+                    }
                 </select>
             </div>
             <div class="col-md-2">
@@ -86,15 +96,14 @@
                     <option value="Todos" selected="@(Model.NivelAlerta == "Todos" || Model.NivelAlerta == null)">Todos</option>
                     <option value="AvisoSAT" selected="@(Model.NivelAlerta == "AvisoSAT")">Aviso SAT</option>
                     <option value="Identificacion" selected="@(Model.NivelAlerta == "Identificacion")">Identificacion</option>
-                    <option value="Normal" selected="@(Model.NivelAlerta == "Normal")">Normal</option>
                 </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
                 <label class="form-label"><small>Buscar cliente</small></label>
                 <input type="text" class="form-control form-control-sm" name="BuscarCliente"
-                       value="@Model.BuscarCliente" placeholder="Nombre, RFC o tel..." />
+                       value="@Model.BuscarCliente" placeholder="Nombre, RFC o telefono..." />
             </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
                 <button type="submit" class="btn btn-primary btn-sm w-100">
                     <i class="fa-solid fa-magnifying-glass me-1"></i>Consultar
                 </button>
@@ -103,13 +112,13 @@
     </form>
 </div>
 
-<!-- Tabla de Clientes -->
-<div class="card">
-    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-        <span><i class="fa-solid fa-list me-2"></i>Clientes - Acumulado del periodo (@Model.Clientes.Count resultados)</span>
-        <span class="badge bg-light text-dark">
-            @Model.FechaDesde?.ToString("dd/MM/yyyy") - @Model.FechaHasta?.ToString("dd/MM/yyyy")
-        </span>
+<!-- Tabla: Pendientes de reportar -->
+@if (pendientes.Any())
+{
+<div class="card mb-4">
+    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-triangle-exclamation me-2"></i>Pendientes de reportar (@pendientes.Count)</span>
+        <span class="badge bg-light text-dark">@meses[(Model.Mes ?? 1) - 1] @Model.Anio</span>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -129,19 +138,10 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model.Clientes.Count == 0)
+                    @for (int i = 0; i < pendientes.Count; i++)
                     {
-                        <tr>
-                            <td colspan="10" class="text-center text-muted py-4">
-                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
-                                No se encontraron resultados para los filtros seleccionados
-                            </td>
-                        </tr>
-                    }
-                    @for (int i = 0; i < Model.Clientes.Count; i++)
-                    {
-                        var c = Model.Clientes[i];
-                        var montoClass = c.RequiereAvisoSAT ? "monto-alto" : c.RequiereIdentificacion ? "monto-medio" : "";
+                        var c = pendientes[i];
+                        var montoClass = c.RequiereAvisoSAT ? "monto-alto" : "monto-medio";
                         <tr>
                             <td>@(i + 1)</td>
                             <td><strong>@c.NombreCliente</strong></td>
@@ -149,31 +149,39 @@
                             <td>@(string.IsNullOrWhiteSpace(c.Telefonos) ? "-" : c.Telefonos)</td>
                             <td class="text-end @montoClass">@c.TotalAcumulado.ToString("C2")</td>
                             <td class="text-center">@c.NumeroOperaciones</td>
-                            <td><span class="utc-date" data-utc="@c.PrimeraOperacion.ToString("o")">@c.PrimeraOperacion.ToString("dd/MM/yyyy")</span></td>
-                            <td><span class="utc-date" data-utc="@c.UltimaOperacion.ToString("o")">@c.UltimaOperacion.ToString("dd/MM/yyyy")</span></td>
+                            <td>@c.PrimeraOperacion.ToString("dd/MM/yyyy")</td>
+                            <td>@c.UltimaOperacion.ToString("dd/MM/yyyy")</td>
                             <td class="text-center">
                                 @if (c.RequiereAvisoSAT)
                                 {
-                                    <span class="badge badge-aml-aviso">
-                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>Aviso SAT
-                                    </span>
-                                }
-                                else if (c.RequiereIdentificacion)
-                                {
-                                    <span class="badge badge-aml-identificacion">
-                                        <i class="fa-solid fa-id-card me-1"></i>Identificacion
-                                    </span>
+                                    <span class="badge badge-aml-aviso"><i class="fa-solid fa-triangle-exclamation me-1"></i>Aviso SAT</span>
                                 }
                                 else
                                 {
-                                    <span class="badge badge-aml-normal">Normal</span>
+                                    <span class="badge badge-aml-identificacion"><i class="fa-solid fa-id-card me-1"></i>Identificacion</span>
                                 }
                             </td>
                             <td class="text-center">
-                                <a href="/AntiLavado/Detalle?cliente=@System.Net.WebUtility.UrlEncode(c.NombreCliente)&fechaDesde=@Model.FechaDesde?.ToString("yyyy-MM-dd")&fechaHasta=@Model.FechaHasta?.ToString("yyyy-MM-dd")&agrupador=@Model.AgrupadorCliente"
-                                   class="btn btn-sm btn-outline-primary" title="Ver detalle de operaciones">
-                                    <i class="fa-solid fa-eye"></i>
-                                </a>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/AntiLavado/Detalle?cliente=@System.Net.WebUtility.UrlEncode(c.NombreCliente)&mes=@Model.Mes&anio=@Model.Anio"
+                                       class="btn btn-outline-primary" title="Ver detalle">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </a>
+                                    <form method="post" asp-page-handler="MarcarReportado" class="d-inline">
+                                        <input type="hidden" name="nombreCliente" value="@c.NombreCliente" />
+                                        <input type="hidden" name="rfc" value="@c.RFC" />
+                                        <input type="hidden" name="telefonos" value="@c.Telefonos" />
+                                        <input type="hidden" name="mes" value="@Model.Mes" />
+                                        <input type="hidden" name="anio" value="@Model.Anio" />
+                                        <input type="hidden" name="totalAcumulado" value="@c.TotalAcumulado" />
+                                        <input type="hidden" name="numOperaciones" value="@c.NumeroOperaciones" />
+                                        <input type="hidden" name="nivelAlerta" value="@c.NivelAlerta" />
+                                        <button type="submit" class="btn btn-outline-success" title="Marcar como reportado"
+                                                onclick="return confirm('Marcar a @c.NombreCliente como reportado para @meses[(Model.Mes ?? 1) - 1] @Model.Anio?')">
+                                            <i class="fa-solid fa-check"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     }
@@ -181,4 +189,74 @@
             </table>
         </div>
     </div>
+</div>
+}
+
+<!-- Tabla: Ya reportados -->
+@if (yaReportados.Any())
+{
+<div class="card">
+    <div class="card-header bg-secondary text-white">
+        <i class="fa-solid fa-check-circle me-2"></i>Ya reportados este mes (@yaReportados.Count)
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-aml table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Cliente</th>
+                        <th>RFC</th>
+                        <th>Telefono</th>
+                        <th class="text-end">Total Acumulado</th>
+                        <th class="text-center">Operaciones</th>
+                        <th class="text-center">Nivel</th>
+                        <th>Fecha Reporte</th>
+                        <th class="text-center">Detalle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < yaReportados.Count; i++)
+                    {
+                        var c = yaReportados[i];
+                        <tr class="table-light text-muted">
+                            <td>@(i + 1)</td>
+                            <td>@c.NombreCliente</td>
+                            <td>@(string.IsNullOrWhiteSpace(c.RFC) ? "-" : c.RFC)</td>
+                            <td>@(string.IsNullOrWhiteSpace(c.Telefonos) ? "-" : c.Telefonos)</td>
+                            <td class="text-end">@c.TotalAcumulado.ToString("C2")</td>
+                            <td class="text-center">@c.NumeroOperaciones</td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary">@c.NivelAlerta</span>
+                            </td>
+                            <td>@c.FechaReportePrevio?.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="text-center">
+                                <a href="/AntiLavado/Detalle?cliente=@System.Net.WebUtility.UrlEncode(c.NombreCliente)&mes=@Model.Mes&anio=@Model.Anio"
+                                   class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-eye"></i></a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+}
+
+@if (!Model.Clientes.Any())
+{
+<div class="card">
+    <div class="card-body text-center text-muted py-5">
+        <i class="fa-solid fa-inbox fa-3x mb-3 d-block"></i>
+        <h5>No hay clientes que superen los umbrales para @meses[(Model.Mes ?? 1) - 1] @Model.Anio</h5>
+        <p>Ningun cliente acumula mas de @Model.Config.MontoIdentificacion.ToString("C2") (805 UMAS) en el periodo de 6 meses.</p>
+    </div>
+</div>
+}
+
+<!-- Link al historial -->
+<div class="mt-3 text-end">
+    <a href="/AntiLavado/Historial" class="btn btn-outline-dark btn-sm">
+        <i class="fa-solid fa-clock-rotate-left me-1"></i>Ver historial de reportados
+    </a>
 </div>

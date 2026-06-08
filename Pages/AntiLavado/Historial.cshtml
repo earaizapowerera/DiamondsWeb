@@ -1,0 +1,65 @@
+@page
+@model DiamondsWeb.Pages.AntiLavado.HistorialModel
+@{
+    ViewData["Title"] = "Historial de Reportados";
+    var meses = new[] { "","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic" };
+}
+
+<div class="mb-3">
+    <a href="/AntiLavado" class="btn btn-outline-secondary btn-sm">
+        <i class="fa-solid fa-arrow-left me-1"></i>Regresar al control
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        <i class="fa-solid fa-clock-rotate-left me-2"></i>Historial de Clientes Reportados (@Model.Reportados.Count registros)
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-aml table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Cliente</th>
+                        <th>RFC</th>
+                        <th>Telefono</th>
+                        <th>Mes/Anio</th>
+                        <th class="text-end">Total Acumulado</th>
+                        <th class="text-center">Ops.</th>
+                        <th class="text-center">Nivel</th>
+                        <th>Fecha Reporte</th>
+                        <th>Reportado por</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Reportados.Any())
+                    {
+                        <tr><td colspan="10" class="text-center text-muted py-4">No hay registros de reportados</td></tr>
+                    }
+                    @for (int i = 0; i < Model.Reportados.Count; i++)
+                    {
+                        var r = Model.Reportados[i];
+                        <tr>
+                            <td>@(i + 1)</td>
+                            <td><strong>@r.NombreCliente</strong></td>
+                            <td>@(string.IsNullOrWhiteSpace(r.RFC) ? "-" : r.RFC)</td>
+                            <td>@(string.IsNullOrWhiteSpace(r.Telefonos) ? "-" : r.Telefonos)</td>
+                            <td>@meses[r.MesReporte] @r.AnioReporte</td>
+                            <td class="text-end fw-bold">@r.TotalAcumulado.ToString("C2")</td>
+                            <td class="text-center">@r.NumeroOperaciones</td>
+                            <td class="text-center">
+                                @if (r.NivelAlerta == "AvisoSAT")
+                                { <span class="badge badge-aml-aviso">Aviso SAT</span> }
+                                else
+                                { <span class="badge badge-aml-identificacion">Identificacion</span> }
+                            </td>
+                            <td>@r.FechaReporte.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@(r.ReportadoPor ?? "-")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

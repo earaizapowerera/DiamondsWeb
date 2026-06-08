@@ -23,39 +23,38 @@ public class DetalleModel : PageModel
     public decimal TotalAcumulado { get; set; }
     public string NivelAlerta { get; set; } = "Normal";
     public AmlConfig Config => _config;
+    public DateTime PeriodoDesde { get; set; }
+    public DateTime PeriodoHasta { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public string? Cliente { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public DateTime? FechaDesde { get; set; }
+    public int? Mes { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public DateTime? FechaHasta { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public string Agrupador { get; set; } = "NombreCliente";
+    public int? Anio { get; set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
         if (string.IsNullOrEmpty(Cliente))
             return RedirectToPage("Index");
 
-        FechaHasta ??= DateTime.UtcNow;
-        FechaDesde ??= FechaHasta.Value.AddMonths(-_config.MesesAcumulacion);
+        Mes ??= DateTime.UtcNow.Month;
+        Anio ??= DateTime.UtcNow.Year;
+
+        PeriodoHasta = new DateTime(Anio.Value, Mes.Value, DateTime.DaysInMonth(Anio.Value, Mes.Value));
+        PeriodoDesde = PeriodoHasta.AddMonths(-5);
+        PeriodoDesde = new DateTime(PeriodoDesde.Year, PeriodoDesde.Month, 1);
 
         ClienteNombre = Cliente;
-        Notas = await _amlService.ObtenerNotasClienteAsync(
-            Cliente, FechaDesde.Value, FechaHasta.Value, Agrupador);
-
+        Notas = await _amlService.ObtenerNotasClienteAsync(Cliente, Mes.Value, Anio.Value);
         TotalAcumulado = Notas.Sum(n => n.Total);
 
         if (TotalAcumulado >= _config.MontoAvisoSAT)
             NivelAlerta = "AvisoSAT";
         else if (TotalAcumulado >= _config.MontoIdentificacion)
             NivelAlerta = "Identificacion";
-        else
-            NivelAlerta = "Normal";
 
         return Page();
     }

@@ -28,7 +28,10 @@ builder.Services.AddSingleton(amlConfig);
 
 // AML Service
 var diamondsConnStr = builder.Configuration.GetConnectionString("DiamondsDb")!;
-builder.Services.AddScoped<AmlService>(sp => new AmlService(diamondsConnStr, sp.GetRequiredService<AmlConfig>()));
+builder.Services.AddScoped<AmlService>(sp => new AmlService(
+    diamondsConnStr,
+    sp.GetRequiredService<AmlConfig>(),
+    sp.GetRequiredService<ILogger<AmlService>>()));
 
 var app = builder.Build();
 
@@ -49,11 +52,23 @@ app.MapStaticAssets();
 app.MapRazorPages().WithStaticAssets();
 app.MapControllers();
 
-// Redirigir raíz a la pantalla de anti-lavado
+// Redirigir raíz y rutas huérfanas de UserPortal compartido a la pantalla principal
 app.MapGet("/", context =>
 {
     context.Response.Redirect("/AntiLavado");
     return Task.CompletedTask;
+});
+app.MapGet("/becario", context =>
+{
+    context.Response.Redirect("/AntiLavado");
+    return Task.CompletedTask;
+});
+
+// Endpoint de diagnóstico para verificar conexión a DB
+app.MapGet("/api/test-db", async (AmlService aml) =>
+{
+    var result = await aml.TestConexionAsync();
+    return Results.Ok(new { status = result });
 });
 
 // Initialize UserPortal database

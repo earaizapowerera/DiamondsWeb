@@ -11,22 +11,27 @@ public class IndexModel : PageModel
 {
     private readonly AmlService _amlService;
     private readonly AmlConfig _config;
+    private readonly ILogger<IndexModel> _logger;
 
-    public IndexModel(AmlService amlService, AmlConfig config)
+    public IndexModel(AmlService amlService, AmlConfig config, ILogger<IndexModel> logger)
     {
         _amlService = amlService;
         _config = config;
+        _logger = logger;
     }
 
     public List<ClienteAmlResumen> Clientes { get; set; } = new();
     public AmlDashboardStats Stats { get; set; } = new();
     public AmlConfig Config => _config;
+    public DateTime PeriodoDesde { get; set; }
+    public DateTime PeriodoHasta { get; set; }
+    public string? ErrorMessage { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public DateTime? FechaDesde { get; set; }
+    public int? Mes { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public DateTime? FechaHasta { get; set; }
+    public int? Anio { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public string? BuscarCliente { get; set; }
@@ -34,25 +39,37 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string? NivelAlerta { get; set; }
 
-    [BindProperty(SupportsGet = true)]
-    public string AgrupadorCliente { get; set; } = "NombreCliente";
-
     public async Task OnGetAsync()
     {
-        // Default: últimos 6 meses
-        FechaHasta ??= DateTime.UtcNow;
-        FechaDesde ??= FechaHasta.Value.AddMonths(-_config.MesesAcumulacion);
+        Mes ??= DateTime.UtcNow.Month;
+        Anio ??= DateTime.UtcNow.Year;
 
-        var filtros = new AmlFiltros
+        PeriodoHasta = new DateTime(Anio.Value, Mes.Value, DateTime.DaysInMonth(Anio.Value, Mes.Value));
+        PeriodoDesde = PeriodoHasta.AddMonths(-5);
+        PeriodoDesde = new DateTime(PeriodoDesde.Year, PeriodoDesde.Month, 1);
+
+        try
         {
-            FechaDesde = FechaDesde,
-            FechaHasta = FechaHasta,
-            BuscarCliente = BuscarCliente,
-            NivelAlerta = NivelAlerta,
-            AgrupadorCliente = AgrupadorCliente
-        };
+            Clientes = await _amlService.ObtenerClientesParaReporteAsync(
+                Mes.Value, Anio.Value, BuscarCliente, NivelAlerta);
+            Stats = await _amlService.ObtenerEstadisticasAsync(Mes.Value, Anio.Value);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error cargando datos AML para {Mes}/{Anio}", Mes, Anio);
+            ErrorMessage = $"Error al consultar datos: {ex.Message}";
+        }
+    }
 
-        Clientes = await _amlService.ObtenerResumenClientesAsync(filtros);
-        Stats = await _amlService.ObtenerEstadisticasAsync(FechaDesde.Value, FechaHasta.Value);
+    public async Task<IActionResult> OnPostMarcarReportadoAsync(
+        string nombreCliente, string? rfc, string? telefonos,
+        int mes, int anio, decimal totalAcumulado, int numOperaciones, string nivelAlerta)
+    {
+        var reportadoPor = User.Identity?.Name ?? "admin";
+        await _amlService.MarcarComoReportadoAsync(
+            nombreCliente, rfc, telefonos, mes, anio,
+            totalAcumulado, numOperaciones, nivelAlerta, reportadoPor, null);
+
+        return RedirectToPage(new { Mes = mes, Anio = anio });
     }
 }

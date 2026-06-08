@@ -8,171 +8,309 @@ namespace DiamondsWeb.Services;
 /// <summary>
 /// Servicio de cálculo y monitoreo de Anti-Lavado de Dinero (AML)
 /// Basado en Art. 17, Frac. VI de la LFPIORPI
+/// Los montos se obtienen de BAJASPAGOSNOTAS.Importe (no de BAJASNOTAS.Total que está vacío)
 /// </summary>
 public class AmlService
 {
     private readonly string _connectionString;
     private readonly AmlConfig _config;
+    private readonly ILogger<AmlService> _logger;
 
-    public AmlService(string connectionString, AmlConfig config)
+    public AmlService(string connectionString, AmlConfig config, ILogger<AmlService> logger)
     {
         _connectionString = connectionString;
         _config = config;
+        _logger = logger;
     }
 
     private IDbConnection CreateConnection() => new SqlConnection(_connectionString);
 
     /// <summary>
-    /// Obtiene el resumen de clientes con acumulados en el período de 6 meses,
-    /// agrupados por el campo seleccionado (NombreCliente, RFC, o Telefonos)
+    /// Calcula las fechas del período de 6 meses para un mes/año dado
     /// </summary>
-    public async Task<List<ClienteAmlResumen>> ObtenerResumenClientesAsync(AmlFiltros filtros)
+    private (DateTime desde, DateTime hasta) CalcularPeriodo(int mes, int anio)
     {
-        var fechaHasta = filtros.FechaHasta ?? DateTime.UtcNow;
-        var fechaDesde = filtros.FechaDesde ?? fechaHasta.AddMonths(-_config.MesesAcumulacion);
-        var agrupador = filtros.AgrupadorCliente ?? "NombreCliente";
-
-        // Validar que el agrupador sea un campo permitido
-        if (agrupador != "NombreCliente" && agrupador != "RFC" && agrupador != "Telefonos")
-            agrupador = "NombreCliente";
-
-        var sql = $@"
-            SELECT
-                {agrupador} AS NombreCliente,
-                MAX(RFC) AS RFC,
-                MAX(Telefonos) AS Telefonos,
-                SUM(ISNULL(Total, 0)) AS TotalAcumulado,
-                COUNT(*) AS NumeroOperaciones,
-                MIN(FechaBaja) AS PrimeraOperacion,
-                MAX(FechaBaja) AS UltimaOperacion
-            FROM BAJASNOTAS
-            WHERE FechaBaja >= @FechaDesde
-              AND FechaBaja <= @FechaHasta
-              AND {agrupador} IS NOT NULL
-              AND LTRIM(RTRIM({agrupador})) <> ''
-              AND (@BuscarCliente IS NULL OR
-                   NombreCliente LIKE '%' + @BuscarCliente + '%' OR
-                   RFC LIKE '%' + @BuscarCliente + '%' OR
-                   Telefonos LIKE '%' + @BuscarCliente + '%')
-            GROUP BY {agrupador}
-            HAVING SUM(ISNULL(Total, 0)) > 0
-            ORDER BY SUM(ISNULL(Total, 0)) DESC";
-
-        using var conn = CreateConnection();
-        var resultados = (await conn.QueryAsync<ClienteAmlResumen>(sql, new
-        {
-            FechaDesde = fechaDesde,
-            FechaHasta = fechaHasta,
-            BuscarCliente = string.IsNullOrWhiteSpace(filtros.BuscarCliente) ? null : filtros.BuscarCliente
-        })).ToList();
-
-        // Clasificar nivel de alerta
-        foreach (var cliente in resultados)
-        {
-            if (cliente.TotalAcumulado >= _config.MontoAvisoSAT)
-            {
-                cliente.NivelAlerta = "AvisoSAT";
-                cliente.RequiereIdentificacion = true;
-                cliente.RequiereAvisoSAT = true;
-            }
-            else if (cliente.TotalAcumulado >= _config.MontoIdentificacion)
-            {
-                cliente.NivelAlerta = "Identificacion";
-                cliente.RequiereIdentificacion = true;
-                cliente.RequiereAvisoSAT = false;
-            }
-            else
-            {
-                cliente.NivelAlerta = "Normal";
-                cliente.RequiereIdentificacion = false;
-                cliente.RequiereAvisoSAT = false;
-            }
-        }
-
-        // Filtrar por nivel de alerta si se especificó
-        if (!string.IsNullOrEmpty(filtros.NivelAlerta) && filtros.NivelAlerta != "Todos")
-        {
-            resultados = resultados.Where(r => r.NivelAlerta == filtros.NivelAlerta).ToList();
-        }
-
-        return resultados;
+        var hasta = new DateTime(anio, mes, DateTime.DaysInMonth(anio, mes));
+        var desde = hasta.AddMonths(-5);
+        desde = new DateTime(desde.Year, desde.Month, 1);
+        return (desde, hasta);
     }
 
     /// <summary>
-    /// Obtiene el detalle de notas/ventas de un cliente específico en el período
+    /// Obtiene clientes que deben reportarse para un mes dado.
+    /// Acumula los 6 meses anteriores al mes seleccionado.
+    /// Excluye clientes ya reportados en el mismo mes/año.
+    /// </summary>
+    public async Task<List<ClienteAmlResumen>> ObtenerClientesParaReporteAsync(
+        int mes, int anio, string? buscarCliente, string? nivelAlerta)
+    {
+        var (fechaDesde, fechaHasta) = CalcularPeriodo(mes, anio);
+
+        _logger.LogInformation(
+            "ObtenerClientes: mes={Mes}, anio={Anio}, periodo={Desde} a {Hasta}, umbral={Umbral}",
+            mes, anio, fechaDesde.ToString("yyyy-MM-dd"), fechaHasta.ToString("yyyy-MM-dd"),
+            _config.MontoIdentificacion);
+
+        // Usar subquery en vez de CTE para máxima compatibilidad
+        var sql = @"
+            SELECT TOP 100 ca.NombreCliente, ca.RFC, ca.Telefonos,
+                   ca.TotalAcumulado, ca.NumeroOperaciones,
+                   ca.PrimeraOperacion, ca.UltimaOperacion,
+                   CASE WHEN r.Id IS NOT NULL THEN 1 ELSE 0 END AS YaReportado,
+                   r.FechaReporte AS FechaReportePrevio
+            FROM (
+                SELECT
+                    bn.NombreCliente,
+                    MAX(bn.RFC) AS RFC,
+                    MAX(bn.Telefonos) AS Telefonos,
+                    SUM(bp.Importe) AS TotalAcumulado,
+                    COUNT(DISTINCT bn.IdNota) AS NumeroOperaciones,
+                    MIN(bn.FechaBaja) AS PrimeraOperacion,
+                    MAX(bn.FechaBaja) AS UltimaOperacion
+                FROM BAJASPAGOSNOTAS bp
+                INNER JOIN BAJASNOTAS bn ON bn.IdNota = bp.IdNota
+                WHERE bn.FechaBaja >= @FechaDesde
+                  AND bn.FechaBaja <= @FechaHasta
+                  AND bn.NombreCliente IS NOT NULL
+                  AND LTRIM(RTRIM(bn.NombreCliente)) <> ''
+                  AND (@BuscarCliente IS NULL OR
+                       bn.NombreCliente LIKE '%' + @BuscarCliente + '%' OR
+                       bn.RFC LIKE '%' + @BuscarCliente + '%' OR
+                       bn.Telefonos LIKE '%' + @BuscarCliente + '%')
+                GROUP BY bn.NombreCliente
+                HAVING SUM(bp.Importe) >= @MontoIdentificacion
+            ) ca
+            LEFT JOIN AML_Reportados r
+                ON r.NombreCliente = ca.NombreCliente
+                AND r.MesReporte = @Mes AND r.AnioReporte = @Anio
+            ORDER BY ca.TotalAcumulado DESC";
+
+        try
+        {
+            using var conn = CreateConnection();
+            conn.Open();
+            _logger.LogInformation("Conexión abierta a: {Database}", ((SqlConnection)conn).Database);
+
+            var resultados = (await conn.QueryAsync<ClienteAmlResumen>(sql, new
+            {
+                FechaDesde = fechaDesde,
+                FechaHasta = fechaHasta,
+                BuscarCliente = string.IsNullOrWhiteSpace(buscarCliente) ? null : buscarCliente,
+                MontoIdentificacion = _config.MontoIdentificacion,
+                Mes = mes,
+                Anio = anio
+            })).ToList();
+
+            _logger.LogInformation("Query retornó {Count} clientes", resultados.Count);
+
+            // Clasificar nivel de alerta
+            foreach (var cliente in resultados)
+            {
+                if (cliente.TotalAcumulado >= _config.MontoAvisoSAT)
+                {
+                    cliente.NivelAlerta = "AvisoSAT";
+                    cliente.RequiereIdentificacion = true;
+                    cliente.RequiereAvisoSAT = true;
+                }
+                else
+                {
+                    cliente.NivelAlerta = "Identificacion";
+                    cliente.RequiereIdentificacion = true;
+                    cliente.RequiereAvisoSAT = false;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(nivelAlerta) && nivelAlerta != "Todos")
+                resultados = resultados.Where(r => r.NivelAlerta == nivelAlerta).ToList();
+
+            return resultados;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al consultar clientes AML para {Mes}/{Anio}", mes, anio);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene el detalle de notas/pagos de un cliente en el período de 6 meses
     /// </summary>
     public async Task<List<NotaDetalle>> ObtenerNotasClienteAsync(
-        string nombreCliente, DateTime fechaDesde, DateTime fechaHasta, string agrupador = "NombreCliente")
+        string nombreCliente, int mes, int anio)
     {
-        if (agrupador != "NombreCliente" && agrupador != "RFC" && agrupador != "Telefonos")
-            agrupador = "NombreCliente";
+        var (fechaDesde, fechaHasta) = CalcularPeriodo(mes, anio);
 
-        var sql = $@"
-            SELECT
-                IdNota,
-                NombreCliente,
-                RFC,
-                Telefonos,
-                ISNULL(Total, 0) AS Total,
-                FechaBaja,
-                FormaPago
-            FROM BAJASNOTAS
-            WHERE {agrupador} = @NombreCliente
-              AND FechaBaja >= @FechaDesde
-              AND FechaBaja <= @FechaHasta
-            ORDER BY FechaBaja DESC";
+        var sql = @"
+            SELECT TOP 500
+                bn.IdNota,
+                bn.NombreCliente,
+                bn.RFC,
+                bn.Telefonos,
+                SUM(bp.Importe) AS Total,
+                bn.FechaBaja,
+                bn.FormaPago
+            FROM BAJASNOTAS bn
+            INNER JOIN BAJASPAGOSNOTAS bp ON bp.IdNota = bn.IdNota
+            WHERE bn.NombreCliente = @NombreCliente
+              AND bn.FechaBaja >= @FechaDesde
+              AND bn.FechaBaja <= @FechaHasta
+            GROUP BY bn.IdNota, bn.NombreCliente, bn.RFC, bn.Telefonos, bn.FechaBaja, bn.FormaPago
+            ORDER BY bn.FechaBaja DESC";
 
-        using var conn = CreateConnection();
-        return (await conn.QueryAsync<NotaDetalle>(sql, new
+        try
         {
-            NombreCliente = nombreCliente,
-            FechaDesde = fechaDesde,
-            FechaHasta = fechaHasta
-        })).ToList();
+            using var conn = CreateConnection();
+            return (await conn.QueryAsync<NotaDetalle>(sql, new
+            {
+                NombreCliente = nombreCliente,
+                FechaDesde = fechaDesde,
+                FechaHasta = fechaHasta
+            })).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al consultar notas de {Cliente} para {Mes}/{Anio}",
+                nombreCliente, mes, anio);
+            throw;
+        }
     }
 
     /// <summary>
-    /// Obtiene estadísticas generales del dashboard
+    /// Obtiene estadísticas para el mes seleccionado
     /// </summary>
-    public async Task<AmlDashboardStats> ObtenerEstadisticasAsync(DateTime fechaDesde, DateTime fechaHasta)
+    public async Task<AmlDashboardStats> ObtenerEstadisticasAsync(int mes, int anio)
+    {
+        var (fechaDesde, fechaHasta) = CalcularPeriodo(mes, anio);
+
+        var sql = @"
+            SELECT TOP 1
+                COUNT(*) AS TotalClientes,
+                SUM(CASE WHEN TotalAcumulado >= @MontoIdentificacion AND TotalAcumulado < @MontoAvisoSAT THEN 1 ELSE 0 END) AS ClientesIdentificacion,
+                SUM(CASE WHEN TotalAcumulado >= @MontoAvisoSAT THEN 1 ELSE 0 END) AS ClientesAvisoSAT,
+                ISNULL(SUM(TotalAcumulado), 0) AS MontoTotalVentas,
+                ISNULL(SUM(NumOperaciones), 0) AS TotalOperaciones
+            FROM (
+                SELECT
+                    bn.NombreCliente,
+                    SUM(bp.Importe) AS TotalAcumulado,
+                    COUNT(DISTINCT bn.IdNota) AS NumOperaciones
+                FROM BAJASPAGOSNOTAS bp
+                INNER JOIN BAJASNOTAS bn ON bn.IdNota = bp.IdNota
+                WHERE bn.FechaBaja >= @FechaDesde
+                  AND bn.FechaBaja <= @FechaHasta
+                  AND bn.NombreCliente IS NOT NULL
+                  AND LTRIM(RTRIM(bn.NombreCliente)) <> ''
+                GROUP BY bn.NombreCliente
+            ) sub";
+
+        try
+        {
+            using var conn = CreateConnection();
+            var stats = await conn.QueryFirstOrDefaultAsync<AmlDashboardStats>(sql, new
+            {
+                FechaDesde = fechaDesde,
+                FechaHasta = fechaHasta,
+                MontoIdentificacion = _config.MontoIdentificacion,
+                MontoAvisoSAT = _config.MontoAvisoSAT
+            }) ?? new AmlDashboardStats();
+
+            _logger.LogInformation(
+                "Stats: {Total} clientes, {Ident} identificación, {SAT} aviso SAT, {Monto:C2} ventas totales",
+                stats.TotalClientes, stats.ClientesIdentificacion,
+                stats.ClientesAvisoSAT, stats.MontoTotalVentas);
+
+            return stats;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener estadísticas AML para {Mes}/{Anio}", mes, anio);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Marca un cliente como reportado para un mes/año
+    /// </summary>
+    public async Task MarcarComoReportadoAsync(string nombreCliente, string? rfc, string? telefonos,
+        int mes, int anio, decimal totalAcumulado, int numOperaciones, string nivelAlerta,
+        string? reportadoPor, string? observaciones)
     {
         var sql = @"
-            ;WITH ClienteAcumulados AS (
-                SELECT
-                    NombreCliente,
-                    SUM(ISNULL(Total, 0)) AS TotalAcumulado,
-                    COUNT(*) AS NumOperaciones
-                FROM BAJASNOTAS
-                WHERE FechaBaja >= @FechaDesde
-                  AND FechaBaja <= @FechaHasta
-                  AND NombreCliente IS NOT NULL
-                  AND LTRIM(RTRIM(NombreCliente)) <> ''
-                GROUP BY NombreCliente
-                HAVING SUM(ISNULL(Total, 0)) > 0
-            )
-            SELECT
-                COUNT(*) AS TotalClientes,
-                SUM(CASE WHEN TotalAcumulado >= @MontoIdentificacion THEN 1 ELSE 0 END) AS ClientesIdentificacion,
-                SUM(CASE WHEN TotalAcumulado >= @MontoAvisoSAT THEN 1 ELSE 0 END) AS ClientesAvisoSAT,
-                SUM(TotalAcumulado) AS MontoTotalVentas,
-                SUM(NumOperaciones) AS TotalOperaciones
-            FROM ClienteAcumulados";
+            IF NOT EXISTS (SELECT 1 FROM AML_Reportados
+                           WHERE NombreCliente = @NombreCliente
+                             AND MesReporte = @Mes AND AnioReporte = @Anio)
+                INSERT INTO AML_Reportados (NombreCliente, RFC, Telefonos, MesReporte, AnioReporte,
+                    TotalAcumulado, NumeroOperaciones, NivelAlerta, ReportadoPor, Observaciones)
+                VALUES (@NombreCliente, @RFC, @Telefonos, @Mes, @Anio,
+                    @TotalAcumulado, @NumOperaciones, @NivelAlerta, @ReportadoPor, @Observaciones)";
 
-        using var conn = CreateConnection();
-        var stats = await conn.QueryFirstOrDefaultAsync<AmlDashboardStats>(sql, new
+        try
         {
-            FechaDesde = fechaDesde,
-            FechaHasta = fechaHasta,
-            MontoIdentificacion = _config.MontoIdentificacion,
-            MontoAvisoSAT = _config.MontoAvisoSAT
-        });
+            using var conn = CreateConnection();
+            await conn.ExecuteAsync(sql, new
+            {
+                NombreCliente = nombreCliente,
+                RFC = rfc,
+                Telefonos = telefonos,
+                Mes = mes,
+                Anio = anio,
+                TotalAcumulado = totalAcumulado,
+                NumOperaciones = numOperaciones,
+                NivelAlerta = nivelAlerta,
+                ReportadoPor = reportadoPor,
+                Observaciones = observaciones
+            });
 
-        return stats ?? new AmlDashboardStats();
+            _logger.LogInformation("Cliente {Cliente} marcado como reportado para {Mes}/{Anio}",
+                nombreCliente, mes, anio);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al marcar como reportado a {Cliente} para {Mes}/{Anio}",
+                nombreCliente, mes, anio);
+            throw;
+        }
     }
 
     /// <summary>
-    /// Obtiene la configuración actual de umbrales
+    /// Obtiene el historial de clientes reportados
     /// </summary>
+    public async Task<List<ClienteReportado>> ObtenerHistorialReportadosAsync(
+        int? mes = null, int? anio = null)
+    {
+        var sql = @"
+            SELECT TOP 200 Id, NombreCliente, RFC, Telefonos, MesReporte, AnioReporte,
+                   TotalAcumulado, NumeroOperaciones, NivelAlerta, FechaReporte,
+                   ReportadoPor, Observaciones
+            FROM AML_Reportados
+            WHERE (@Mes IS NULL OR MesReporte = @Mes)
+              AND (@Anio IS NULL OR AnioReporte = @Anio)
+            ORDER BY AnioReporte DESC, MesReporte DESC, TotalAcumulado DESC";
+
+        using var conn = CreateConnection();
+        return (await conn.QueryAsync<ClienteReportado>(sql, new { Mes = mes, Anio = anio })).ToList();
+    }
+
+    /// <summary>
+    /// Test simple de conectividad a la base de datos
+    /// </summary>
+    public async Task<string> TestConexionAsync()
+    {
+        try
+        {
+            using var conn = CreateConnection();
+            conn.Open();
+            var dbName = ((SqlConnection)conn).Database;
+            var count = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM BAJASNOTAS WHERE NombreCliente IS NOT NULL AND LTRIM(RTRIM(NombreCliente)) <> ''");
+            return $"OK - DB: {dbName}, Notas con cliente: {count}";
+        }
+        catch (Exception ex)
+        {
+            return $"ERROR - {ex.Message}";
+        }
+    }
+
     public AmlConfig ObtenerConfiguracion() => _config;
 }
 
