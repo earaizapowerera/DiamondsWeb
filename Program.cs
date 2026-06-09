@@ -39,10 +39,10 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
-// Diamantes Service (Catálogo de diamantes — migración de frmDiamantes.frm)
-builder.Services.AddScoped<DiamantesService>(sp => new DiamantesService(
+// Compuestas Service
+builder.Services.AddScoped<CompuestaService>(sp => new CompuestaService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<DiamantesService>>()));
+    sp.GetRequiredService<ILogger<CompuestaService>>()));
 
 // SPPLD Config & Service
 var sppldConfig = new SppldConfig();

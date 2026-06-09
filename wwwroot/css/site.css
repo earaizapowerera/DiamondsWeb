@@ -106,91 +106,22 @@
     font-weight: 700;
 }
 
-/* ============================================ */
-/* Catalogo de Diamantes                        */
-/* ============================================ */
-
-/* Header Panel */
-.info-panel-diamantes {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    border-radius: 12px;
-    padding: 1.5rem;
-    color: #fff;
-}
-
-.info-panel-diamantes h5 {
-    color: #fff;
-    font-weight: 700;
-}
-
-.info-panel-diamantes .text-muted {
-    color: #a0aec0 !important;
-}
-
-/* Diamantes Table */
-.table-diamantes thead th {
-    background-color: #1a1a2e;
+/* Compuestas Table */
+.table-comp thead th {
+    background-color: #343a40;
     color: #fff;
     border: none;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    position: sticky;
-    top: 0;
-    z-index: 1;
 }
 
-.table-diamantes tbody tr:hover {
-    background-color: #f0f4ff;
+.table-comp tbody tr:hover {
+    background-color: #e8f4f8;
 }
 
-/* Status badges */
-.status-exhibicion {
-    background-color: #28a745;
-    color: #fff;
-    font-size: 0.75rem;
-}
-
-.status-apartado {
-    background-color: #fd7e14;
-    color: #fff;
-    font-size: 0.75rem;
-}
-
-.status-otro {
-    background-color: #6c757d;
-    color: #fff;
-    font-size: 0.75rem;
-}
-
-/* Color & Pureza badges */
-.badge-color {
-    display: inline-block;
-    width: 28px;
-    height: 28px;
-    line-height: 28px;
-    text-align: center;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);
-    color: #1a237e;
-    font-weight: 700;
-    font-size: 0.85rem;
-}
-
-.badge-pureza {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    background-color: #e3f2fd;
-    color: #0d47a1;
-    font-weight: 600;
-    font-size: 0.8rem;
-}
-
-/* Precio USD */
-.precio-usd {
-    color: #2e7d32;
-    font-weight: 700;
+.table-comp .font-monospace {
+    font-size: 0.9rem;
 }
 
 /* Responsive */
