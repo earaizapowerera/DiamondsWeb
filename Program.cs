@@ -44,10 +44,10 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
-// Catalog Service (DefaultsUtilidad, etc.)
-builder.Services.AddScoped<CatalogService>(sp => new CatalogService(
+// Jerarquias Service (config etiquetas)
+builder.Services.AddScoped<JerarquiasService>(sp => new JerarquiasService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<CatalogService>>()));
+    sp.GetRequiredService<ILogger<JerarquiasService>>()));
 
 // SPPLD Config & Service
 var sppldConfig = new SppldConfig();
