@@ -39,10 +39,10 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
-// Devoluciones Service
-builder.Services.AddScoped<DevolucionesService>(sp => new DevolucionesService(
+// Inventario Fisico Service
+builder.Services.AddScoped<InventarioFisicoService>(sp => new InventarioFisicoService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<DevolucionesService>>()));
+    sp.GetRequiredService<ILogger<InventarioFisicoService>>()));
 
 // SPPLD Config & Service
 var sppldConfig = new SppldConfig();
@@ -78,12 +78,12 @@ app.MapControllers();
 // Redirigir raíz y rutas huérfanas de UserPortal compartido a la pantalla principal
 app.MapGet("/", context =>
 {
-    context.Response.Redirect("/AntiLavado");
+    context.Response.Redirect("/Inventario");
     return Task.CompletedTask;
 });
 app.MapGet("/becario", context =>
 {
-    context.Response.Redirect("/AntiLavado");
+    context.Response.Redirect("/Inventario");
     return Task.CompletedTask;
 });
 
