@@ -106,6 +106,69 @@
     font-weight: 700;
 }
 
+/* Secondary/Info stat cards */
+.stat-card.bg-secondary-custom {
+    background: linear-gradient(135deg, #636e72 0%, #b2bec3 100%);
+}
+
+.stat-card.bg-info-custom {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* ===== Inventario Fisico Styles ===== */
+
+/* Scan Panel */
+.scan-panel {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    color: #fff;
+}
+
+.scan-panel h5 {
+    color: #fff;
+}
+
+.scan-panel small {
+    color: rgba(255,255,255,0.8) !important;
+}
+
+.scan-panel .form-control {
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    font-weight: 700;
+}
+
+/* Inventory Table */
+.table-inv thead th {
+    background-color: #2d3436;
+    color: #fff;
+    border: none;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table-inv tbody tr:hover {
+    background-color: #dfe6e9;
+}
+
+.table-inv code {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #2d3436;
+    background: #f1f2f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* Nav Pills small */
+.nav-pills.nav-sm .nav-link {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .stat-card {
@@ -113,5 +176,14 @@
     }
     .stat-card .stat-number {
         font-size: 1.5rem;
+    }
+    .scan-panel .input-group {
+        flex-direction: column;
+    }
+    .scan-panel .input-group .form-control,
+    .scan-panel .input-group .btn {
+        width: 100%;
+        border-radius: 8px !important;
+        margin-top: 0.5rem;
     }
 }

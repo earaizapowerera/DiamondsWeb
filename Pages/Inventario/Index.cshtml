@@ -1,0 +1,562 @@
+@page
+@model DiamondsWeb.Pages.Inventario.IndexModel
+@{
+    ViewData["Title"] = "Inventario Fisico";
+    var activeTab = Model.Tab ?? "escaneadas";
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage) || TempData["ErrorMessage"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@(Model.ErrorMessage ?? TempData["ErrorMessage"]?.ToString())
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["SuccessMessage"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Panel de Escaneo -->
+<div class="scan-panel mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <h5 class="mb-0"><i class="fa-solid fa-barcode me-2"></i>Escanear Pieza</h5>
+            <small class="text-muted">Escanee o escriba el codigo de barras y presione Enter</small>
+        </div>
+        <div class="col-md-6">
+            <div class="input-group input-group-lg">
+                <span class="input-group-text"><i class="fa-solid fa-barcode"></i></span>
+                <input type="text" id="txtCodigoBarras" class="form-control form-control-lg"
+                       placeholder="Codigo de barras..." maxlength="8" autofocus
+                       autocomplete="off" />
+                <button type="button" id="btnEscanear" class="btn btn-primary btn-lg">
+                    <i class="fa-solid fa-plus me-1"></i>Registrar
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- Feedback del escaneo -->
+    <div id="scanFeedback" class="mt-2" style="display:none;"></div>
+</div>
+
+<!-- Dashboard Stats -->
+<div class="row mb-4">
+    <div class="col-md-2 col-sm-4 col-6 mb-2">
+        <div class="stat-card bg-primary-custom">
+            <div class="stat-number" id="statTotal">@Model.Stats.TotalEscaneadas</div>
+            <div class="stat-label"><i class="fa-solid fa-barcode me-1"></i>Escaneadas</div>
+        </div>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6 mb-2">
+        <div class="stat-card bg-success-custom">
+            <div class="stat-number" id="statEnSistema">@Model.Stats.EnSistema</div>
+            <div class="stat-label"><i class="fa-solid fa-check me-1"></i>En Sistema</div>
+        </div>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6 mb-2">
+        <div class="stat-card bg-warning-custom">
+            <div class="stat-number" id="statSobrantes">@Model.Stats.Sobrantes</div>
+            <div class="stat-label"><i class="fa-solid fa-question me-1"></i>Sobrantes</div>
+        </div>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6 mb-2">
+        <div class="stat-card bg-info-custom">
+            <div class="stat-number" id="statCompuestas">@Model.Stats.Compuestas</div>
+            <div class="stat-label"><i class="fa-solid fa-layer-group me-1"></i>Compuestas</div>
+        </div>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6 mb-2">
+        <div class="stat-card bg-secondary-custom">
+            <div class="stat-number" id="statComponentes">@Model.Stats.ComponentesAuto</div>
+            <div class="stat-label"><i class="fa-solid fa-puzzle-piece me-1"></i>Componentes</div>
+        </div>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6 mb-2">
+        <div class="stat-card bg-danger-custom">
+            <div class="stat-number" id="statFaltantes">@Model.Stats.Faltantes</div>
+            <div class="stat-label"><i class="fa-solid fa-triangle-exclamation me-1"></i>Faltantes</div>
+        </div>
+    </div>
+</div>
+
+<!-- Toolbar -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <!-- Tabs -->
+        <ul class="nav nav-pills nav-sm">
+            <li class="nav-item">
+                <a class="nav-link @(activeTab == "escaneadas" ? "active" : "")"
+                   href="/Inventario?Tab=escaneadas">
+                    <i class="fa-solid fa-list me-1"></i>Escaneadas
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(activeTab == "sobrantes" ? "active" : "")"
+                   href="/Inventario?Tab=sobrantes">
+                    <i class="fa-solid fa-question-circle me-1"></i>Sobrantes
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(activeTab == "faltantes" ? "active" : "")"
+                   href="/Inventario?Tab=faltantes">
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i>Faltantes
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div class="btn-group">
+        <a href="/Inventario?handler=Exportar" class="btn btn-outline-success btn-sm">
+            <i class="fa-solid fa-file-excel me-1"></i>Exportar Excel
+        </a>
+        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalIniciar">
+            <i class="fa-solid fa-rotate me-1"></i>Iniciar Inventario
+        </button>
+    </div>
+</div>
+
+<!-- Busqueda (para tabs escaneadas y faltantes) -->
+@if (activeTab != "sobrantes")
+{
+<div class="filter-panel mb-3">
+    <form method="get">
+        <input type="hidden" name="Tab" value="@activeTab" />
+        <div class="row g-2 align-items-end">
+            <div class="col-md-8">
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Buscar por codigo o descripcion..." />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-search me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="/Inventario?Tab=@activeTab" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-times me-1"></i>Limpiar
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+}
+
+<!-- Tab: Escaneadas -->
+@if (activeTab == "escaneadas")
+{
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-barcode me-2"></i>Piezas Escaneadas (@Model.Registros.Count)</span>
+        <button type="button" class="btn btn-sm btn-outline-light" onclick="refrescarTabla()">
+            <i class="fa-solid fa-refresh"></i>
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-inv table-hover mb-0" id="tablaEscaneadas">
+                <thead>
+                    <tr>
+                        <th style="width:50px">#</th>
+                        <th style="width:100px">Codigo</th>
+                        <th>Descripcion</th>
+                        <th style="width:110px" class="text-center">Tipo</th>
+                        <th style="width:80px">Padre</th>
+                        <th style="width:160px">Fecha</th>
+                        <th style="width:60px" class="text-center">Acc.</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyEscaneadas">
+                    @for (int i = 0; i < Model.Registros.Count; i++)
+                    {
+                        var r = Model.Registros[i];
+                        var badgeClass = r.TipoRegistro switch
+                        {
+                            "Compuesta" => "bg-info",
+                            "Sobrante" => "bg-warning text-dark",
+                            _ => "bg-success"
+                        };
+                        <tr>
+                            <td>@(i + 1)</td>
+                            <td><code>@r.CodigoBarras</code></td>
+                            <td>@(r.Descripcion ?? "<em class='text-muted'>Sin descripcion</em>")</td>
+                            <td class="text-center"><span class="badge @badgeClass">@r.TipoRegistro</span></td>
+                            <td>@(r.CBPadreCompuesta != null ? $"({r.CBPadreCompuesta})" : "")</td>
+                            <td><span class="utc-date" data-utc="@r.FechaCaptura.ToString("o")">@r.FechaCaptura.ToString("dd/MM/yyyy HH:mm")</span></td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-danger" onclick="eliminarRegistro(@r.Id)" title="Eliminar">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Tab: Sobrantes -->
+@if (activeTab == "sobrantes")
+{
+<div class="card">
+    <div class="card-header bg-warning text-dark">
+        <i class="fa-solid fa-question-circle me-2"></i>Piezas Sobrantes (@Model.Sobrantes.Count)
+        <small class="ms-2">Piezas escaneadas que no existen en el sistema</small>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-inv table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Codigo</th>
+                        <th>Descripcion</th>
+                        <th class="text-end">Precio</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < Model.Sobrantes.Count; i++)
+                    {
+                        var s = Model.Sobrantes[i];
+                        <tr>
+                            <td>@(i + 1)</td>
+                            <td><code>@s.CodigoBarras</code></td>
+                            <td>@(s.Descripcion ?? "-")</td>
+                            <td class="text-end">@(s.Precio?.ToString("C0") ?? "-")</td>
+                            <td><span class="utc-date" data-utc="@s.FechaCaptura.ToString("o")">@s.FechaCaptura.ToString("dd/MM/yyyy HH:mm")</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Tab: Faltantes -->
+@if (activeTab == "faltantes")
+{
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>Piezas Faltantes
+        <small class="ms-2">Piezas en sistema que NO han sido contadas</small>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-inv table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Codigo</th>
+                        <th>Descripcion</th>
+                        <th class="text-end">Precio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < Model.Faltantes.Count; i++)
+                    {
+                        var f = Model.Faltantes[i];
+                        <tr>
+                            <td>@(i + 1)</td>
+                            <td><code>@f.CodigoBarras</code></td>
+                            <td>@(f.Descripcion ?? "-")</td>
+                            <td class="text-end">@(f.Precio?.ToString("C0") ?? "-")</td>
+                        </tr>
+                    }
+                    @if (!Model.Faltantes.Any())
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-check-circle fa-2x mb-2 d-block text-success"></i>
+                                No hay piezas faltantes (o aun no se ha iniciado inventario)
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Modal: Iniciar Inventario -->
+<div class="modal fade" id="modalIniciar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-rotate me-2"></i>Iniciar Inventario Fisico</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fa-solid fa-exclamation-triangle me-2"></i>
+                    <strong>Atencion:</strong> Esta accion:
+                    <ul class="mt-2 mb-0">
+                        <li>Marcara TODAS las piezas como <strong>faltantes</strong></li>
+                        <li>Eliminara todos los registros de escaneo previos</li>
+                        <li>Eliminara todas las piezas sobrantes registradas</li>
+                    </ul>
+                </div>
+                <p>Solo inicie un inventario cuando este listo para contar todas las piezas.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="post" asp-page-handler="Iniciar">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa-solid fa-rotate me-1"></i>Si, Iniciar Inventario
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Registrar Sobrante -->
+<div class="modal fade" id="modalSobrante" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="fa-solid fa-question-circle me-2"></i>Pieza No Encontrada</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>La pieza <strong id="sobranteCB"></strong> no existe en el sistema. Registre los datos:</p>
+                <div class="mb-3">
+                    <label class="form-label">Descripcion</label>
+                    <input type="text" id="sobranteDesc" class="form-control" placeholder="Descripcion de la pieza..." />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Precio</label>
+                    <input type="number" id="sobrantePrecio" class="form-control" placeholder="Precio..." />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="cerrarSobrante()">Omitir</button>
+                <button type="button" class="btn btn-warning" onclick="guardarSobrante()">
+                    <i class="fa-solid fa-save me-1"></i>Guardar Sobrante
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Anti-forgery token para AJAX
+    var antiForgeryToken = '@Html.AntiForgeryToken()'.match(/value="([^"]+)"/)?.[1] || '';
+
+    var input = document.getElementById('txtCodigoBarras');
+    var btnEscanear = document.getElementById('btnEscanear');
+    var feedback = document.getElementById('scanFeedback');
+    var pendingSobranteCB = null;
+
+    // Enter para escanear
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            escanear();
+        }
+    });
+
+    btnEscanear.addEventListener('click', escanear);
+
+    // F2 = focus en input
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F2') {
+            e.preventDefault();
+            input.value = '';
+            input.focus();
+        }
+    });
+
+    function escanear() {
+        var cb = input.value.trim();
+        if (!cb) return;
+
+        btnEscanear.disabled = true;
+        input.disabled = true;
+
+        fetch('/Inventario?handler=Escanear', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': antiForgeryToken
+            },
+            body: JSON.stringify({ codigoBarras: cb })
+        })
+        .then(r => r.json())
+        .then(data => {
+            mostrarFeedback(data);
+            actualizarStats(data.stats);
+
+            if (data.requiereDatosSobrante) {
+                pendingSobranteCB = cb;
+                document.getElementById('sobranteCB').textContent = cb;
+                document.getElementById('sobranteDesc').value = '';
+                document.getElementById('sobrantePrecio').value = '';
+                var modal = new bootstrap.Modal(document.getElementById('modalSobrante'));
+                modal.show();
+                setTimeout(function() { document.getElementById('sobranteDesc').focus(); }, 500);
+            } else {
+                // Limpiar y re-focus para siguiente escaneo
+                input.value = '';
+                input.focus();
+            }
+
+            // Refrescar tabla si estamos en tab escaneadas
+            if (!document.querySelector('[href*="Tab=sobrantes"].active') &&
+                !document.querySelector('[href*="Tab=faltantes"].active')) {
+                refrescarTabla();
+            }
+        })
+        .catch(err => {
+            mostrarFeedback({ success: false, message: 'Error de conexion: ' + err.message });
+        })
+        .finally(() => {
+            btnEscanear.disabled = false;
+            input.disabled = false;
+        });
+    }
+
+    function mostrarFeedback(data) {
+        feedback.style.display = 'block';
+        var icon, cls;
+        if (!data.success) {
+            icon = 'fa-circle-xmark'; cls = 'alert-danger';
+        } else if (data.yaEscaneada) {
+            icon = 'fa-circle-info'; cls = 'alert-info';
+        } else if (data.tipoRegistro === 'Sobrante') {
+            icon = 'fa-circle-question'; cls = 'alert-warning';
+        } else if (data.tipoRegistro === 'Compuesta') {
+            icon = 'fa-layer-group'; cls = 'alert-info';
+        } else {
+            icon = 'fa-circle-check'; cls = 'alert-success';
+        }
+
+        var html = '<div class="alert ' + cls + ' py-2 mb-0 d-flex align-items-center">' +
+            '<i class="fa-solid ' + icon + ' me-2"></i>' +
+            '<span>' + data.message + '</span>';
+
+        if (data.componentesRegistrados && data.componentesRegistrados.length > 0) {
+            html += '<span class="ms-2 badge bg-info">' +
+                data.componentesRegistrados.length + ' componentes auto-registrados</span>';
+        }
+        html += '</div>';
+        feedback.innerHTML = html;
+
+        // Auto-ocultar despues de 5s
+        setTimeout(function() { feedback.style.display = 'none'; }, 5000);
+    }
+
+    function actualizarStats(stats) {
+        if (!stats) return;
+        document.getElementById('statTotal').textContent = stats.totalEscaneadas;
+        document.getElementById('statEnSistema').textContent = stats.enSistema;
+        document.getElementById('statSobrantes').textContent = stats.sobrantes;
+        document.getElementById('statCompuestas').textContent = stats.compuestas;
+        document.getElementById('statComponentes').textContent = stats.componentesAuto;
+        document.getElementById('statFaltantes').textContent = stats.faltantes;
+    }
+
+    function guardarSobrante() {
+        if (!pendingSobranteCB) return;
+        var desc = document.getElementById('sobranteDesc').value;
+        var precio = document.getElementById('sobrantePrecio').value;
+
+        fetch('/Inventario?handler=Sobrante', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': antiForgeryToken
+            },
+            body: JSON.stringify({
+                codigoBarras: pendingSobranteCB,
+                descripcion: desc || null,
+                precio: precio ? parseInt(precio) : null
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            bootstrap.Modal.getInstance(document.getElementById('modalSobrante')).hide();
+            pendingSobranteCB = null;
+            input.value = '';
+            input.focus();
+            if (data.success) {
+                mostrarFeedback({ success: true, message: 'Sobrante registrada: ' + (desc || pendingSobranteCB) });
+            }
+        });
+    }
+
+    function cerrarSobrante() {
+        pendingSobranteCB = null;
+        input.value = '';
+        input.focus();
+    }
+
+    // Al cerrar modal sobrante, re-focus
+    document.getElementById('modalSobrante').addEventListener('hidden.bs.modal', function() {
+        input.value = '';
+        input.focus();
+    });
+
+    function eliminarRegistro(id) {
+        if (!confirm('Eliminar este registro?')) return;
+
+        fetch('/Inventario?handler=Eliminar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': antiForgeryToken
+            },
+            body: JSON.stringify({ id: id })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        });
+    }
+
+    function refrescarTabla() {
+        fetch('/Inventario?handler=Registros')
+            .then(r => r.json())
+            .then(registros => {
+                var tbody = document.getElementById('tbodyEscaneadas');
+                if (!tbody) return;
+                var html = '';
+                for (var i = 0; i < registros.length; i++) {
+                    var r = registros[i];
+                    var badgeClass = r.tipoRegistro === 'Compuesta' ? 'bg-info' :
+                                     r.tipoRegistro === 'Sobrante' ? 'bg-warning text-dark' : 'bg-success';
+                    html += '<tr>' +
+                        '<td>' + (i + 1) + '</td>' +
+                        '<td><code>' + r.codigoBarras + '</code></td>' +
+                        '<td>' + (r.descripcion || '<em class="text-muted">Sin descripcion</em>') + '</td>' +
+                        '<td class="text-center"><span class="badge ' + badgeClass + '">' + r.tipoRegistro + '</span></td>' +
+                        '<td>' + (r.cbPadreCompuesta ? '(' + r.cbPadreCompuesta + ')' : '') + '</td>' +
+                        '<td>' + new Date(r.fechaCaptura).toLocaleString('es-MX') + '</td>' +
+                        '<td class="text-center"><button class="btn btn-sm btn-outline-danger" onclick="eliminarRegistro(' + r.id + ')" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button></td>' +
+                        '</tr>';
+                }
+                tbody.innerHTML = html;
+            });
+
+        // Actualizar stats tambien
+        fetch('/Inventario?handler=Stats')
+            .then(r => r.json())
+            .then(stats => actualizarStats(stats));
+    }
+
+    // Auto-focus en input al cargar
+    document.addEventListener('DOMContentLoaded', function() {
+        input.focus();
+        convertUtcDatesToLocal();
+    });
+</script>
+}
