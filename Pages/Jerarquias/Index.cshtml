@@ -1,0 +1,331 @@
+@page
+@model DiamondsWeb.Pages.Jerarquias.IndexModel
+@using DiamondsWeb.Models
+@{
+    ViewData["Title"] = "Tablas de Jerarquias";
+    var columnas = ColumnasDisponibles.Valores;
+    var etiquetas = ColumnasDisponibles.Etiquetas;
+    var errorMsg = TempData["Error"]?.ToString() ?? Model.ErrorMessage;
+    var successMsg = TempData["Success"]?.ToString() ?? Model.SuccessMessage;
+}
+
+<!-- Alertas -->
+@if (!string.IsNullOrEmpty(errorMsg))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@errorMsg
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(successMsg))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@successMsg
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Header -->
+<div class="info-panel mb-3">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h5 class="mb-1"><i class="fa-solid fa-layer-group me-2"></i>Tablas de Jerarquias de Renglones para Etiquetas</h5>
+            <small class="text-muted">Configuracion de la estructura de renglones que aparecen en cada tipo de etiqueta.</small>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaTabla">
+                <i class="fa-solid fa-plus me-1"></i>Nueva Tabla
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- ═══ Panel Izquierdo: Master (TablasJerarquias) ═══ -->
+    <div class="col-md-5">
+        <div class="card master-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-table me-2"></i>Tablas de Jerarquias (@Model.Tablas.Count)</span>
+                <form method="get" class="d-flex" style="max-width:200px;">
+                    <input type="hidden" name="TablaId" value="@Model.TablaId" />
+                    <input type="text" class="form-control form-control-sm" name="Buscar"
+                           value="@Model.Buscar" placeholder="Filtrar..." />
+                </form>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.Tablas.Any())
+                {
+                <div class="list-group list-group-flush master-list">
+                    @foreach (var t in Model.Tablas)
+                    {
+                        var isActive = Model.TablaId == t.IdTabla;
+                        <a href="/Jerarquias?TablaId=@t.IdTabla&Buscar=@Model.Buscar"
+                           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center @(isActive ? "active" : "")">
+                            <div>
+                                <strong>@t.Descripcion</strong>
+                                <br />
+                                <small class="@(isActive ? "text-white-50" : "text-muted")">
+                                    ID: @t.IdTabla
+                                    @if (t.FechaCaptura.HasValue)
+                                    {
+                                        <span>| @t.FechaCaptura.Value.ToString("dd/MM/yyyy")</span>
+                                    }
+                                </small>
+                            </div>
+                            <span class="badge @(isActive ? "bg-light text-primary" : "bg-primary") rounded-pill">
+                                @t.CantidadColumnas col.
+                            </span>
+                        </a>
+                    }
+                </div>
+                }
+                else
+                {
+                <div class="text-center text-muted py-4">
+                    <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                    <small>No hay tablas de jerarquias.</small>
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Panel Derecho: Detail (Jerarquias) ═══ -->
+    <div class="col-md-7">
+        @if (Model.TablaSeleccionada != null)
+        {
+        <div class="card detail-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="fa-solid fa-columns me-2"></i>
+                    Columnas de: <strong>@Model.TablaSeleccionada.Descripcion</strong>
+                    <small class="text-muted ms-2">(ID: @Model.TablaSeleccionada.IdTabla)</small>
+                </span>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalEditarTabla"
+                            title="Editar tabla">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <form method="post" asp-page-handler="EliminarTabla" class="d-inline"
+                          onsubmit="return confirm('Eliminar tabla \'@Model.TablaSeleccionada.Descripcion\' y todas sus columnas?')">
+                        <input type="hidden" name="idTabla" value="@Model.TablaSeleccionada.IdTabla" />
+                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Eliminar tabla">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- Formulario agregar columna -->
+                <div class="p-3 border-bottom bg-light">
+                    <form method="post" asp-page-handler="CrearColumna" class="row g-2 align-items-end">
+                        <input type="hidden" name="idTabla" value="@Model.TablaSeleccionada.IdTabla" />
+                        <div class="col">
+                            <label class="form-label mb-1"><small>Agregar columna</small></label>
+                            <select class="form-select form-select-sm" name="columna" required>
+                                <option value="">-- Seleccionar --</option>
+                                @foreach (var col in columnas)
+                                {
+                                    <option value="@col">@col - @etiquetas[col]</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="fa-solid fa-plus me-1"></i>Agregar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tabla de columnas -->
+                @if (Model.Jerarquias.Any())
+                {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 detail-table">
+                        <thead>
+                            <tr>
+                                <th style="width:80px">#</th>
+                                <th>Columna</th>
+                                <th>Descripcion</th>
+                                <th>Fecha</th>
+                                <th style="width:120px" class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var j in Model.Jerarquias)
+                            {
+                            <tr>
+                                <td class="text-muted">@j.IdJerarquia</td>
+                                <td>
+                                    <span class="badge bg-secondary">@j.Columna</span>
+                                </td>
+                                <td>@(j.Columna != null && etiquetas.ContainsKey(j.Columna) ? etiquetas[j.Columna] : "-")</td>
+                                <td class="text-muted">
+                                    <small>@(j.FechaCaptura?.ToString("dd/MM/yyyy") ?? "-")</small>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" title="Editar"
+                                                data-bs-toggle="modal" data-bs-target="#modalEditarCol"
+                                                onclick="setEditCol(@j.IdJerarquia, '@j.Columna')">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <form method="post" asp-page-handler="EliminarColumna" class="d-inline">
+                                            <input type="hidden" name="idJerarquia" value="@j.IdJerarquia" />
+                                            <input type="hidden" name="idTabla" value="@Model.TablaSeleccionada.IdTabla" />
+                                            <button type="submit" class="btn btn-outline-danger"
+                                                    title="Eliminar"
+                                                    onclick="return confirm('Eliminar columna @j.Columna?')">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+                else
+                {
+                <div class="text-center text-muted py-4">
+                    <i class="fa-solid fa-columns fa-2x mb-2 d-block"></i>
+                    <small>Esta tabla no tiene columnas. Agregue una arriba.</small>
+                </div>
+                }
+            </div>
+        </div>
+        }
+        else
+        {
+        <div class="card">
+            <div class="card-body text-center text-muted py-5">
+                <i class="fa-solid fa-hand-pointer fa-3x mb-3 d-block"></i>
+                <h5>Seleccione una tabla</h5>
+                <p>Elija una tabla del panel izquierdo para ver y editar sus columnas.</p>
+            </div>
+        </div>
+        }
+    </div>
+</div>
+
+<!-- ═══ Modal: Nueva Tabla ═══ -->
+<div class="modal fade" id="modalNuevaTabla" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-page-handler="CrearTabla">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa-solid fa-plus me-2"></i>Nueva Tabla de Jerarquia</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Descripcion</label>
+                        <input type="text" class="form-control" name="descripcion"
+                               maxlength="50" required placeholder="Ej: Etiqueta Diamante" autofocus />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-save me-1"></i>Registrar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══ Modal: Editar Tabla ═══ -->
+@if (Model.TablaSeleccionada != null)
+{
+<div class="modal fade" id="modalEditarTabla" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-page-handler="EditarTabla">
+            <input type="hidden" name="idTabla" value="@Model.TablaSeleccionada.IdTabla" />
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa-solid fa-pen me-2"></i>Editar Tabla</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">ID</label>
+                        <input type="text" class="form-control" value="@Model.TablaSeleccionada.IdTabla" disabled />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripcion</label>
+                        <input type="text" class="form-control" name="descripcion"
+                               value="@Model.TablaSeleccionada.Descripcion" maxlength="50" required autofocus />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-save me-1"></i>Guardar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+}
+
+<!-- ═══ Modal: Editar Columna ═══ -->
+@if (Model.TablaSeleccionada != null)
+{
+<div class="modal fade" id="modalEditarCol" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-page-handler="EditarColumna">
+            <input type="hidden" name="idJerarquia" id="editColId" />
+            <input type="hidden" name="idTabla" value="@Model.TablaSeleccionada.IdTabla" />
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa-solid fa-pen me-2"></i>Editar Columna</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Columna</label>
+                        <select class="form-select" name="columna" id="editColSelect" required>
+                            <option value="">-- Seleccionar --</option>
+                            @foreach (var col in columnas)
+                            {
+                                <option value="@col">@col - @etiquetas[col]</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-save me-1"></i>Guardar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+}
+
+@section Scripts {
+<script>
+    function setEditCol(id, columna) {
+        document.getElementById('editColId').value = id;
+        document.getElementById('editColSelect').value = columna;
+    }
+
+    // Auto-dismiss alerts after 4 seconds
+    document.addEventListener('DOMContentLoaded', function () {
+        var alerts = document.querySelectorAll('.alert-dismissible');
+        alerts.forEach(function (a) {
+            setTimeout(function () {
+                var bsAlert = bootstrap.Alert.getOrCreateInstance(a);
+                if (bsAlert) bsAlert.close();
+            }, 4000);
+        });
+    });
+</script>
+}
