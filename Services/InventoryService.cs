@@ -19,6 +19,40 @@ public class InventoryService
     private IDbConnection CreateConnection() => new SqlConnection(_connectionString);
 
     // ══════════════════════════════════════════════
+    // REPORTE FALTANTES
+    // ══════════════════════════════════════════════
+    public async Task<List<PiezaFaltante>> ObtenerFaltantesAsync(string? buscar = null)
+    {
+        using var conn = CreateConnection();
+        var sql = @"SELECT p.CodigoBarras, p.Descripcion, p.Precio, g.Grupo,
+                       p.Modelo, p.Linea, p.Kilates, p.Peso, p.NumSerie,
+                       cf.Comentarios AS Comentario
+                    FROM Piezas p
+                    LEFT JOIN Grupos g ON p.IdGrupo = g.IdGrupo
+                    LEFT JOIN ComentariosFaltantes cf ON p.CodigoBarras = cf.CodigoBarras
+                    WHERE p.Faltante = 1";
+        if (!string.IsNullOrWhiteSpace(buscar))
+            sql += @" AND (p.CodigoBarras LIKE @B OR p.Descripcion LIKE @B
+                       OR g.Grupo LIKE @B OR cf.Comentarios LIKE @B
+                       OR p.Modelo LIKE @B OR p.Linea LIKE @B)";
+        sql += " ORDER BY p.CodigoBarras";
+        return (await conn.QueryAsync<PiezaFaltante>(sql, new { B = $"%{buscar}%" })).ToList();
+    }
+
+    public async Task GuardarComentarioFaltanteAsync(string codigoBarras, string comentario)
+    {
+        using var conn = CreateConnection();
+        var existe = await conn.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM ComentariosFaltantes WHERE CodigoBarras = @CB", new { CB = codigoBarras });
+        if (existe > 0)
+            await conn.ExecuteAsync("UPDATE ComentariosFaltantes SET Comentarios = @C WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras, C = comentario });
+        else
+            await conn.ExecuteAsync("INSERT INTO ComentariosFaltantes (CodigoBarras, Comentarios) VALUES (@CB, @C)",
+                new { CB = codigoBarras, C = comentario });
+    }
+
+    // ══════════════════════════════════════════════
     // PRE BAJAS
     // ══════════════════════════════════════════════
 

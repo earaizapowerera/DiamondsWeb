@@ -1,7 +1,7 @@
 @page
 @model DiamondsWeb.Pages.Inventario.Faltantes.IndexModel
 @{
-    ViewData["Title"] = "Faltantes";
+    ViewData["Title"] = "Reporte de Faltantes";
 }
 
 @if (TempData["Error"] != null)
@@ -19,16 +19,49 @@
 </div>
 }
 
-<!-- Faltantes -->
+<!-- Resumen -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 col-6 mb-2">
+        <div class="stat-card bg-danger-custom">
+            <div class="stat-number">@Model.TotalFaltantes</div>
+            <div class="stat-label"><i class="fa-solid fa-triangle-exclamation me-1"></i>Piezas Faltantes</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 col-6 mb-2">
+        <div class="stat-card bg-warning-custom">
+            <div class="stat-number">@Model.SumaPrecios.ToString("C0")</div>
+            <div class="stat-label"><i class="fa-solid fa-dollar-sign me-1"></i>Valor Total</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 col-6 mb-2">
+        <div class="stat-card bg-info-custom">
+            <div class="stat-number">@Model.ConComentario</div>
+            <div class="stat-label"><i class="fa-solid fa-comment me-1"></i>Con Comentario</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 col-6 mb-2">
+        <div class="stat-card bg-primary-custom">
+            <div class="stat-number">@Model.SinComentario</div>
+            <div class="stat-label"><i class="fa-solid fa-comment-slash me-1"></i>Sin Comentario</div>
+        </div>
+    </div>
+</div>
+
+<!-- Card principal -->
 <div class="card mb-4">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <span><i class="fa-solid fa-magnifying-glass-minus me-2"></i>Piezas Faltantes</span>
-        <form method="post" asp-page-handler="ExportarExcel" class="d-inline">
-            <input type="hidden" name="Buscar" value="@Model.Buscar" />
-            <button type="submit" class="btn btn-success btn-sm" id="btnExportarExcel">
-                <i class="fa-solid fa-file-excel me-1"></i>Exportar Excel
-            </button>
-        </form>
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-magnifying-glass-minus me-2"></i>Reporte de Faltantes</span>
+        <div>
+            <a href="/Inventario/Faltantes" class="btn btn-outline-light btn-sm me-1" title="Refrescar">
+                <i class="fa-solid fa-refresh"></i>
+            </a>
+            <form method="post" asp-page-handler="ExportarExcel" class="d-inline">
+                <input type="hidden" name="Buscar" value="@Model.Buscar" />
+                <button type="submit" class="btn btn-success btn-sm" id="btnExportarExcel">
+                    <i class="fa-solid fa-file-excel me-1"></i>Exportar Excel
+                </button>
+            </form>
+        </div>
     </div>
     <div class="card-body">
 
@@ -37,7 +70,8 @@
             <div class="input-group">
                 <span class="input-group-text"><i class="fa-solid fa-search"></i></span>
                 <input type="text" class="form-control" name="Buscar" value="@Model.Buscar"
-                       placeholder="Buscar por codigo, descripcion, grupo o comentario..." id="txtBuscar" />
+                       placeholder="Buscar por codigo, descripcion, grupo, modelo, linea o comentario..."
+                       id="txtBuscar" />
                 <button type="submit" class="btn btn-primary" id="btnBuscar">Buscar</button>
                 @if (!string.IsNullOrEmpty(Model.Buscar))
                 {
@@ -48,56 +82,62 @@
             </div>
         </form>
 
-        <!-- Resumen -->
-        <div class="d-flex gap-3 mb-3">
-            <span class="badge bg-danger fs-6">
-                <i class="fa-solid fa-hashtag me-1"></i>Total: @Model.TotalFaltantes
-            </span>
-            <span class="badge bg-warning text-dark fs-6">
-                <i class="fa-solid fa-dollar-sign me-1"></i>Suma Precios: @Model.SumaPrecios.ToString("C2")
-            </span>
-        </div>
-
         <!-- Tabla -->
         <div class="table-responsive">
-            <table class="table table-hover table-striped mb-0" id="tablaFaltantes">
+            <table class="table table-hover table-striped table-sm mb-0" id="tablaFaltantes">
                 <thead class="table-dark">
                     <tr>
-                        <th>Codigo Barras</th>
+                        <th style="width:40px">#</th>
+                        <th style="width:85px">Codigo</th>
                         <th>Descripcion</th>
-                        <th class="text-end">Precio</th>
-                        <th>Grupo</th>
+                        <th style="width:100px">Modelo</th>
+                        <th style="width:80px">Linea</th>
+                        <th style="width:50px" class="text-center">K</th>
+                        <th style="width:70px" class="text-end">Peso</th>
+                        <th style="width:90px" class="text-end">Precio</th>
+                        <th style="width:100px">Grupo</th>
                         <th>Comentario</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (Model.Faltantes.Any())
                     {
-                        @foreach (var f in Model.Faltantes)
+                        @for (int i = 0; i < Model.Faltantes.Count; i++)
                         {
+                            var f = Model.Faltantes[i];
                             <tr>
+                                <td class="text-muted">@(i + 1)</td>
                                 <td><code>@f.CodigoBarras</code></td>
-                                <td>@f.Descripcion</td>
-                                <td class="text-end">@(f.Precio?.ToString("C2"))</td>
-                                <td>@f.Grupo</td>
+                                <td>@(f.Descripcion ?? "-")</td>
+                                <td class="small">@(f.Modelo ?? "-")</td>
+                                <td class="small">@(f.Linea ?? "-")</td>
+                                <td class="text-center">@(f.Kilates ?? "-")</td>
+                                <td class="text-end">@(f.Peso?.ToString("N2") ?? "-")</td>
+                                <td class="text-end fw-semibold">@(f.Precio?.ToString("C0") ?? "-")</td>
+                                <td class="small">@(f.Grupo ?? "-")</td>
                                 <td>
-                                    <span id="display-com-@f.CodigoBarras">@f.Comentario</span>
-                                    <form method="post" asp-page-handler="Comentario" class="d-none" id="edit-com-@f.CodigoBarras">
+                                    <span id="display-com-@f.CodigoBarras" class="small">@f.Comentario</span>
+                                    <form method="post" asp-page-handler="Comentario" class="d-none"
+                                          id="edit-com-@f.CodigoBarras">
                                         <input type="hidden" name="Buscar" value="@Model.Buscar" />
                                         <div class="input-group input-group-sm">
                                             <input type="hidden" name="ComentarioCB" value="@f.CodigoBarras" />
-                                            <input type="text" class="form-control" name="ComentarioTexto"
+                                            <input type="text" class="form-control form-control-sm"
+                                                   name="ComentarioTexto"
                                                    value="@f.Comentario" maxlength="250" />
-                                            <button type="submit" class="btn btn-success btn-sm">
+                                            <button type="submit" class="btn btn-success btn-sm"
+                                                    title="Guardar">
                                                 <i class="fa-solid fa-check"></i>
                                             </button>
                                             <button type="button" class="btn btn-secondary btn-sm"
+                                                    title="Cancelar"
                                                     onclick="cancelComment('@f.CodigoBarras')">
                                                 <i class="fa-solid fa-times"></i>
                                             </button>
                                         </div>
                                     </form>
-                                    <button type="button" class="btn btn-outline-warning btn-sm ms-1"
+                                    <button type="button"
+                                            class="btn btn-outline-warning btn-sm ms-1 btn-comment-edit"
                                             title="Editar comentario"
                                             id="btn-com-@f.CodigoBarras"
                                             onclick="startComment('@f.CodigoBarras')">
@@ -110,7 +150,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">
+                            <td colspan="10" class="text-center text-muted py-4">
                                 <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
                                 No se encontraron piezas faltantes.
                             </td>
@@ -127,14 +167,28 @@
     function startComment(cb) {
         document.getElementById('display-com-' + cb).classList.add('d-none');
         document.getElementById('btn-com-' + cb).classList.add('d-none');
-        document.getElementById('edit-com-' + cb).classList.remove('d-none');
-        var input = document.querySelector('#edit-com-' + cb + ' input[name="ComentarioTexto"]');
-        if (input) input.focus();
+        var editForm = document.getElementById('edit-com-' + cb);
+        editForm.classList.remove('d-none');
+        var input = editForm.querySelector('input[name="ComentarioTexto"]');
+        if (input) {
+            input.focus();
+            input.select();
+        }
     }
+
     function cancelComment(cb) {
         document.getElementById('display-com-' + cb).classList.remove('d-none');
         document.getElementById('btn-com-' + cb).classList.remove('d-none');
         document.getElementById('edit-com-' + cb).classList.add('d-none');
     }
+
+    // Atajos: F6 = focus en busqueda
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F6') {
+            e.preventDefault();
+            var txt = document.getElementById('txtBuscar');
+            if (txt) { txt.focus(); txt.select(); }
+        }
+    });
 </script>
 }

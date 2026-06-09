@@ -44,6 +44,11 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
+// Inventory Service (Faltantes, PreBajas, etc.)
+builder.Services.AddScoped<InventoryService>(sp => new InventoryService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<InventoryService>>()));
+
 // Jerarquias Service (config etiquetas)
 builder.Services.AddScoped<JerarquiasService>(sp => new JerarquiasService(
     diamondsConnStr,
