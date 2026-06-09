@@ -6,10 +6,13 @@ using Microsoft.Data.SqlClient;
 namespace DiamondsWeb.Services;
 
 /// <summary>
-/// Servicio para inventario fisico de piezas.
-/// Migrado de frmInventarioFisico.frm (VB6).
-/// Flujo: escanear codigo → registrar en InventarioFisico → marcar Faltante=0 en piezas
-/// → auto-registrar componentes de compuestas → detectar sobrantes.
+/// Servicio para el registro de existencias (inventario físico).
+/// Migrado de frmRegistroExistencias.frm (VB6 legacy).
+/// Flujo: escanear código de barras → registrar en InventarioFisico
+///   - Si la pieza existe en catálogo (piezas), se marca faltante=0
+///   - Si es pieza compuesta (vCompuestas), se registran todos sus componentes
+///   - Si no existe en ningún catálogo, se registra en sobrantes
+/// Cancelación: mueve registro a inventariofisicocancelado (solo dentro de 24hrs)
 /// </summary>
 public class InventarioFisicoService
 {
@@ -25,404 +28,359 @@ public class InventarioFisicoService
     private IDbConnection CreateConnection() => new SqlConnection(_connectionString);
 
     /// <summary>
-    /// Registra un escaneo de codigo de barras.
-    /// 1) Inserta en InventarioFisico
-    /// 2) Si existe en piezas → marca Faltante=0
-    /// 3) Si es compuesta → auto-registra todos sus componentes
-    /// 4) Si NO existe en piezas → retorna RequiereDatosSobrante=true
+    /// Obtiene registros de inventario físico con datos de pieza.
     /// </summary>
-    public async Task<EscaneoResult> RegistrarEscaneoAsync(string codigoBarras, int userId)
+    public async Task<List<InventarioFisicoItem>> ObtenerRegistrosAsync(
+        string? filtro, string? busqueda, int pageSize = 100)
     {
-        codigoBarras = codigoBarras.Trim();
-        if (string.IsNullOrEmpty(codigoBarras))
-            return new EscaneoResult { Success = false, Message = "Codigo de barras vacio" };
-
-        try
+        var where = filtro switch
         {
-            using var conn = CreateConnection();
-            conn.Open();
+            "hoy" => "AND inv.FechaCaptura >= CAST(GETUTCDATE() AS DATE)",
+            "semana" => "AND inv.FechaCaptura >= DATEADD(DAY, -7, GETUTCDATE())",
+            _ => ""
+        };
 
-            // Verificar si ya fue escaneada en este inventario
-            var yaExiste = await conn.ExecuteScalarAsync<int>(
-                "SELECT TOP 1 COUNT(*) FROM InventarioFisico WHERE CodigoBarras = @CB",
-                new { CB = codigoBarras });
-
-            if (yaExiste > 0)
-            {
-                var descDup = await conn.ExecuteScalarAsync<string>(
-                    "SELECT TOP 1 Descripcion FROM piezas WHERE CodigoBarras = @CB",
-                    new { CB = codigoBarras });
-                var stats = await ObtenerEstadisticasInternalAsync(conn);
-                return new EscaneoResult
-                {
-                    Success = true,
-                    Message = $"Pieza {codigoBarras} ya fue escaneada anteriormente",
-                    YaEscaneada = true,
-                    TipoRegistro = "Duplicada",
-                    Descripcion = descDup,
-                    Stats = stats
-                };
-            }
-
-            var ahora = DateTime.UtcNow;
-
-            // Insertar en InventarioFisico
-            await conn.ExecuteAsync(
-                @"INSERT INTO InventarioFisico (CodigoBarras, FechaCaptura, FechaUltEdicion, IdUsuario)
-                  VALUES (@CB, @Fecha, @Fecha, @UserId)",
-                new { CB = codigoBarras, Fecha = ahora, UserId = userId });
-
-            // Verificar si existe en piezas
-            var descripcionPieza = await conn.ExecuteScalarAsync<string>(
-                "SELECT TOP 1 Descripcion FROM piezas WHERE CodigoBarras = @CB",
-                new { CB = codigoBarras });
-
-            var existeEnPiezas = descripcionPieza != null;
-
-            if (existeEnPiezas)
-            {
-                // Marcar como contada (Faltante = 0)
-                await conn.ExecuteAsync(
-                    "UPDATE piezas SET Faltante = 0 WHERE CodigoBarras = @CB",
-                    new { CB = codigoBarras });
-            }
-
-            // Verificar si es pieza compuesta
-            var esCompuesta = await conn.ExecuteScalarAsync<int>(
-                "SELECT TOP 1 COUNT(*) FROM Compuestas WHERE CodigoBarras = @CB",
-                new { CB = codigoBarras }) > 0;
-
-            var componentesRegistrados = new List<string>();
-
-            if (esCompuesta)
-            {
-                // Obtener componentes de la compuesta
-                var componentes = (await conn.QueryAsync<string>(
-                    "SELECT TOP 50 CodigoBarras FROM ComponentesCompuestas WHERE CBPadre = @CB",
-                    new { CB = codigoBarras })).ToList();
-
-                foreach (var comp in componentes)
-                {
-                    // Solo registrar si no fue escaneado antes
-                    var compYaExiste = await conn.ExecuteScalarAsync<int>(
-                        "SELECT TOP 1 COUNT(*) FROM InventarioFisico WHERE CodigoBarras = @CB",
-                        new { CB = comp });
-
-                    if (compYaExiste == 0)
-                    {
-                        await conn.ExecuteAsync(
-                            @"INSERT INTO InventarioFisico (CodigoBarras, FechaCaptura, FechaUltEdicion, IdUsuario)
-                              VALUES (@CB, @Fecha, @Fecha, @UserId)",
-                            new { CB = comp, Fecha = ahora, UserId = userId });
-
-                        // Marcar componente como contado
-                        await conn.ExecuteAsync(
-                            "UPDATE piezas SET Faltante = 0 WHERE CodigoBarras = @CB",
-                            new { CB = comp });
-
-                        componentesRegistrados.Add(comp);
-                    }
-                }
-
-                _logger.LogInformation(
-                    "Compuesta {CB}: {Count} componentes auto-registrados",
-                    codigoBarras, componentesRegistrados.Count);
-            }
-
-            // Si no existe en piezas → necesita registrarse como sobrante
-            if (!existeEnPiezas)
-            {
-                _logger.LogInformation("Pieza {CB} no encontrada en sistema, requiere datos sobrante", codigoBarras);
-
-                var statsS = await ObtenerEstadisticasInternalAsync(conn);
-                return new EscaneoResult
-                {
-                    Success = true,
-                    Message = $"Pieza {codigoBarras} NO encontrada en sistema. Registrar como sobrante.",
-                    TipoRegistro = "Sobrante",
-                    RequiereDatosSobrante = true,
-                    Stats = statsS
-                };
-            }
-
-            var tipo = esCompuesta ? "Compuesta" : "Pieza";
-            var msg = esCompuesta
-                ? $"Compuesta {codigoBarras} registrada con {componentesRegistrados.Count} componentes"
-                : $"Pieza {codigoBarras} registrada - {descripcionPieza}";
-
-            var statsF = await ObtenerEstadisticasInternalAsync(conn);
-            return new EscaneoResult
-            {
-                Success = true,
-                Message = msg,
-                TipoRegistro = tipo,
-                Descripcion = descripcionPieza,
-                ComponentesRegistrados = componentesRegistrados,
-                Stats = statsF
-            };
-        }
-        catch (Exception ex)
+        var searchWhere = "";
+        if (!string.IsNullOrWhiteSpace(busqueda))
         {
-            _logger.LogError(ex, "Error al registrar escaneo de {CB}", codigoBarras);
-            return new EscaneoResult { Success = false, Message = $"Error: {ex.Message}" };
+            searchWhere = @"AND (inv.CodigoBarras LIKE '%' + @Busqueda + '%'
+                OR p.Descripcion LIKE '%' + @Busqueda + '%'
+                OR vc.Descripcion LIKE '%' + @Busqueda + '%')";
         }
-    }
 
-    /// <summary>
-    /// Registra datos de una pieza sobrante (no existe en sistema)
-    /// </summary>
-    public async Task<bool> RegistrarSobranteAsync(
-        string codigoBarras, string? descripcion, int? precio, int userId)
-    {
-        try
-        {
-            using var conn = CreateConnection();
-            var ahora = DateTime.UtcNow;
-
-            // Verificar si ya existe en sobrantes
-            var yaExiste = await conn.ExecuteScalarAsync<int>(
-                "SELECT TOP 1 COUNT(*) FROM sobrantes WHERE CodigoBarras = @CB",
-                new { CB = codigoBarras });
-
-            if (yaExiste > 0)
-            {
-                await conn.ExecuteAsync(
-                    @"UPDATE sobrantes SET Descripcion = @Desc, Precio = @Precio,
-                      FechaUltEdicion = @Fecha WHERE CodigoBarras = @CB",
-                    new { CB = codigoBarras, Desc = descripcion, Precio = precio, Fecha = ahora });
-            }
-            else
-            {
-                await conn.ExecuteAsync(
-                    @"INSERT INTO sobrantes (CodigoBarras, Descripcion, Precio, FechaCaptura, FechaUltEdicion, IdUsuario)
-                      VALUES (@CB, @Desc, @Precio, @Fecha, @Fecha, @UserId)",
-                    new { CB = codigoBarras, Desc = descripcion, Precio = precio, Fecha = ahora, UserId = userId });
-            }
-
-            _logger.LogInformation("Sobrante {CB} registrada: {Desc}, Precio={Precio}",
-                codigoBarras, descripcion, precio);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al registrar sobrante {CB}", codigoBarras);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Obtiene los registros del inventario fisico actual, unido con piezas para descripcion
-    /// </summary>
-    public async Task<List<RegistroInventario>> ObtenerRegistrosAsync(string? buscar = null)
-    {
-        var sql = @"
-            SELECT TOP 50
-                i.Id, i.CodigoBarras, p.Descripcion, i.FechaCaptura, i.IdUsuario,
+        var sql = $@"
+            SELECT TOP (@PageSize)
+                inv.Id,
+                inv.CodigoBarras,
+                inv.FechaCaptura,
+                inv.FechaUltEdicion,
+                inv.IdUsuario,
+                COALESCE(p.Descripcion, vc.Descripcion, s.Descripcion) AS Descripcion,
+                COALESCE(p.CBTotal, vc.Precio, s.Precio) AS Precio,
                 CASE
-                    WHEN c.CodigoBarras IS NOT NULL THEN 'Compuesta'
-                    WHEN p.CodigoBarras IS NULL THEN 'Sobrante'
-                    ELSE 'Pieza'
-                END AS TipoRegistro,
-                cc.CBPadre AS CBPadreCompuesta
-            FROM InventarioFisico i
-            LEFT JOIN piezas p ON p.CodigoBarras = i.CodigoBarras
-            LEFT JOIN Compuestas c ON c.CodigoBarras = i.CodigoBarras
-            LEFT JOIN ComponentesCompuestas cc ON cc.CodigoBarras = i.CodigoBarras
-            WHERE (@Buscar IS NULL
-                OR i.CodigoBarras LIKE '%' + @Buscar + '%'
-                OR p.Descripcion LIKE '%' + @Buscar + '%')
-            ORDER BY i.FechaCaptura DESC";
-
-        try
-        {
-            using var conn = CreateConnection();
-            return (await conn.QueryAsync<RegistroInventario>(sql, new
-            {
-                Buscar = string.IsNullOrWhiteSpace(buscar) ? null : buscar
-            })).ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al obtener registros de inventario");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Obtiene la lista de sobrantes registrados
-    /// </summary>
-    public async Task<List<PiezaSobrante>> ObtenerSobrantesAsync()
-    {
-        var sql = @"SELECT TOP 50 CodigoBarras, Descripcion, Precio, FechaCaptura, IdUsuario
-                    FROM sobrantes ORDER BY FechaCaptura DESC";
+                    WHEN p.CodigoBarras IS NOT NULL THEN 'Pieza'
+                    WHEN vc.CodigoBarras IS NOT NULL THEN 'Compuesta'
+                    WHEN s.CodigoBarras IS NOT NULL THEN 'Sobrante'
+                    ELSE 'Desconocido'
+                END AS Origen
+            FROM InventarioFisico inv
+            LEFT JOIN piezas p ON p.CodigoBarras = inv.CodigoBarras
+            LEFT JOIN vCompuestas vc ON vc.CodigoBarras = inv.CodigoBarras
+            LEFT JOIN sobrantes s ON s.CodigoBarras = inv.CodigoBarras
+            WHERE 1=1 {where} {searchWhere}
+            ORDER BY inv.FechaCaptura DESC";
 
         using var conn = CreateConnection();
-        return (await conn.QueryAsync<PiezaSobrante>(sql)).ToList();
-    }
-
-    /// <summary>
-    /// Estadisticas del inventario fisico
-    /// </summary>
-    public async Task<InventarioStats> ObtenerEstadisticasAsync()
-    {
-        using var conn = CreateConnection();
-        conn.Open();
-        return await ObtenerEstadisticasInternalAsync(conn);
-    }
-
-    private async Task<InventarioStats> ObtenerEstadisticasInternalAsync(IDbConnection conn)
-    {
-        var sql = @"
-            SELECT TOP 1
-                (SELECT COUNT(*) FROM InventarioFisico) AS TotalEscaneadas,
-                (SELECT COUNT(*) FROM InventarioFisico i
-                 INNER JOIN piezas p ON p.CodigoBarras = i.CodigoBarras
-                 WHERE NOT EXISTS (SELECT 1 FROM Compuestas c WHERE c.CodigoBarras = i.CodigoBarras)) AS EnSistema,
-                (SELECT COUNT(*) FROM InventarioFisico i
-                 WHERE NOT EXISTS (SELECT 1 FROM piezas p WHERE p.CodigoBarras = i.CodigoBarras)) AS Sobrantes,
-                (SELECT COUNT(*) FROM InventarioFisico i
-                 INNER JOIN Compuestas c ON c.CodigoBarras = i.CodigoBarras) AS Compuestas,
-                (SELECT COUNT(*) FROM InventarioFisico i
-                 INNER JOIN ComponentesCompuestas cc ON cc.CodigoBarras = i.CodigoBarras) AS ComponentesAuto,
-                (SELECT COUNT(*) FROM piezas WHERE Faltante = 1) AS Faltantes";
-
-        return await conn.QueryFirstOrDefaultAsync<InventarioStats>(sql) ?? new InventarioStats();
-    }
-
-    /// <summary>
-    /// Eliminar un registro del inventario (y revertir Faltante si aplica)
-    /// </summary>
-    public async Task<bool> EliminarRegistroAsync(int id)
-    {
-        try
+        return (await conn.QueryAsync<InventarioFisicoItem>(sql, new
         {
-            using var conn = CreateConnection();
-            conn.Open();
-
-            // Obtener CB antes de borrar
-            var cb = await conn.ExecuteScalarAsync<string>(
-                "SELECT TOP 1 CodigoBarras FROM InventarioFisico WHERE Id = @Id",
-                new { Id = id });
-
-            if (cb == null) return false;
-
-            // Borrar registro
-            await conn.ExecuteAsync("DELETE FROM InventarioFisico WHERE Id = @Id", new { Id = id });
-
-            // Si no hay mas escaneos de este CB, revertir Faltante a 1
-            var otrosEscaneos = await conn.ExecuteScalarAsync<int>(
-                "SELECT TOP 1 COUNT(*) FROM InventarioFisico WHERE CodigoBarras = @CB",
-                new { CB = cb });
-
-            if (otrosEscaneos == 0)
-            {
-                await conn.ExecuteAsync(
-                    "UPDATE piezas SET Faltante = 1 WHERE CodigoBarras = @CB",
-                    new { CB = cb });
-            }
-
-            _logger.LogInformation("Registro {Id} (CB={CB}) eliminado del inventario", id, cb);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al eliminar registro {Id}", id);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Iniciar inventario fisico: marca TODAS las piezas como Faltante=1
-    /// y limpia la tabla de inventario y sobrantes previos
-    /// </summary>
-    public async Task<string> IniciarInventarioAsync(int userId)
-    {
-        try
-        {
-            using var conn = CreateConnection();
-            conn.Open();
-
-            var totalPiezas = await conn.ExecuteScalarAsync<int>("SELECT TOP 1 COUNT(*) FROM piezas");
-
-            await conn.ExecuteAsync("UPDATE piezas SET Faltante = 1");
-            await conn.ExecuteAsync("DELETE FROM InventarioFisico");
-            await conn.ExecuteAsync("DELETE FROM sobrantes");
-
-            _logger.LogInformation(
-                "Inventario fisico iniciado por usuario {UserId}. {Total} piezas marcadas como faltantes",
-                userId, totalPiezas);
-
-            return $"Inventario iniciado. {totalPiezas} piezas marcadas como faltantes. Comience a escanear.";
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al iniciar inventario fisico");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Obtiene las piezas faltantes (no contadas en el inventario)
-    /// </summary>
-    public async Task<List<PiezaFaltante>> ObtenerFaltantesAsync(string? buscar = null)
-    {
-        var sql = @"
-            SELECT TOP 50 CodigoBarras, Descripcion, Precio
-            FROM piezas
-            WHERE Faltante = 1
-              AND (@Buscar IS NULL
-                OR CodigoBarras LIKE '%' + @Buscar + '%'
-                OR Descripcion LIKE '%' + @Buscar + '%')
-            ORDER BY CodigoBarras";
-
-        using var conn = CreateConnection();
-        return (await conn.QueryAsync<PiezaFaltante>(sql, new
-        {
-            Buscar = string.IsNullOrWhiteSpace(buscar) ? null : buscar
+            PageSize = pageSize,
+            Busqueda = busqueda
         })).ToList();
     }
 
     /// <summary>
-    /// Exporta el inventario fisico actual como datos para Excel (CSV)
+    /// Busca info de una pieza por código de barras en piezas, vCompuestas, o sobrantes.
     /// </summary>
-    public async Task<byte[]> ExportarExcelAsync()
+    public async Task<PiezaInfo?> BuscarPiezaAsync(string codigoBarras)
     {
-        var sql = @"
-            SELECT TOP 5000
-                i.CodigoBarras,
-                ISNULL(p.Descripcion, s.Descripcion) AS Descripcion,
-                CASE
-                    WHEN comp.CodigoBarras IS NOT NULL THEN 'Compuesta'
-                    WHEN p.CodigoBarras IS NULL THEN 'Sobrante'
-                    ELSE 'Pieza'
-                END AS Tipo,
-                ISNULL(p.Precio, s.Precio) AS Precio,
-                i.FechaCaptura
-            FROM InventarioFisico i
-            LEFT JOIN piezas p ON p.CodigoBarras = i.CodigoBarras
-            LEFT JOIN sobrantes s ON s.CodigoBarras = i.CodigoBarras
-            LEFT JOIN Compuestas comp ON comp.CodigoBarras = i.CodigoBarras
-            ORDER BY i.FechaCaptura";
-
         using var conn = CreateConnection();
-        var registros = await conn.QueryAsync(sql);
 
-        using var ms = new MemoryStream();
-        using var writer = new StreamWriter(ms, System.Text.Encoding.UTF8);
+        // 1. Buscar en piezas
+        var pieza = await conn.QueryFirstOrDefaultAsync<PiezaInfo>(
+            "SELECT TOP 1 CodigoBarras, Descripcion, CBTotal AS Precio FROM piezas WHERE CodigoBarras = @CB",
+            new { CB = codigoBarras });
 
-        // BOM para Excel
-        await writer.WriteAsync('\uFEFF');
-        await writer.WriteLineAsync("CodigoBarras,Descripcion,Tipo,Precio,FechaCaptura");
+        if (pieza != null)
+            return pieza;
 
-        foreach (var r in registros)
+        // 2. Buscar en compuestas
+        var compuesta = await conn.QueryFirstOrDefaultAsync<PiezaInfo>(
+            "SELECT TOP 1 CodigoBarras, Descripcion, Precio FROM vCompuestas WHERE CodigoBarras = @CB",
+            new { CB = codigoBarras });
+
+        if (compuesta != null)
         {
-            var desc = ((string?)r.Descripcion ?? "").Replace("\"", "\"\"");
-            var precio = r.Precio?.ToString() ?? "";
-            var fecha = ((DateTime)r.FechaCaptura).ToString("dd/MM/yyyy HH:mm:ss");
-            await writer.WriteLineAsync($"\"{r.CodigoBarras}\",\"{desc}\",\"{r.Tipo}\",{precio},\"{fecha}\"");
+            compuesta.EsCompuesta = true;
+            var componentes = await conn.QueryAsync<string>(
+                "SELECT CodigoBarras FROM ComponentesCompuestas WHERE CBPadre = @CB",
+                new { CB = codigoBarras });
+            compuesta.ComponentesCB = componentes.ToList();
+            return compuesta;
         }
 
-        await writer.FlushAsync();
-        return ms.ToArray();
+        return null; // No encontrada → será sobrante
+    }
+
+    /// <summary>
+    /// Registra una existencia. Replica la lógica de Command1_Click del VB6.
+    /// </summary>
+    public async Task<RegistroResultado> RegistrarExistenciaAsync(
+        string codigoBarras, int idUsuario)
+    {
+        if (string.IsNullOrWhiteSpace(codigoBarras) || codigoBarras.Length < 6)
+        {
+            return new RegistroResultado
+            {
+                Exito = false,
+                Mensaje = "Mala lectura — el código de barras debe tener al menos 6 caracteres."
+            };
+        }
+
+        codigoBarras = codigoBarras.Trim();
+        var ahora = DateTime.UtcNow;
+
+        using var conn = CreateConnection();
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+
+        try
+        {
+            // Registrar en InventarioFisico
+            await conn.ExecuteAsync(
+                @"INSERT INTO InventarioFisico (CodigoBarras, FechaCaptura, FechaUltEdicion, IdUsuario)
+                  VALUES (@CB, @Fecha, @Fecha, @Usuario)",
+                new { CB = codigoBarras, Fecha = ahora, Usuario = idUsuario },
+                tx);
+
+            // Marcar como no faltante
+            await conn.ExecuteAsync(
+                "UPDATE piezas SET faltante = 0 WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+
+            // Buscar la pieza
+            var pieza = await conn.QueryFirstOrDefaultAsync<dynamic>(
+                "SELECT TOP 1 CodigoBarras, Descripcion, CBTotal AS Precio FROM piezas WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+
+            if (pieza != null)
+            {
+                tx.Commit();
+                return new RegistroResultado
+                {
+                    Exito = true,
+                    Mensaje = "Pieza registrada correctamente.",
+                    CodigoBarras = pieza.CodigoBarras,
+                    Descripcion = pieza.Descripcion,
+                    Precio = pieza.Precio,
+                    Tipo = "Pieza"
+                };
+            }
+
+            // Buscar en compuestas
+            var compuesta = await conn.QueryFirstOrDefaultAsync<dynamic>(
+                "SELECT TOP 1 CodigoBarras, Descripcion, Precio FROM vCompuestas WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+
+            if (compuesta != null)
+            {
+                // Registrar componentes individuales
+                var componentes = await conn.QueryAsync<string>(
+                    "SELECT CodigoBarras FROM ComponentesCompuestas WHERE CBPadre = @CB",
+                    new { CB = codigoBarras }, tx);
+
+                foreach (var comp in componentes)
+                {
+                    await conn.ExecuteAsync(
+                        @"INSERT INTO InventarioFisico (CodigoBarras, FechaCaptura, FechaUltEdicion, IdUsuario)
+                          VALUES (@CB, @Fecha, @Fecha, @Usuario)",
+                        new { CB = comp, Fecha = ahora, Usuario = idUsuario }, tx);
+                }
+
+                tx.Commit();
+                return new RegistroResultado
+                {
+                    Exito = true,
+                    Mensaje = $"Pieza compuesta registrada ({componentes.Count()} componentes).",
+                    CodigoBarras = compuesta.CodigoBarras,
+                    Descripcion = compuesta.Descripcion,
+                    Precio = compuesta.Precio,
+                    Tipo = "Compuesta"
+                };
+            }
+
+            // No existe → registrar como sobrante (requiere descripción del usuario)
+            await conn.ExecuteAsync(
+                @"IF NOT EXISTS (SELECT 1 FROM sobrantes WHERE CodigoBarras = @CB)
+                  INSERT INTO sobrantes (CodigoBarras, IdUsuario, FechaCaptura, FechaUltEdicion)
+                  VALUES (@CB, @Usuario, @Fecha, @Fecha)",
+                new { CB = codigoBarras, Usuario = idUsuario, Fecha = ahora }, tx);
+
+            tx.Commit();
+            return new RegistroResultado
+            {
+                Exito = true,
+                Mensaje = "Pieza no encontrada en catálogo. Registrada como sobrante.",
+                CodigoBarras = codigoBarras,
+                Tipo = "Sobrante",
+                RequiereDescripcion = true
+            };
+        }
+        catch (Exception ex)
+        {
+            tx.Rollback();
+            _logger.LogError(ex, "Error al registrar existencia CB={CodigoBarras}", codigoBarras);
+            return new RegistroResultado
+            {
+                Exito = false,
+                Mensaje = $"Error al registrar: {ex.Message}"
+            };
+        }
+    }
+
+    /// <summary>
+    /// Actualiza descripción y precio de un sobrante.
+    /// </summary>
+    public async Task ActualizarSobranteAsync(
+        string codigoBarras, string? descripcion, decimal? precio)
+    {
+        var sql = @"UPDATE sobrantes
+                    SET Descripcion = COALESCE(@Desc, Descripcion),
+                        Precio = COALESCE(@Precio, Precio),
+                        FechaUltEdicion = GETUTCDATE()
+                    WHERE CodigoBarras = @CB";
+
+        using var conn = CreateConnection();
+        await conn.ExecuteAsync(sql, new
+        {
+            CB = codigoBarras,
+            Desc = descripcion,
+            Precio = precio
+        });
+    }
+
+    /// <summary>
+    /// Cancela un registro de inventario. Archiva en inventariofisicocancelado.
+    /// Solo permite cancelar si no han pasado más de 24 horas.
+    /// </summary>
+    public async Task<RegistroResultado> CancelarRegistroAsync(int registroId, int canceladoPor)
+    {
+        using var conn = CreateConnection();
+        conn.Open();
+
+        // Obtener el registro
+        var registro = await conn.QueryFirstOrDefaultAsync<InventarioFisicoItem>(
+            "SELECT TOP 1 Id, CodigoBarras, FechaCaptura, FechaUltEdicion, IdUsuario FROM InventarioFisico WHERE Id = @Id",
+            new { Id = registroId });
+
+        if (registro == null)
+        {
+            return new RegistroResultado
+            {
+                Exito = false,
+                Mensaje = "Registro no encontrado."
+            };
+        }
+
+        // Verificar 24 horas
+        var horas = (DateTime.UtcNow - registro.FechaCaptura).TotalHours;
+        if (horas > 24)
+        {
+            return new RegistroResultado
+            {
+                Exito = false,
+                Mensaje = "No se puede cancelar — han pasado más de 24 horas desde el registro."
+            };
+        }
+
+        using var tx = conn.BeginTransaction();
+        try
+        {
+            // Archivar en cancelados
+            await conn.ExecuteAsync(
+                @"INSERT INTO inventariofisicocancelado
+                    (CodigoBarras, FechaCaptura, FechaUltEdicion, IdUsuario, FechaCancelacion, CanceladoPor)
+                  VALUES (@CB, @FC, @FUE, @Usr, GETUTCDATE(), @CancelPor)",
+                new
+                {
+                    CB = registro.CodigoBarras,
+                    FC = registro.FechaCaptura,
+                    FUE = registro.FechaUltEdicion,
+                    Usr = registro.IdUsuario,
+                    CancelPor = canceladoPor
+                }, tx);
+
+            // Eliminar el original
+            await conn.ExecuteAsync(
+                "DELETE FROM InventarioFisico WHERE Id = @Id",
+                new { Id = registroId }, tx);
+
+            tx.Commit();
+
+            _logger.LogInformation(
+                "Registro {Id} cancelado (CB={CB}) por usuario {User}",
+                registroId, registro.CodigoBarras, canceladoPor);
+
+            return new RegistroResultado
+            {
+                Exito = true,
+                Mensaje = $"Registro cancelado correctamente (CB: {registro.CodigoBarras}).",
+                CodigoBarras = registro.CodigoBarras
+            };
+        }
+        catch (Exception ex)
+        {
+            tx.Rollback();
+            _logger.LogError(ex, "Error al cancelar registro {Id}", registroId);
+            return new RegistroResultado
+            {
+                Exito = false,
+                Mensaje = $"Error al cancelar: {ex.Message}"
+            };
+        }
+    }
+
+    /// <summary>
+    /// Obtiene estadísticas del inventario para el dashboard.
+    /// </summary>
+    public async Task<InventarioStats> ObtenerEstadisticasAsync()
+    {
+        var sql = @"
+            SELECT TOP 1
+                (SELECT COUNT(*) FROM InventarioFisico
+                 WHERE FechaCaptura >= CAST(GETUTCDATE() AS DATE)) AS TotalRegistrosHoy,
+                (SELECT COUNT(*) FROM InventarioFisico) AS TotalRegistros,
+                (SELECT COUNT(*) FROM sobrantes) AS TotalSobrantes,
+                (SELECT COUNT(*) FROM inventariofisicocancelado) AS TotalCancelados";
+
+        using var conn = CreateConnection();
+        return await conn.QueryFirstAsync<InventarioStats>(sql);
+    }
+
+    /// <summary>
+    /// Obtiene todos los registros para exportar a Excel (sin límite de paginación).
+    /// </summary>
+    public async Task<List<InventarioFisicoItem>> ObtenerRegistrosParaExportarAsync(string? filtro)
+    {
+        var where = filtro switch
+        {
+            "hoy" => "AND inv.FechaCaptura >= CAST(GETUTCDATE() AS DATE)",
+            "semana" => "AND inv.FechaCaptura >= DATEADD(DAY, -7, GETUTCDATE())",
+            _ => ""
+        };
+
+        var sql = $@"
+            SELECT TOP 50000
+                inv.Id,
+                inv.CodigoBarras,
+                inv.FechaCaptura,
+                inv.FechaUltEdicion,
+                inv.IdUsuario,
+                COALESCE(p.Descripcion, vc.Descripcion, s.Descripcion) AS Descripcion,
+                COALESCE(p.CBTotal, vc.Precio, s.Precio) AS Precio,
+                CASE
+                    WHEN p.CodigoBarras IS NOT NULL THEN 'Pieza'
+                    WHEN vc.CodigoBarras IS NOT NULL THEN 'Compuesta'
+                    WHEN s.CodigoBarras IS NOT NULL THEN 'Sobrante'
+                    ELSE 'Desconocido'
+                END AS Origen
+            FROM InventarioFisico inv
+            LEFT JOIN piezas p ON p.CodigoBarras = inv.CodigoBarras
+            LEFT JOIN vCompuestas vc ON vc.CodigoBarras = inv.CodigoBarras
+            LEFT JOIN sobrantes s ON s.CodigoBarras = inv.CodigoBarras
+            WHERE 1=1 {where}
+            ORDER BY inv.FechaCaptura DESC";
+
+        using var conn = CreateConnection();
+        return (await conn.QueryAsync<InventarioFisicoItem>(sql)).ToList();
     }
 }

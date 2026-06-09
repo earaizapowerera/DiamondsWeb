@@ -50,10 +50,10 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
-// Transfer Service (Transferencias de Mercancía)
-builder.Services.AddScoped<TransferService>(sp => new TransferService(
+// Inventario Fisico Service
+builder.Services.AddScoped<InventarioFisicoService>(sp => new InventarioFisicoService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<TransferService>>()));
+    sp.GetRequiredService<ILogger<InventarioFisicoService>>()));
 
 var app = builder.Build();
 

@@ -1,83 +1,82 @@
 namespace DiamondsWeb.Models;
 
 /// <summary>
-/// Registro de una pieza escaneada durante inventario fisico
+/// Registro de inventario físico (tabla InventarioFisico)
 /// </summary>
-public class RegistroInventario
+public class InventarioFisicoItem
 {
     public int Id { get; set; }
     public string CodigoBarras { get; set; } = string.Empty;
-    public string? Descripcion { get; set; }
     public DateTime FechaCaptura { get; set; }
+    public DateTime? FechaUltEdicion { get; set; }
     public int IdUsuario { get; set; }
-    /// <summary>
-    /// "Pieza" = encontrada en sistema, "Sobrante" = no encontrada, "Compuesta" = pieza compuesta
-    /// </summary>
-    public string TipoRegistro { get; set; } = "Pieza";
-    /// <summary>
-    /// Si fue registrada como componente de una compuesta, el CB padre
-    /// </summary>
-    public string? CBPadreCompuesta { get; set; }
+
+    // Campos de join con piezas/vCompuestas
+    public string? Descripcion { get; set; }
+    public decimal? Precio { get; set; }
+    public string? Origen { get; set; } // "Pieza", "Compuesta", "Sobrante"
 }
 
 /// <summary>
-/// Pieza sobrante (escaneada pero no existe en sistema)
+/// Registro de sobrante (pieza no encontrada en catálogo)
 /// </summary>
-public class PiezaSobrante
+public class SobranteItem
 {
     public string CodigoBarras { get; set; } = string.Empty;
     public string? Descripcion { get; set; }
-    public int? Precio { get; set; }
+    public decimal? Precio { get; set; }
     public DateTime FechaCaptura { get; set; }
+    public DateTime FechaUltEdicion { get; set; }
     public int IdUsuario { get; set; }
 }
 
 /// <summary>
-/// Estadisticas del inventario fisico actual
+/// Info básica de una pieza (para mostrar al escanear)
+/// </summary>
+public class PiezaInfo
+{
+    public string CodigoBarras { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
+    public decimal? Precio { get; set; }
+    public bool EsCompuesta { get; set; }
+    public List<string> ComponentesCB { get; set; } = new();
+}
+
+/// <summary>
+/// Resultado de registrar una existencia
+/// </summary>
+public class RegistroResultado
+{
+    public bool Exito { get; set; }
+    public string Mensaje { get; set; } = string.Empty;
+    public string? CodigoBarras { get; set; }
+    public string? Descripcion { get; set; }
+    public decimal? Precio { get; set; }
+    public string Tipo { get; set; } = string.Empty; // "Pieza", "Compuesta", "Sobrante"
+    public bool RequiereDescripcion { get; set; }
+}
+
+/// <summary>
+/// Registro cancelado (tabla inventariofisicocancelado)
+/// </summary>
+public class InventarioCancelado
+{
+    public int Id { get; set; }
+    public string CodigoBarras { get; set; } = string.Empty;
+    public DateTime FechaCaptura { get; set; }
+    public DateTime? FechaUltEdicion { get; set; }
+    public int IdUsuario { get; set; }
+    public DateTime FechaCancelacion { get; set; }
+    public int CanceladoPor { get; set; }
+}
+
+/// <summary>
+/// Estadísticas del inventario para dashboard
 /// </summary>
 public class InventarioStats
 {
-    public int TotalEscaneadas { get; set; }
-    public int EnSistema { get; set; }
-    public int Sobrantes { get; set; }
-    public int Compuestas { get; set; }
-    public int ComponentesAuto { get; set; }
-    public int Faltantes { get; set; }
-}
-
-/// <summary>
-/// Resultado de escanear un codigo de barras
-/// </summary>
-public class EscaneoResult
-{
-    public bool Success { get; set; }
-    public string Message { get; set; } = string.Empty;
-    public string TipoRegistro { get; set; } = string.Empty;
-    /// <summary>
-    /// True si el codigo no existe en piezas y necesita datos adicionales
-    /// </summary>
-    public bool RequiereDatosSobrante { get; set; }
-    /// <summary>
-    /// Si es compuesta, lista de componentes auto-registrados
-    /// </summary>
-    public List<string> ComponentesRegistrados { get; set; } = new();
-    /// <summary>
-    /// True si ya fue escaneada anteriormente
-    /// </summary>
-    public bool YaEscaneada { get; set; }
-    public string? Descripcion { get; set; }
-    /// <summary>
-    /// Stats actualizadas despues del escaneo
-    /// </summary>
-    public InventarioStats? Stats { get; set; }
-}
-
-/// <summary>
-/// Pieza faltante (no contada en inventario fisico)
-/// </summary>
-public class PiezaFaltante
-{
-    public string CodigoBarras { get; set; } = string.Empty;
-    public string? Descripcion { get; set; }
-    public int? Precio { get; set; }
+    public int TotalRegistrosHoy { get; set; }
+    public int TotalRegistros { get; set; }
+    public int TotalSobrantes { get; set; }
+    public int TotalCancelados { get; set; }
 }
