@@ -32,8 +32,13 @@ var amlConfig = new AmlConfig();
 builder.Configuration.GetSection("AmlConfig").Bind(amlConfig);
 builder.Services.AddSingleton(amlConfig);
 
-// AML Service
+// Catalog Service (Grupos, Monedas, Defaults, etc.)
 var diamondsConnStr = builder.Configuration.GetConnectionString("DiamondsDb")!;
+builder.Services.AddScoped<CatalogService>(sp => new CatalogService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<CatalogService>>()));
+
+// AML Service
 builder.Services.AddScoped<AmlService>(sp => new AmlService(
     diamondsConnStr,
     sp.GetRequiredService<AmlConfig>(),

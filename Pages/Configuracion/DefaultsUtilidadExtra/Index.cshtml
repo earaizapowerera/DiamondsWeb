@@ -21,9 +21,28 @@
 
 <div class="card mb-4">
     <div class="card-header bg-primary text-white">
-        <i class="fa-solid fa-plus-circle me-2"></i>Defaults Utilidad Extra
+        <i class="fa-solid fa-sliders me-2"></i>Defaults Utilidad Extra seg&uacute;n precio por gramo
     </div>
     <div class="card-body">
+        <!-- Filtro -->
+        <form method="get" class="row g-3 align-items-end mb-4">
+            <div class="col-md-6">
+                <label class="form-label"><small>Buscar por valor</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Ej: 1.050..." />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-3">
+                <a href="/Configuracion/DefaultsUtilidadExtra" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+
         <!-- Tabla -->
         <div class="table-responsive">
             <table class="table table-hover table-striped mb-0">
@@ -32,7 +51,7 @@
                         <th>ID</th>
                         <th>Utilidad Extra</th>
                         <th>Usuario</th>
-                        <th>Fecha</th>
+                        <th>Fecha Captura</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
@@ -43,17 +62,46 @@
                         {
                             <tr>
                                 <td>@d.IdDefaultUtilidadExtra</td>
-                                <td>@d.DefaultUtilidadExtra1</td>
-                                <td>@d.IdUsuario</td>
-                                <td>@d.FechaCaptura?.ToString("dd/MM/yyyy HH:mm")</td>
-                                <td class="text-center">
-                                    <form method="post" asp-page-handler="Delete" class="d-inline">
-                                        <input type="hidden" name="id" value="@d.IdDefaultUtilidadExtra" />
-                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Eliminar"
-                                                onclick="return confirm('Eliminar default utilidad extra?')">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
+                                <td>
+                                    <span id="display-@d.IdDefaultUtilidadExtra">@d.DefaultUtilidadExtra1.ToString("0.000")</span>
+                                    <form method="post" asp-page-handler="Edit" class="d-none" id="edit-form-@d.IdDefaultUtilidadExtra">
+                                        <div class="input-group input-group-sm">
+                                            <input type="hidden" name="EditId" value="@d.IdDefaultUtilidadExtra" />
+                                            <input type="number" class="form-control" name="EditUtilidadExtra"
+                                                   value="@d.DefaultUtilidadExtra1" step="0.001" min="0.001" required />
+                                            <button type="submit" class="btn btn-success btn-sm" title="Guardar">
+                                                <i class="fa-solid fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-secondary btn-sm" title="Cancelar"
+                                                    onclick="cancelEdit(@d.IdDefaultUtilidadExtra)">
+                                                <i class="fa-solid fa-times"></i>
+                                            </button>
+                                        </div>
                                     </form>
+                                </td>
+                                <td>@d.IdUsuario</td>
+                                <td>
+                                    @if (d.FechaCaptura.HasValue)
+                                    {
+                                        <span class="utc-date" data-utc="@d.FechaCaptura.Value.ToString("o")Z">
+                                            @d.FechaCaptura.Value.ToString("dd/MM/yyyy HH:mm")
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-warning" title="Editar"
+                                                onclick="startEdit(@d.IdDefaultUtilidadExtra)">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <form method="post" asp-page-handler="Delete" class="d-inline">
+                                            <input type="hidden" name="id" value="@d.IdDefaultUtilidadExtra" />
+                                            <button type="submit" class="btn btn-outline-danger" title="Eliminar"
+                                                    onclick="return confirm('Eliminar default utilidad extra #@d.IdDefaultUtilidadExtra?')">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -77,8 +125,8 @@
         <form method="post" asp-page-handler="Create" class="row g-3 align-items-end">
             <div class="col-md-8">
                 <label class="form-label"><small>Utilidad Extra</small></label>
-                <input type="number" class="form-control form-control-sm" name="NuevoUtilidadExtra" step="0.01" required
-                       placeholder="Valor de utilidad extra..." />
+                <input type="number" class="form-control form-control-sm" name="NuevoUtilidadExtra"
+                       step="0.001" min="0.001" required placeholder="Ej: 1.050..." />
             </div>
             <div class="col-md-4">
                 <button type="submit" class="btn btn-success btn-sm w-100">
@@ -88,3 +136,16 @@
         </form>
     </div>
 </div>
+
+@section Scripts {
+<script>
+    function startEdit(id) {
+        document.getElementById('display-' + id).classList.add('d-none');
+        document.getElementById('edit-form-' + id).classList.remove('d-none');
+    }
+    function cancelEdit(id) {
+        document.getElementById('display-' + id).classList.remove('d-none');
+        document.getElementById('edit-form-' + id).classList.add('d-none');
+    }
+</script>
+}
