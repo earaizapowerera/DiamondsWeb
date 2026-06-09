@@ -55,10 +55,10 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
-// Cambio de Status de Piezas
-builder.Services.AddScoped<CambioStatusService>(sp => new CambioStatusService(
+// Divisores Service (catálogo de divisores para precio de venta)
+builder.Services.AddScoped<DivisoresService>(sp => new DivisoresService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<CambioStatusService>>()));
+    sp.GetRequiredService<ILogger<DivisoresService>>()));
 
 var app = builder.Build();
 

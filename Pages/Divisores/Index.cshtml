@@ -1,0 +1,183 @@
+@page
+@model DiamondsWeb.Pages.Divisores.IndexModel
+@{
+    ViewData["Title"] = "Catalogo de Divisores para Venta";
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.SuccessMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Info Panel -->
+<div class="info-panel">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h6><i class="fa-solid fa-divide me-2"></i>Catalogo de Divisores para Venta</h6>
+            <small class="text-muted">Precio de Venta = Costo / Divisor &nbsp;|&nbsp; Multiplicador = 1 / Divisor</small>
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge bg-dark fs-6">@Model.Divisores.Count registros</span>
+        </div>
+    </div>
+</div>
+
+<!-- Formulario Crear / Editar -->
+<div class="filter-panel" id="formPanel">
+    <h6 class="mb-3" id="formTitle">
+        <i class="fa-solid fa-plus-circle me-2"></i>Nuevo Divisor
+    </h6>
+    <form method="post" id="divisorForm">
+        <input type="hidden" name="EditId" id="editId" value="" />
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label"><small>Descripcion</small></label>
+                <input type="text" class="form-control form-control-sm" name="Descripcion" id="txtDescripcion"
+                       maxlength="50" required placeholder="Ej: Brillanteria" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Divisor</small></label>
+                <input type="number" class="form-control form-control-sm" name="Divisor" id="txtDivisor"
+                       step="0.0001" min="0.0001" required placeholder="0.0000" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Multiplicador (auto)</small></label>
+                <input type="text" class="form-control form-control-sm bg-light" id="txtMultiplicador"
+                       readonly tabindex="-1" placeholder="= 1 / Divisor" />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary btn-sm" id="btnSubmit"
+                        asp-page-handler="Crear">
+                    <i class="fa-solid fa-save me-1"></i>Registrar
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm d-none" id="btnCancelar"
+                        onclick="cancelarEdicion()">
+                    <i class="fa-solid fa-times me-1"></i>Cancelar
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla de Divisores -->
+<div class="table-responsive">
+    <table class="table table-sm table-hover table-aml" id="tblDivisores">
+        <thead>
+            <tr>
+                <th style="width:80px">Id</th>
+                <th>Descripcion</th>
+                <th style="width:120px" class="text-end">Divisor</th>
+                <th style="width:120px" class="text-end">Multiplicador</th>
+                <th style="width:180px">Ult. Edicion</th>
+                <th style="width:120px" class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Divisores.Count == 0)
+            {
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <i class="fa-solid fa-inbox me-2"></i>No hay divisores registrados.
+                    </td>
+                </tr>
+            }
+            @foreach (var d in Model.Divisores)
+            {
+                <tr id="row-@d.IdDivisor">
+                    <td><span class="badge bg-secondary">@d.IdDivisor</span></td>
+                    <td>@d.Descripcion</td>
+                    <td class="text-end font-monospace">@d.Divisor.ToString("N4")</td>
+                    <td class="text-end font-monospace fw-bold">@d.Multiplicador.ToString("N4")</td>
+                    <td>
+                        <small class="text-muted">
+                            <span class="utc-date" data-utc="@d.FechaUltEdicion.ToString("o")Z">
+                                @d.FechaUltEdicion.ToString("dd/MM/yyyy HH:mm")
+                            </span>
+                        </small>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-outline-primary btn-sm"
+                                title="Editar"
+                                onclick="iniciarEdicion(@d.IdDivisor, '@d.Descripcion?.Replace("'", "\\'")', @d.Divisor.ToString("F4", System.Globalization.CultureInfo.InvariantCulture))">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <form method="post" asp-page-handler="Eliminar" style="display:inline"
+                              onsubmit="return confirm('Eliminar divisor #@d.IdDivisor - @d.Descripcion?');">
+                            <input type="hidden" name="id" value="@d.IdDivisor" />
+                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Eliminar">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+<script>
+    // Auto-calculo de multiplicador al escribir divisor
+    var txtDivisor = document.getElementById('txtDivisor');
+    var txtMultiplicador = document.getElementById('txtMultiplicador');
+
+    txtDivisor.addEventListener('input', function () {
+        var val = parseFloat(this.value);
+        txtMultiplicador.value = (val > 0) ? (1 / val).toFixed(4) : '';
+    });
+
+    // Edicion inline
+    function iniciarEdicion(id, desc, divisor) {
+        document.getElementById('editId').value = id;
+        document.getElementById('txtDescripcion').value = desc;
+        document.getElementById('txtDivisor').value = divisor;
+        txtMultiplicador.value = (divisor > 0) ? (1 / divisor).toFixed(4) : '';
+
+        document.getElementById('formTitle').innerHTML =
+            '<i class="fa-solid fa-pen-to-square me-2"></i>Editar Divisor #' + id;
+        document.getElementById('btnSubmit').innerHTML =
+            '<i class="fa-solid fa-save me-1"></i>Guardar';
+        document.getElementById('btnSubmit').setAttribute('formaction', '?handler=Editar');
+        document.getElementById('btnCancelar').classList.remove('d-none');
+
+        document.getElementById('formPanel').scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('txtDescripcion').focus();
+
+        // Resaltar fila
+        document.querySelectorAll('#tblDivisores tbody tr').forEach(function (r) {
+            r.classList.remove('table-warning');
+        });
+        var row = document.getElementById('row-' + id);
+        if (row) row.classList.add('table-warning');
+    }
+
+    function cancelarEdicion() {
+        document.getElementById('editId').value = '';
+        document.getElementById('txtDescripcion').value = '';
+        document.getElementById('txtDivisor').value = '';
+        txtMultiplicador.value = '';
+
+        document.getElementById('formTitle').innerHTML =
+            '<i class="fa-solid fa-plus-circle me-2"></i>Nuevo Divisor';
+        document.getElementById('btnSubmit').innerHTML =
+            '<i class="fa-solid fa-save me-1"></i>Registrar';
+        document.getElementById('btnSubmit').setAttribute('formaction', '?handler=Crear');
+        document.getElementById('btnCancelar').classList.add('d-none');
+
+        document.querySelectorAll('#tblDivisores tbody tr').forEach(function (r) {
+            r.classList.remove('table-warning');
+        });
+    }
+</script>
+}
