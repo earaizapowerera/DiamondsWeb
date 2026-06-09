@@ -38,13 +38,17 @@ public class RegistroExistenciasModel : PageModel
         await CargarDatosAsync();
     }
 
+    private int ObtenerIdUsuario()
+    {
+        return int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+    }
+
     /// <summary>
     /// Registrar existencia por código de barras (POST principal).
     /// </summary>
     public async Task<IActionResult> OnPostRegistrarAsync(string codigoBarras)
     {
-        // UserId fijo (legacy — no hay tabla de usuarios Diamonds, se usa el VB6 IdUsuario)
-        var idUsuario = 1;
+        var idUsuario = ObtenerIdUsuario();
 
         var resultado = await _service.RegistrarExistenciaAsync(codigoBarras, idUsuario);
         UltimoRegistro = resultado;
@@ -83,7 +87,7 @@ public class RegistroExistenciasModel : PageModel
     /// </summary>
     public async Task<IActionResult> OnPostCancelarAsync(int registroId)
     {
-        var canceladoPor = 1; // IdUsuario legacy
+        var canceladoPor = ObtenerIdUsuario();
         var resultado = await _service.CancelarRegistroAsync(registroId, canceladoPor);
 
         if (resultado.Exito)

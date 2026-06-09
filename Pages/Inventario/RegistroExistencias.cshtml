@@ -137,26 +137,43 @@
 <!-- Filtros y acciones -->
 <div class="card mb-3">
     <div class="card-body py-2">
-        <form method="get" class="row g-2 align-items-end">
+        <div class="row g-2 align-items-end">
             <div class="col-md-2">
-                <label class="form-label"><small>Periodo</small></label>
-                <select class="form-select form-select-sm" name="Filtro" onchange="this.form.submit()">
-                    <option value="hoy" selected="@(Model.Filtro == "hoy")">Hoy</option>
-                    <option value="semana" selected="@(Model.Filtro == "semana")">Ultima semana</option>
-                    <option value="todos" selected="@(Model.Filtro == "todos")">Todos</option>
-                </select>
+                <form method="get" id="formFiltro">
+                    <input type="hidden" name="Busqueda" value="@Model.Busqueda" />
+                    <label class="form-label"><small>Periodo</small></label>
+                    @{
+                        var filtroActual = Model.Filtro ?? "hoy";
+                    }
+                    <select class="form-select form-select-sm" name="Filtro" onchange="document.getElementById('formFiltro').submit()">
+                        @foreach (var opt in new[] { ("hoy", "Hoy"), ("semana", "Ultima semana"), ("todos", "Todos") })
+                        {
+                            if (filtroActual == opt.Item1)
+                            {
+                                <option value="@opt.Item1" selected>@opt.Item2</option>
+                            }
+                            else
+                            {
+                                <option value="@opt.Item1">@opt.Item2</option>
+                            }
+                        }
+                    </select>
+                </form>
             </div>
             <div class="col-md-4">
-                <label class="form-label"><small>Buscar</small></label>
-                <input type="text" class="form-control form-control-sm" name="Busqueda"
-                       value="@Model.Busqueda" placeholder="Codigo de barras o descripcion..." />
+                <form method="get" id="formBusqueda">
+                    <input type="hidden" name="Filtro" value="@Model.Filtro" />
+                    <label class="form-label"><small>Buscar</small></label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control form-control-sm" name="Busqueda"
+                               value="@Model.Busqueda" placeholder="Codigo de barras o descripcion..." />
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </button>
+                    </div>
+                </form>
             </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-outline-primary btn-sm w-100">
-                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
-                </button>
-            </div>
-            <div class="col-md-4 text-end">
+            <div class="col-md-6 text-end">
                 <form method="post" asp-page-handler="ExportarExcel" class="d-inline">
                     <input type="hidden" name="Filtro" value="@Model.Filtro" />
                     <button type="submit" class="btn btn-outline-success btn-sm">
@@ -167,7 +184,7 @@
                     <i class="fa-solid fa-rotate me-1"></i>Refrescar
                 </button>
             </div>
-        </form>
+        </div>
     </div>
 </div>
 
@@ -209,7 +226,7 @@
                             <tr>
                                 <td class="text-muted">@r.Id</td>
                                 <td><strong>@r.CodigoBarras</strong></td>
-                                <td>@(r.Descripcion ?? "<span class='text-muted fst-italic'>Sin descripcion</span>")</td>
+                                <td>@if (r.Descripcion != null) { @r.Descripcion } else { <span class="text-muted fst-italic">Sin descripcion</span> }</td>
                                 <td class="text-end">@(r.Precio.HasValue ? r.Precio.Value.ToString("C2") : "-")</td>
                                 <td class="text-center"><span class="badge @origenBadge">@r.Origen</span></td>
                                 <td>
