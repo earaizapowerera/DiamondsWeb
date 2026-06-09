@@ -18,20 +18,34 @@ public class IndexModel : PageModel
         _logger = logger;
     }
 
-    public List<DefaultUtilidadExtra> Defaults { get; set; } = new();
+    public List<Models.DefaultUtilidadExtra> Defaults { get; set; } = new();
 
-    [BindProperty] public decimal NuevoUtilidadExtra { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public string? Buscar { get; set; }
+
+    [BindProperty]
+    public decimal NuevoUtilidadExtra { get; set; }
+
+    [BindProperty]
+    public int? EditId { get; set; }
+
+    [BindProperty]
+    public decimal? EditUtilidadExtra { get; set; }
 
     public async Task OnGetAsync()
     {
         try
         {
             Defaults = await _catalogService.ObtenerDefaultsUtilidadExtraAsync();
+            if (!string.IsNullOrWhiteSpace(Buscar))
+                Defaults = Defaults
+                    .Where(d => d.DefaultUtilidadExtra1.ToString("0.000").Contains(Buscar, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al cargar defaults utilidad extra");
-            TempData["Error"] = $"Error al cargar defaults utilidad extra: {ex.Message}";
+            TempData["Error"] = $"Error al cargar datos: {ex.Message}";
         }
     }
 
@@ -39,6 +53,12 @@ public class IndexModel : PageModel
     {
         try
         {
+            if (NuevoUtilidadExtra <= 0)
+            {
+                TempData["Error"] = "La utilidad extra debe ser mayor a 0.";
+                return RedirectToPage();
+            }
+
             var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
             await _catalogService.CrearDefaultUtilidadExtraAsync(NuevoUtilidadExtra, idUsuario);
             TempData["Success"] = "Default utilidad extra creado exitosamente.";
@@ -46,7 +66,30 @@ public class IndexModel : PageModel
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al crear default utilidad extra");
-            TempData["Error"] = $"Error al crear default utilidad extra: {ex.Message}";
+            TempData["Error"] = $"Error al crear: {ex.Message}";
+        }
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostEditAsync()
+    {
+        try
+        {
+            if (EditId == null || EditUtilidadExtra == null || EditUtilidadExtra <= 0)
+            {
+                TempData["Error"] = "Datos incompletos para editar.";
+                return RedirectToPage();
+            }
+
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            await _catalogService.ActualizarDefaultUtilidadExtraAsync(EditId.Value, EditUtilidadExtra.Value, idUsuario);
+            TempData["Success"] = "Default utilidad extra actualizado exitosamente.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar default utilidad extra {Id}", EditId);
+            TempData["Error"] = $"Error al actualizar: {ex.Message}";
         }
 
         return RedirectToPage();
@@ -62,7 +105,7 @@ public class IndexModel : PageModel
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al eliminar default utilidad extra {Id}", id);
-            TempData["Error"] = $"Error al eliminar default utilidad extra: {ex.Message}";
+            TempData["Error"] = $"Error al eliminar: {ex.Message}";
         }
 
         return RedirectToPage();

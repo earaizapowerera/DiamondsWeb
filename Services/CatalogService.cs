@@ -431,8 +431,18 @@ public class CatalogService
     {
         using var conn = CreateConnection();
         return await conn.ExecuteScalarAsync<int>(
-            "INSERT INTO DefaultsUtilidadExtra (DefaultUtilidadExtra, IdUsuario, FechaCaptura) OUTPUT INSERTED.IdDefaultUtilidadExtra VALUES (@UtilidadExtra, @IdUsuario, GETDATE())",
+            "INSERT INTO DefaultsUtilidadExtra (DefaultUtilidadExtra, IdUsuario, FechaCaptura) OUTPUT INSERTED.IdDefaultUtilidadExtra VALUES (@UtilidadExtra, @IdUsuario, GETUTCDATE())",
             new { UtilidadExtra = utilidadExtra, IdUsuario = idUsuario });
+    }
+
+    public async Task ActualizarDefaultUtilidadExtraAsync(int id, decimal utilidadExtra, int idUsuario)
+    {
+        using var conn = CreateConnection();
+        await conn.ExecuteAsync(
+            @"UPDATE DefaultsUtilidadExtra
+              SET DefaultUtilidadExtra = @UtilidadExtra, IdUsuario = @IdUsuario, FechaCaptura = GETUTCDATE()
+              WHERE IdDefaultUtilidadExtra = @Id",
+            new { Id = id, UtilidadExtra = utilidadExtra, IdUsuario = idUsuario });
     }
 
     public async Task EliminarDefaultUtilidadExtraAsync(int id)
