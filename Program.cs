@@ -39,6 +39,11 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
+// Catalogo Repetidas Service
+builder.Services.AddScoped<CatalogoRepetidasService>(sp => new CatalogoRepetidasService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<CatalogoRepetidasService>>()));
+
 // SPPLD Config & Service
 var sppldConfig = new SppldConfig();
 builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
