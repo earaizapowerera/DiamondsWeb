@@ -1,0 +1,277 @@
+@page
+@model DiamondsWeb.Pages.Catalogos.DiamantesModel
+@{
+    ViewData["Title"] = "Catalogo de Diamantes";
+    var hayFiltrosActivos = !string.IsNullOrEmpty(Model.Busqueda) ||
+                            !string.IsNullOrEmpty(Model.Corte) ||
+                            !string.IsNullOrEmpty(Model.Color) ||
+                            !string.IsNullOrEmpty(Model.Pureza) ||
+                            !string.IsNullOrEmpty(Model.Status) ||
+                            Model.QuilatesMin.HasValue || Model.QuilatesMax.HasValue ||
+                            Model.PrecioMin.HasValue || Model.PrecioMax.HasValue;
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+</div>
+}
+
+<!-- Header -->
+<div class="info-panel-diamantes mb-3">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h5 class="mb-1"><i class="fa-solid fa-gem me-2"></i>Catalogo de Diamantes</h5>
+            <small class="text-muted">Inventario de diamantes sueltos y engarzados</small>
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge bg-dark fs-6">
+                <i class="fa-solid fa-diamond me-1"></i>@Model.Diamantes.Count diamante@(Model.Diamantes.Count != 1 ? "s" : "")
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="filter-panel mb-3">
+    <form method="get" id="filtrosForm">
+        <div class="row g-2 align-items-end">
+            <!-- Busqueda general -->
+            <div class="col-md-3">
+                <label class="form-label"><small>Busqueda general</small></label>
+                <input type="text" class="form-control form-control-sm" name="Busqueda"
+                       value="@Model.Busqueda" placeholder="Descripcion, codigo, GIA..."
+                       id="inputBusqueda" />
+            </div>
+            <!-- Corte -->
+            <div class="col-md-2">
+                <label class="form-label"><small>Corte</small></label>
+                <select class="form-select form-select-sm" name="Corte" id="selectCorte">
+                    <option value="">Todos</option>
+                    @foreach (var c in Model.Cortes)
+                    {
+                        <option value="@c" selected="@(Model.Corte == c)">@c</option>
+                    }
+                </select>
+            </div>
+            <!-- Color -->
+            <div class="col-md-1">
+                <label class="form-label"><small>Color</small></label>
+                <select class="form-select form-select-sm" name="Color" id="selectColor">
+                    <option value="">Todos</option>
+                    @foreach (var c in Model.Colores)
+                    {
+                        <option value="@c" selected="@(Model.Color == c)">@c</option>
+                    }
+                </select>
+            </div>
+            <!-- Pureza -->
+            <div class="col-md-1">
+                <label class="form-label"><small>Pureza</small></label>
+                <select class="form-select form-select-sm" name="Pureza" id="selectPureza">
+                    <option value="">Todos</option>
+                    @foreach (var p in Model.Purezas)
+                    {
+                        <option value="@p" selected="@(Model.Pureza == p)">@p</option>
+                    }
+                </select>
+            </div>
+            <!-- Status -->
+            <div class="col-md-2">
+                <label class="form-label"><small>Status</small></label>
+                <select class="form-select form-select-sm" name="Status" id="selectStatus">
+                    <option value="">Todos</option>
+                    @foreach (var s in Model.StatusList)
+                    {
+                        <option value="@s" selected="@(Model.Status == s)">@s</option>
+                    }
+                </select>
+            </div>
+            <!-- Botones -->
+            <div class="col-md-3 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar (F6)
+                </button>
+                @if (hayFiltrosActivos)
+                {
+                    <a href="/Catalogos/Diamantes" class="btn btn-outline-secondary btn-sm">
+                        <i class="fa-solid fa-xmark"></i>
+                    </a>
+                }
+                <button type="button" class="btn btn-outline-dark btn-sm" onclick="toggleFiltrosAvanzados()" title="Filtros avanzados">
+                    <i class="fa-solid fa-sliders"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filtros avanzados (quilates, precio) -->
+        <div class="row g-2 mt-2" id="filtrosAvanzados" style="display:@(Model.QuilatesMin.HasValue || Model.QuilatesMax.HasValue || Model.PrecioMin.HasValue || Model.PrecioMax.HasValue ? "flex" : "none");">
+            <div class="col-md-2">
+                <label class="form-label"><small>Quilates min</small></label>
+                <input type="number" step="0.01" class="form-control form-control-sm" name="QuilatesMin"
+                       value="@Model.QuilatesMin" placeholder="0.00" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Quilates max</small></label>
+                <input type="number" step="0.01" class="form-control form-control-sm" name="QuilatesMax"
+                       value="@Model.QuilatesMax" placeholder="99.99" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Precio min (USD)</small></label>
+                <input type="number" class="form-control form-control-sm" name="PrecioMin"
+                       value="@Model.PrecioMin" placeholder="0" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Precio max (USD)</small></label>
+                <input type="number" class="form-control form-control-sm" name="PrecioMax"
+                       value="@Model.PrecioMax" placeholder="999999" />
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla de diamantes -->
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-gem me-2"></i>Diamantes</span>
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="imprimirTabla()" title="Imprimir (I)">
+            <i class="fa-solid fa-print me-1"></i>Imprimir
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-diamantes table-hover table-sm mb-0" id="tablaDiamantes">
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width:50px;">#</th>
+                        <th>Status</th>
+                        <th>Corte</th>
+                        <th>Tipo</th>
+                        <th class="text-end">Quilates</th>
+                        <th class="text-center">Color</th>
+                        <th class="text-center">Pureza</th>
+                        <th>Observaciones</th>
+                        <th class="text-end">Precio USD</th>
+                        <th>Descripcion</th>
+                        <th>Codigo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Diamantes.Any())
+                    {
+                        @for (int i = 0; i < Model.Diamantes.Count; i++)
+                        {
+                            var d = Model.Diamantes[i];
+                            var statusClass = d.NombreStatus.Contains("Exhib") ? "status-exhibicion" :
+                                              d.NombreStatus.Contains("Apartado") ? "status-apartado" :
+                                              "status-otro";
+                            <tr>
+                                <td class="text-center text-muted">@(i + 1)</td>
+                                <td><span class="badge @statusClass">@d.NombreStatus</span></td>
+                                <td>@d.Corte</td>
+                                <td><small class="text-muted">@d.Corte2</small></td>
+                                <td class="text-end fw-bold">@d.Quilates.ToString("F2")</td>
+                                <td class="text-center"><span class="badge-color">@d.Color</span></td>
+                                <td class="text-center"><span class="badge-pureza">@d.Pureza</span></td>
+                                <td><small>@d.Obs2</small></td>
+                                <td class="text-end precio-usd">$@d.Precio.ToString("N0")</td>
+                                <td><small>@d.Descripcion</small></td>
+                                <td><code class="small">@d.CodigoBarras</code></td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="11" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-gem fa-2x mb-2 d-block opacity-50"></i>
+                                No se encontraron diamantes con los filtros seleccionados
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @if (Model.Diamantes.Any())
+    {
+        <div class="card-footer bg-light d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+                Total: @Model.Diamantes.Count diamante@(Model.Diamantes.Count != 1 ? "s" : "")
+                &mdash; @Model.Diamantes.Sum(d => d.Quilates).ToString("F2") quilates
+            </small>
+            <small class="text-muted">
+                Valor total: $@Model.Diamantes.Sum(d => d.Precio).ToString("N0") USD
+            </small>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+    // F6 para buscar (replica tecla del VB6 original)
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F6') {
+            e.preventDefault();
+            document.getElementById('inputBusqueda').focus();
+        }
+        // I para imprimir (como en el VB6 original)
+        if (e.key === 'i' || e.key === 'I') {
+            // Solo si no estamos escribiendo en un input
+            if (document.activeElement.tagName !== 'INPUT' &&
+                document.activeElement.tagName !== 'SELECT' &&
+                document.activeElement.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                imprimirTabla();
+            }
+        }
+        // Escape para limpiar filtros
+        if (e.key === 'Escape') {
+            window.location.href = '/Catalogos/Diamantes';
+        }
+    });
+
+    function toggleFiltrosAvanzados() {
+        var el = document.getElementById('filtrosAvanzados');
+        el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+    }
+
+    function imprimirTabla() {
+        var printContent = document.getElementById('tablaDiamantes').outerHTML;
+        var win = window.open('', '_blank');
+        win.document.write('<html><head><title>Catalogo de Diamantes</title>');
+        win.document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">');
+        win.document.write('<style>');
+        win.document.write('body { padding: 20px; font-size: 12px; }');
+        win.document.write('h2 { margin-bottom: 15px; }');
+        win.document.write('.badge { border: 1px solid #ccc; padding: 2px 6px; font-size: 11px; }');
+        win.document.write('table { width: 100%; border-collapse: collapse; }');
+        win.document.write('th, td { border: 1px solid #ddd; padding: 4px 8px; font-size: 11px; }');
+        win.document.write('th { background: #343a40; color: white; }');
+        win.document.write('@@media print { .no-print { display: none; } }');
+        win.document.write('</style></head><body>');
+        win.document.write('<h2>Catalogo de Diamantes - Diamonds</h2>');
+        win.document.write('<p>Fecha: ' + new Date().toLocaleDateString('es-MX') + '</p>');
+        win.document.write(printContent);
+        win.document.write('</body></html>');
+        win.document.close();
+        win.onload = function() { win.print(); };
+    }
+
+    // Inicializar TomSelect en selects con mas de 5 opciones
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof TomSelect !== 'undefined') {
+            ['selectCorte', 'selectStatus'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el && el.options.length > 5) {
+                    new TomSelect(el, {
+                        allowEmptyOption: true,
+                        sortField: { field: 'text', direction: 'asc' }
+                    });
+                }
+            });
+        }
+    });
+</script>
+}
