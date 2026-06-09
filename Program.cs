@@ -45,6 +45,11 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
+// Punto de Venta Service (migración de frmPuntodeVenta.frm)
+builder.Services.AddScoped<PuntoVentaService>(sp => new PuntoVentaService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<PuntoVentaService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware
