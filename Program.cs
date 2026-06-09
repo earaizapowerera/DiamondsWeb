@@ -45,6 +45,11 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
+// Consignacion Service
+builder.Services.AddScoped<ConsignacionService>(sp => new ConsignacionService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<ConsignacionService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware

@@ -22,6 +22,12 @@
     opacity: 0.9;
 }
 
+.stat-card .stat-sublabel {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    margin-top: 0.25rem;
+}
+
 .stat-card.bg-info-custom {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
