@@ -50,10 +50,10 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
-// Remisiones Service
-builder.Services.AddScoped<RemisionService>(sp => new RemisionService(
+// Cambio de Status de Piezas
+builder.Services.AddScoped<CambioStatusService>(sp => new CambioStatusService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<RemisionService>>()));
+    sp.GetRequiredService<ILogger<CambioStatusService>>()));
 
 var app = builder.Build();
 
