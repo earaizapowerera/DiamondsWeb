@@ -1,0 +1,299 @@
+@page
+@model DiamondsWeb.Pages.ConsultaNotas.IndexModel
+@{
+    ViewData["Title"] = "Consulta de Notas de Venta";
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["SuccessMessage"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+</div>
+}
+
+<!-- Panel de filtros principales -->
+<div class="filter-panel">
+    <form method="get" id="formBusqueda">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label"><small>Nombre Cliente</small></label>
+                <input type="text" class="form-control form-control-sm" name="NombreCliente"
+                       value="@Model.NombreCliente" placeholder="Buscar por nombre..." />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Fecha Desde</small></label>
+                <input type="date" class="form-control form-control-sm" name="FechaDesde"
+                       value="@Model.FechaDesde?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Fecha Hasta</small></label>
+                <input type="date" class="form-control form-control-sm" name="FechaHasta"
+                       value="@Model.FechaHasta?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+                        id="btnTogglePiezas" title="Busqueda por pieza">
+                    <i class="fa-solid fa-gem me-1"></i>Pieza
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="/ConsultaNotas" class="btn btn-outline-dark btn-sm w-100">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </a>
+            </div>
+        </div>
+
+        <!-- Filtros avanzados de pieza (colapsable) -->
+        <div id="filtrosPieza" class="mt-3" style="display:none;">
+            <hr class="my-2" />
+            <h6 class="text-muted mb-2"><i class="fa-solid fa-gem me-1"></i>Busqueda por Pieza</h6>
+            <div class="row g-2">
+                <div class="col-md-2">
+                    <label class="form-label"><small>Codigo Barras</small></label>
+                    <input type="text" class="form-control form-control-sm" name="CodigoBarras"
+                           value="@Model.CodigoBarras" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Proveedor</small></label>
+                    <input type="text" class="form-control form-control-sm" name="Proveedor"
+                           value="@Model.Proveedor" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><small>Descripcion</small></label>
+                    <input type="text" class="form-control form-control-sm" name="DescripcionPieza"
+                           value="@Model.DescripcionPieza" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Grupo</small></label>
+                    <input type="text" class="form-control form-control-sm" name="Grupo"
+                           value="@Model.Grupo" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Localizacion</small></label>
+                    <input type="text" class="form-control form-control-sm" name="IdLocalizacion"
+                           value="@Model.IdLocalizacion" />
+                </div>
+            </div>
+            <div class="row g-2 mt-1">
+                <div class="col-md-2">
+                    <label class="form-label"><small>Modelo</small></label>
+                    <input type="text" class="form-control form-control-sm" name="Modelo"
+                           value="@Model.Modelo" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Serie</small></label>
+                    <input type="text" class="form-control form-control-sm" name="Serie"
+                           value="@Model.Serie" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Peso Desde</small></label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" name="PesoDesde"
+                           value="@Model.PesoDesde" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Peso Hasta</small></label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" name="PesoHasta"
+                           value="@Model.PesoHasta" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Quilates Desde</small></label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" name="QuilatesDesde"
+                           value="@Model.QuilatesDesde" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Quilates Hasta</small></label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" name="QuilatesHasta"
+                           value="@Model.QuilatesHasta" />
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@if (Model.BusquedaRealizada)
+{
+<!-- Resumen -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <small class="text-muted">
+        <i class="fa-solid fa-list me-1"></i>@Model.Notas.Count nota(s) encontrada(s)
+    </small>
+    <div class="d-flex align-items-center gap-2">
+        <small class="text-muted">Suma Neto:</small>
+        <span class="badge bg-dark fs-6">@Model.SumaNeto.ToString("C2")</span>
+    </div>
+</div>
+
+<!-- Grid de notas -->
+<div class="card mb-3">
+    <div class="card-header bg-dark text-white py-2">
+        <i class="fa-solid fa-receipt me-2"></i>Notas de Venta
+        <small class="float-end text-light">Haz click en una fila para ver detalle</small>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-notas table-hover table-sm mb-0" id="tblNotas">
+                <thead>
+                    <tr>
+                        <th>Nota</th>
+                        <th>Cliente</th>
+                        <th>Telefono</th>
+                        <th class="text-end">Bruto</th>
+                        <th class="text-end">Descuento %</th>
+                        <th class="text-end">Neto</th>
+                        <th>Forma Pago</th>
+                        <th>Fecha Baja</th>
+                        <th>Comentarios</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var nota in Model.Notas)
+                {
+                    <tr class="fila-nota" data-idnota="@nota.IdNota" style="cursor:pointer;">
+                        <td><strong>@nota.IdNota</strong></td>
+                        <td>@nota.NombreCliente</td>
+                        <td>@nota.Telefonos</td>
+                        <td class="text-end">@nota.Bruto.ToString("C2")</td>
+                        <td class="text-end">@nota.Descuento.ToString("N3")%</td>
+                        <td class="text-end fw-bold">@nota.Neto.ToString("C2")</td>
+                        <td>@nota.FormaPago</td>
+                        <td>
+                            @if (nota.FechaBaja.HasValue)
+                            {
+                                @nota.FechaBaja.Value.ToString("dd/MM/yyyy")
+                            }
+                        </td>
+                        <td><small>@nota.Comentarios</small></td>
+                        <td class="text-center">
+                            <form method="post" asp-page-handler="Cancelar" class="d-inline"
+                                  onsubmit="return confirmarCancelacion(@nota.IdNota)">
+                                <input type="hidden" name="idNota" value="@nota.IdNota" />
+                                @* Preservar filtros *@
+                                <input type="hidden" name="FechaDesde" value="@Model.FechaDesde?.ToString("yyyy-MM-dd")" />
+                                <input type="hidden" name="FechaHasta" value="@Model.FechaHasta?.ToString("yyyy-MM-dd")" />
+                                <input type="hidden" name="NombreCliente" value="@Model.NombreCliente" />
+                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Cancelar nota"
+                                        onclick="event.stopPropagation();">
+                                    <i class="fa-solid fa-ban"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Panel de detalle (piezas + pagos) — se llena via AJAX -->
+<div id="panelDetalle" style="display:none;">
+    <div class="row">
+        <!-- Piezas -->
+        <div class="col-12 mb-3">
+            <div class="card">
+                <div class="card-header bg-secondary text-white py-2">
+                    <i class="fa-solid fa-gem me-2"></i>Piezas de Nota <span id="lblNotaDetalle" class="fw-bold"></span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0" id="tblPiezas">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Codigo</th>
+                                    <th>Descripcion</th>
+                                    <th class="text-end">Cantidad</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th class="text-end">Total</th>
+                                    <th>Proveedor</th>
+                                    <th class="text-end">Costo Neto</th>
+                                    <th class="text-end">Precio</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagos y Totales lado a lado -->
+        <div class="col-md-7 mb-3">
+            <div class="card">
+                <div class="card-header bg-secondary text-white py-2">
+                    <i class="fa-solid fa-credit-card me-2"></i>Pagos
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0" id="tblPagos">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Forma de Pago</th>
+                                    <th class="text-end">Importe</th>
+                                    <th class="text-end">Tipo Cambio</th>
+                                    <th class="text-end">Importe Original</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5 mb-3">
+            <div class="card">
+                <div class="card-header bg-secondary text-white py-2">
+                    <i class="fa-solid fa-calculator me-2"></i>Totales Costo Neto
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0" id="tblTotales">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Moneda</th>
+                                    <th class="text-end">Costo Neto</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+}
+else
+{
+<div class="card">
+    <div class="card-body text-center text-muted py-5">
+        <i class="fa-solid fa-receipt fa-3x mb-3 d-block"></i>
+        <h5>Consulta de Notas de Venta</h5>
+        <p>Utiliza los filtros superiores para buscar notas. Puedes filtrar por nombre de cliente, rango de fechas, o expandir la busqueda por pieza.</p>
+    </div>
+</div>
+}
+
+@section Scripts {
+<script src="/js/consulta-notas.js?v=20260609"></script>
+}
