@@ -50,10 +50,10 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
-// Actualización Pieza por Pieza Service
-builder.Services.AddScoped<ActualizacionService>(sp => new ActualizacionService(
+// Remisiones Service
+builder.Services.AddScoped<RemisionService>(sp => new RemisionService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<ActualizacionService>>()));
+    sp.GetRequiredService<ILogger<RemisionService>>()));
 
 var app = builder.Build();
 
