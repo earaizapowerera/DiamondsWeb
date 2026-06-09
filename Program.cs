@@ -50,10 +50,10 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
-// Punto de Venta Service (migración de frmPuntodeVenta.frm)
-builder.Services.AddScoped<PuntoVentaService>(sp => new PuntoVentaService(
+// Consignacion Service
+builder.Services.AddScoped<ConsignacionService>(sp => new ConsignacionService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<PuntoVentaService>>()));
+    sp.GetRequiredService<ILogger<ConsignacionService>>()));
 
 var app = builder.Build();
 
