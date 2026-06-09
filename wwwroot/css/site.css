@@ -112,27 +112,25 @@
     font-weight: 700;
 }
 
-/* Cambio de Status */
-.nav-tabs .nav-link {
-    font-weight: 600;
-    color: #555;
+/* Etiquetas */
+.table-etiquetas thead th {
+    background-color: #343a40;
+    color: #fff;
+    border: none;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.nav-tabs .nav-link.active {
-    color: #0d6efd;
-    border-bottom: 2px solid #0d6efd;
+.table-etiquetas tbody tr:hover {
+    background-color: #e8f4f8;
 }
 
-.tab-content {
-    border: 1px solid #dee2e6;
-    border-top: none;
-    border-radius: 0 0 8px 8px;
-    background: #fff;
-}
-
-.btn-escanear {
-    padding: 0.15rem 0.4rem;
-    font-size: 0.75rem;
+.etiqueta-actual {
+    background: #f8f9fa;
+    border-left: 4px solid #0d6efd;
+    padding: 0.75rem 1rem;
+    border-radius: 0 8px 8px 0;
 }
 
 /* Responsive */

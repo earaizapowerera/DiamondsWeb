@@ -1,0 +1,226 @@
+@page
+@model DiamondsWeb.Pages.Etiquetas.IndexModel
+@{
+    ViewData["Title"] = "Diseño de Etiquetas";
+    var plantillaActiva = Model.Plantillas.FirstOrDefault(p => p.IdDisenoEtiqueta == Model.Configuracion.IdDisenoEtiqueta);
+}
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-check-circle me-2"></i>@Model.MensajeExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Configuración Activa -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-dark text-white">
+        <i class="fa-solid fa-tag me-2"></i>Configuración de Etiquetas
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+            <!-- Plantilla Sencilla -->
+            <div class="col-md-6">
+                <h6 class="text-muted mb-3"><i class="fa-solid fa-bookmark me-1"></i>Etiqueta Sencilla</h6>
+                <div class="etiqueta-actual mb-3">
+                    <small class="text-muted">Plantilla activa:</small>
+                    <div class="fw-bold fs-5 text-primary">
+                        @(plantillaActiva?.Archivo ?? "Sin configurar")
+                    </div>
+                </div>
+                <form method="post" asp-page-handler="CambiarSencilla">
+                    <div class="input-group">
+                        <select name="idPlantilla" id="selectPlantillaSencilla" class="form-select" required>
+                            <option value="">-- Seleccionar plantilla --</option>
+                            @foreach (var p in Model.Plantillas)
+                            {
+                                <option value="@p.IdDisenoEtiqueta"
+                                        selected="@(p.IdDisenoEtiqueta == Model.Configuracion.IdDisenoEtiqueta)">
+                                    @p.Archivo
+                                </option>
+                            }
+                        </select>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-check me-1"></i>Aplicar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Plantilla Compuesta -->
+            <div class="col-md-6">
+                <h6 class="text-muted mb-3"><i class="fa-solid fa-tags me-1"></i>Etiqueta Compuesta</h6>
+                <div class="etiqueta-actual mb-3">
+                    <small class="text-muted">Plantilla activa:</small>
+                    <div class="fw-bold fs-5 text-primary">
+                        @(string.IsNullOrEmpty(Model.Configuracion.ArchivoEtiquetaCompuesta) ? "Sin configurar" : Model.Configuracion.ArchivoEtiquetaCompuesta)
+                    </div>
+                </div>
+                <form method="post" asp-page-handler="ActualizarCompuesta">
+                    <div class="input-group">
+                        <input type="text" name="archivoCompuesta" id="inputCompuesta"
+                               class="form-control" placeholder="Nombre de plantilla compuesta"
+                               value="@Model.Configuracion.ArchivoEtiquetaCompuesta"
+                               maxlength="50" required />
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-save me-1"></i>Actualizar
+                        </button>
+                    </div>
+                    <small class="text-muted">Identificador de la plantilla para etiquetas compuestas (max. 50 caracteres).</small>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Catálogo de Plantillas -->
+<div class="card shadow-sm">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-list me-2"></i>Catálogo de Plantillas</span>
+        <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#modalAgregar">
+            <i class="fa-solid fa-plus me-1"></i>Nueva Plantilla
+        </button>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.Plantillas.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-etiquetas mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre de Plantilla</th>
+                            <th>Estado</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var plantilla in Model.Plantillas)
+                        {
+                            var esActiva = plantilla.IdDisenoEtiqueta == Model.Configuracion.IdDisenoEtiqueta;
+                            <tr class="@(esActiva ? "table-success" : "")">
+                                <td>@plantilla.IdDisenoEtiqueta</td>
+                                <td>
+                                    <i class="fa-solid fa-file-lines me-1 text-muted"></i>
+                                    @plantilla.Archivo
+                                </td>
+                                <td>
+                                    @if (esActiva)
+                                    {
+                                        <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i>Activa</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactiva</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary btn-editar"
+                                            data-id="@plantilla.IdDisenoEtiqueta"
+                                            data-nombre="@plantilla.Archivo"
+                                            data-bs-toggle="modal" data-bs-target="#modalEditar"
+                                            title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    @if (!esActiva)
+                                    {
+                                        <form method="post" asp-page-handler="EliminarPlantilla"
+                                              class="d-inline" onsubmit="return confirm('¿Eliminar la plantilla \'@plantilla.Archivo\'?')">
+                                            <input type="hidden" name="idPlantilla" value="@plantilla.IdDisenoEtiqueta" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="fa-solid fa-tag fa-3x mb-3 d-block"></i>
+                <p>No hay plantillas de etiquetas configuradas.</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregar">
+                    <i class="fa-solid fa-plus me-1"></i>Agregar primera plantilla
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal: Agregar Plantilla -->
+<div class="modal fade" id="modalAgregar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="AgregarPlantilla">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="fa-solid fa-plus me-2"></i>Nueva Plantilla</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nombreNuevaPlantilla" class="form-label">Nombre de la plantilla</label>
+                        <input type="text" id="nombreNuevaPlantilla" name="nombrePlantilla"
+                               class="form-control" maxlength="100" required
+                               placeholder="Ej: Derecha, Izquierda, PrecioGrande..." />
+                        <small class="text-muted">Identificador del diseño de etiqueta (max. 100 caracteres).</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i>Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Editar Plantilla -->
+<div class="modal fade" id="modalEditar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="EditarPlantilla">
+                <input type="hidden" name="idPlantilla" id="editarIdPlantilla" />
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="fa-solid fa-pen me-2"></i>Editar Plantilla</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editarNombrePlantilla" class="form-label">Nombre de la plantilla</label>
+                        <input type="text" id="editarNombrePlantilla" name="nombrePlantilla"
+                               class="form-control" maxlength="100" required />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i>Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Poblar modal de edición con los datos de la plantilla seleccionada
+    document.querySelectorAll('.btn-editar').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.getElementById('editarIdPlantilla').value = this.dataset.id;
+            document.getElementById('editarNombrePlantilla').value = this.dataset.nombre;
+        });
+    });
+</script>
+}

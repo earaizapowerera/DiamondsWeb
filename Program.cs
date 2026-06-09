@@ -55,10 +55,10 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
-// Divisores Service (catálogo de divisores para precio de venta)
-builder.Services.AddScoped<DivisoresService>(sp => new DivisoresService(
+// Etiquetas Service
+builder.Services.AddScoped<EtiquetaService>(sp => new EtiquetaService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<DivisoresService>>()));
+    sp.GetRequiredService<ILogger<EtiquetaService>>()));
 
 var app = builder.Build();
 
