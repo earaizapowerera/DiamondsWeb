@@ -50,6 +50,11 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
+// Pieza Service (Alta de Piezas Sencillas)
+builder.Services.AddScoped<PiezaService>(sp => new PiezaService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<PiezaService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware

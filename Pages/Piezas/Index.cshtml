@@ -1,0 +1,196 @@
+@page
+@model DiamondsWeb.Pages.Piezas.IndexModel
+@{
+    ViewData["Title"] = "Piezas Sencillas";
+}
+
+<link rel="stylesheet" href="/css/piezas.css?v=20260609" />
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.MensajeExito
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Barra de herramientas -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h5 class="mb-0"><i class="fa-solid fa-gem me-2"></i>Piezas Sencillas</h5>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-page="Alta" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus me-1"></i>Nueva Pieza
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label form-label-sm mb-0">Buscar</label>
+                <input type="text" name="Buscar" value="@Model.Buscar" class="form-control form-control-sm"
+                       placeholder="Codigo, descripcion..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label form-label-sm mb-0">Remision</label>
+                <select name="IdRemision" class="form-select form-select-sm" id="selRemision">
+                    <option value="">-- Todas --</option>
+                    @foreach (var r in Model.Remisiones)
+                    {
+                        <option value="@r.IdRemision" selected="@(Model.IdRemision == r.IdRemision)">
+                            @r.IdRemision - @r.NombreProveedor (@r.NumeroRemision)
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label form-label-sm mb-0">Grupo</label>
+                <select name="IdGrupo" class="form-select form-select-sm" id="selGrupo">
+                    <option value="">-- Todos --</option>
+                    @foreach (var g in Model.Grupos)
+                    {
+                        <option value="@g.IdGrupo" selected="@(Model.IdGrupo == g.IdGrupo)">@g.Grupo</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-1">
+                <button type="submit" class="btn btn-outline-primary btn-sm">
+                    <i class="fa-solid fa-search me-1"></i>Buscar
+                </button>
+                <a asp-page="Index" class="btn btn-outline-secondary btn-sm">
+                    <i class="fa-solid fa-rotate-right me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Resumen de remision seleccionada -->
+@if (Model.RemisionActual != null && Model.Totales != null)
+{
+<div class="card mb-3 border-primary">
+    <div class="card-body py-2">
+        <div class="row">
+            <div class="col-md-4">
+                <small class="text-muted">Remision #@Model.RemisionActual.IdRemision</small>
+                <div><strong>@Model.RemisionActual.NombreProveedor</strong> - @Model.RemisionActual.NumeroRemision</div>
+                @if (Model.RemisionActual.Consignacion)
+                {
+                    <span class="badge bg-warning text-dark">Consignacion</span>
+                }
+            </div>
+            <div class="col-md-8">
+                <div class="row text-center">
+                    <div class="col">
+                        <small class="text-muted d-block">Piezas</small>
+                        <strong>@Model.Totales.Piezas</strong>
+                    </div>
+                    <div class="col">
+                        <small class="text-muted d-block">Peso</small>
+                        <strong>@Model.Totales.Peso.ToString("N2")</strong>
+                    </div>
+                    <div class="col">
+                        <small class="text-muted d-block">Bruto Total</small>
+                        <strong>@Model.Totales.BrutoTotal.ToString("C2")</strong>
+                    </div>
+                    <div class="col">
+                        <small class="text-muted d-block">Neto Total</small>
+                        <strong>@Model.Totales.NetoTotal.ToString("C2")</strong>
+                    </div>
+                    <div class="col">
+                        <small class="text-muted d-block">Bruto Nota</small>
+                        <strong>@Model.Totales.BrutoNota.ToString("C2")</strong>
+                    </div>
+                    <div class="col">
+                        <small class="text-muted d-block">Neto Nota</small>
+                        <strong>@Model.Totales.NetoNota.ToString("C2")</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Tabla de piezas -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Codigo</th>
+                        <th>Descripcion</th>
+                        <th>Grupo</th>
+                        <th class="text-end">C. Bruto</th>
+                        <th class="text-end">C. Neto</th>
+                        <th class="text-end">Precio</th>
+                        <th class="text-end">Peso</th>
+                        <th>Kilates</th>
+                        <th>Modelo</th>
+                        <th>Linea</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Piezas.Count == 0)
+                    {
+                    <tr>
+                        <td colspan="11" class="text-center text-muted py-3">
+                            <i class="fa-solid fa-inbox me-2"></i>No se encontraron piezas
+                        </td>
+                    </tr>
+                    }
+                    @foreach (var p in Model.Piezas)
+                    {
+                    <tr>
+                        <td><code>@p.CodigoBarras</code></td>
+                        <td class="text-truncate" style="max-width: 250px;" title="@p.Descripcion">@p.Descripcion</td>
+                        <td>@p.NombreGrupo</td>
+                        <td class="text-end">@p.CBTotal.ToString("N2")</td>
+                        <td class="text-end">@p.CNTotal.ToString("N2")</td>
+                        <td class="text-end fw-bold">$@p.Precio.ToString("N0")</td>
+                        <td class="text-end">@(p.Peso > 0 ? p.Peso.ToString("N2") : "")</td>
+                        <td>@p.Kilates</td>
+                        <td>@p.Modelo</td>
+                        <td>@p.Linea</td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <a asp-page="Alta" asp-route-cb="@p.CodigoBarras" class="btn btn-outline-primary btn-sm" title="Modificar">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </a>
+                                <form method="post" asp-page-handler="Eliminar" class="d-inline"
+                                      onsubmit="return confirm('Eliminar pieza @p.CodigoBarras?')">
+                                    <input type="hidden" name="codigoBarras" value="@p.CodigoBarras" />
+                                    <input type="hidden" name="idRemision" value="@Model.IdRemision" />
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Searchable dropdowns con TomSelect
+    if (typeof TomSelect !== 'undefined') {
+        var selRemision = document.getElementById('selRemision');
+        if (selRemision) new TomSelect(selRemision, { allowEmptyOption: true });
+        var selGrupo = document.getElementById('selGrupo');
+        if (selGrupo) new TomSelect(selGrupo, { allowEmptyOption: true });
+    }
+});
+</script>
+}
