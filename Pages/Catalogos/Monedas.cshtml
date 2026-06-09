@@ -1,0 +1,159 @@
+@page
+@model DiamondsWeb.Pages.Catalogos.MonedasModel
+@{
+    ViewData["Title"] = "Catalogo de Monedas";
+}
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.MensajeExito
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.MensajeError
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Panel de alta/edicion -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>
+            <i class="fa-solid fa-coins me-2"></i>
+            <span id="formTitle">Nueva Moneda</span>
+        </span>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="btnNuevo"
+                onclick="resetForm()">
+            <i class="fa-solid fa-plus me-1"></i>Nuevo
+        </button>
+    </div>
+    <div class="card-body">
+        <form method="post" asp-page-handler="Guardar" id="formMoneda">
+            <input type="hidden" name="IdMoneda" id="IdMoneda" value="0" />
+            <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label"><small>Nombre de la Moneda</small></label>
+                    <input type="text" class="form-control" name="Nombre" id="Nombre"
+                           maxlength="20" required placeholder="Ej: Dolar, Euro..." />
+                </div>
+                <div class="col-md-3 d-flex align-items-center pt-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="Extranjera"
+                               id="Extranjera" value="true" checked />
+                        <label class="form-check-label" for="Extranjera">Moneda Extranjera</label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" id="btnGuardar">
+                            <i class="fa-solid fa-floppy-disk me-1"></i>Registrar
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                            <i class="fa-solid fa-xmark me-1"></i>Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de monedas -->
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        <i class="fa-solid fa-list me-2"></i>Monedas Registradas (@Model.Monedas.Count)
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="tablaMonedas">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width:60px">Id</th>
+                        <th>Moneda</th>
+                        <th class="text-center" style="width:120px">Extranjera</th>
+                        <th style="width:160px">Usuario</th>
+                        <th style="width:160px">Fecha Captura</th>
+                        <th class="text-center" style="width:120px">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Monedas.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No hay monedas registradas
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var m in Model.Monedas)
+                    {
+                        <tr>
+                            <td>@m.IdMoneda</td>
+                            <td><strong>@m.Nombre</strong></td>
+                            <td class="text-center">
+                                @if (m.Extranjera)
+                                {
+                                    <span class="badge bg-info"><i class="fa-solid fa-globe me-1"></i>Si</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary"><i class="fa-solid fa-house me-1"></i>No</span>
+                                }
+                            </td>
+                            <td>@(m.NombreUsuario ?? "-")</td>
+                            <td>
+                                <span class="utc-date" data-utc="@m.FechaCaptura.ToString("o")">
+                                    @m.FechaCaptura.ToString("dd/MM/yyyy HH:mm")
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-warning"
+                                            title="Editar"
+                                            onclick="editarMoneda(@m.IdMoneda, '@m.Nombre.Replace("'", "\\'")', @(m.Extranjera ? "true" : "false"))">
+                                        <i class="fa-solid fa-pencil"></i>
+                                    </button>
+                                    <form method="post" asp-page-handler="Eliminar" class="d-inline">
+                                        <input type="hidden" name="IdMoneda" value="@m.IdMoneda" />
+                                        <button type="submit" class="btn btn-outline-danger"
+                                                title="Eliminar"
+                                                onclick="return confirm('Eliminar la moneda \'@m.Nombre.Replace("'", "\\'")\'?')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function editarMoneda(id, nombre, extranjera) {
+        document.getElementById('IdMoneda').value = id;
+        document.getElementById('Nombre').value = nombre;
+        document.getElementById('Extranjera').checked = extranjera;
+        document.getElementById('formTitle').textContent = 'Editar Moneda #' + id;
+        document.getElementById('btnGuardar').innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Actualizar';
+        document.getElementById('Nombre').focus();
+    }
+
+    function resetForm() {
+        document.getElementById('IdMoneda').value = '0';
+        document.getElementById('Nombre').value = '';
+        document.getElementById('Extranjera').checked = true;
+        document.getElementById('formTitle').textContent = 'Nueva Moneda';
+        document.getElementById('btnGuardar').innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Registrar';
+        document.getElementById('Nombre').focus();
+    }
+</script>
+}

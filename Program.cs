@@ -45,6 +45,20 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
+// Catalog Services
+builder.Services.AddScoped<CatalogService>(sp => new CatalogService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<CatalogService>>()));
+builder.Services.AddScoped<MonedaService>(sp => new MonedaService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<MonedaService>>()));
+builder.Services.AddScoped<InventoryService>(sp => new InventoryService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<InventoryService>>()));
+builder.Services.AddScoped<SalesService>(sp => new SalesService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<SalesService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware
