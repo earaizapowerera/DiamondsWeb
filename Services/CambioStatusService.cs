@@ -69,10 +69,10 @@ public class CambioStatusService
                 WHERE CodigoBarras = @CB",
                 new { NuevoStatus = nuevoStatusId, CB = codigoBarras }, tx);
 
-            // Insertar en bitácora
+            // Insertar en bitácora (FechaCaptura NOT NULL, no tiene DEFAULT en la tabla legacy)
             var idCambio = await conn.QueryFirstAsync<int>(@"
-                INSERT INTO bitacorastatus (CodigoBarras, IdStatusAnterior, IdStatusNuevo, IdUsuario)
-                VALUES (@CB, @Anterior, @Nuevo, @User);
+                INSERT INTO bitacorastatus (CodigoBarras, IdStatusAnterior, IdStatusNuevo, IdUsuario, FechaCaptura)
+                VALUES (@CB, @Anterior, @Nuevo, @User, GETUTCDATE());
                 SELECT SCOPE_IDENTITY();",
                 new { CB = codigoBarras, Anterior = statusAnterior, Nuevo = nuevoStatusId, User = userId }, tx);
 
