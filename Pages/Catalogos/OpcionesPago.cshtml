@@ -1,0 +1,256 @@
+@page
+@model DiamondsWeb.Pages.Catalogos.OpcionesPagoModel
+@{
+    ViewData["Title"] = "Catalogo de Opciones de Pago";
+}
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.MensajeExito
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.MensajeError
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Panel de alta/edicion -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>
+            <i class="fa-solid fa-credit-card me-2"></i>
+            <span id="formTitle">Nueva Opcion de Pago</span>
+        </span>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="btnNuevo"
+                onclick="resetForm()">
+            <i class="fa-solid fa-plus me-1"></i>Nuevo
+        </button>
+    </div>
+    <div class="card-body">
+        <form method="post" asp-page-handler="Guardar" id="formOpcionPago">
+            <input type="hidden" name="IdOpcionPago" id="IdOpcionPago" value="0" />
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label"><small>Nombre</small></label>
+                    <input type="text" class="form-control" name="Nombre" id="Nombre"
+                           maxlength="20" required placeholder="Ej: Visa, Amex..." />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><small>Moneda</small></label>
+                    <select class="form-select" name="IdMoneda" id="IdMoneda">
+                        @foreach (var m in Model.Monedas)
+                        {
+                            <option value="@m.IdMoneda">@m.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Icono</small></label>
+                    <select class="form-select" name="Logo" id="Logo">
+                        @foreach (var logo in DiamondsWeb.Models.OpcionPago.LogosDisponibles)
+                        {
+                            <option value="@logo.Value">@logo.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex align-items-center pt-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="Activa"
+                               id="Activa" value="true" checked />
+                        <label class="form-check-label" for="Activa">Activa</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" id="btnGuardar">
+                            <i class="fa-solid fa-floppy-disk me-1"></i>Registrar
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                            <i class="fa-solid fa-xmark me-1"></i>Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Preview del icono seleccionado -->
+            <div class="mt-2">
+                <span class="text-muted small">Vista previa:</span>
+                <span id="iconPreview" class="ms-2 fs-4">
+                    <i class="fa-brands fa-cc-amex"></i>
+                </span>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de opciones de pago -->
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span>
+            <i class="fa-solid fa-list me-2"></i>Opciones de Pago Registradas (@Model.Opciones.Count)
+        </span>
+        <div>
+            <span class="badge bg-success me-1">
+                <i class="fa-solid fa-check me-1"></i>@Model.Opciones.Count(o => o.Activa) activas
+            </span>
+            <span class="badge bg-secondary">
+                <i class="fa-solid fa-ban me-1"></i>@Model.Opciones.Count(o => !o.Activa) inactivas
+            </span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="tablaOpciones">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width:60px">Id</th>
+                        <th style="width:50px" class="text-center">Icono</th>
+                        <th>Opcion de Pago</th>
+                        <th>Moneda</th>
+                        <th class="text-center" style="width:100px">Estado</th>
+                        <th style="width:160px">Ult. Edicion</th>
+                        <th class="text-center" style="width:160px">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Opciones.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No hay opciones de pago registradas
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var op in Model.Opciones)
+                    {
+                        <tr class="@(!op.Activa ? "table-secondary" : "")">
+                            <td>@op.IdOpcionPago</td>
+                            <td class="text-center fs-5">
+                                <i class="@DiamondsWeb.Models.OpcionPago.LogoToFaIcon(op.Logo)"
+                                   title="@DiamondsWeb.Models.OpcionPago.LogoToNombre(op.Logo)"></i>
+                            </td>
+                            <td><strong>@op.Nombre</strong></td>
+                            <td>@(op.NombreMoneda ?? "-")</td>
+                            <td class="text-center">
+                                @if (op.Activa)
+                                {
+                                    <span class="badge bg-success">
+                                        <i class="fa-solid fa-check me-1"></i>Activa
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">
+                                        <i class="fa-solid fa-ban me-1"></i>Inactiva
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                <span class="utc-date" data-utc="@op.FechaUltEdicion.ToString("o")">
+                                    @op.FechaUltEdicion.ToString("dd/MM/yyyy HH:mm")
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-warning"
+                                            title="Editar"
+                                            onclick="editarOpcion(@op.IdOpcionPago, '@op.Nombre.Replace("'", "\\'")', @op.IdMoneda, '@(op.Logo ?? "")', @(op.Activa ? "true" : "false"))">
+                                        <i class="fa-solid fa-pencil"></i>
+                                    </button>
+                                    <form method="post" asp-page-handler="ToggleActiva" class="d-inline">
+                                        <input type="hidden" name="IdOpcionPago" value="@op.IdOpcionPago" />
+                                        <input type="hidden" name="ActivaActual" value="@op.Activa" />
+                                        @if (op.Activa)
+                                        {
+                                            <button type="submit" class="btn btn-outline-secondary"
+                                                    title="Desactivar"
+                                                    onclick="return confirm('Desactivar \'@op.Nombre.Replace("'", "\\'")\'?')">
+                                                <i class="fa-solid fa-ban"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-outline-success"
+                                                    title="Activar"
+                                                    onclick="return confirm('Activar \'@op.Nombre.Replace("'", "\\'")\'?')">
+                                                <i class="fa-solid fa-check"></i>
+                                            </button>
+                                        }
+                                    </form>
+                                    <form method="post" asp-page-handler="Eliminar" class="d-inline">
+                                        <input type="hidden" name="IdOpcionPago" value="@op.IdOpcionPago" />
+                                        <button type="submit" class="btn btn-outline-danger"
+                                                title="Eliminar"
+                                                onclick="return confirm('Eliminar la opcion de pago \'@op.Nombre.Replace("'", "\\'")\'?')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Mapeo de logo a icono Font Awesome (sincronizado con OpcionPago.LogoToFaIcon)
+    var logoIconMap = {
+        '1': 'fa-brands fa-cc-amex',
+        '2': 'fa-brands fa-cc-mastercard',
+        '3': 'fa-brands fa-cc-visa',
+        '4': 'fa-solid fa-money-bill-wave',
+        '5': 'fa-solid fa-dollar-sign',
+        '6': 'fa-solid fa-building-columns',
+        '7': 'fa-solid fa-building-columns',
+        '8': 'fa-solid fa-money-check',
+        '9': 'fa-solid fa-building-columns',
+        '10': 'fa-solid fa-building-columns'
+    };
+
+    function updateIconPreview() {
+        var logo = document.getElementById('Logo').value;
+        var icon = logoIconMap[logo] || 'fa-solid fa-credit-card';
+        document.getElementById('iconPreview').innerHTML = '<i class="' + icon + '"></i>';
+    }
+
+    document.getElementById('Logo').addEventListener('change', updateIconPreview);
+
+    function editarOpcion(id, nombre, idMoneda, logo, activa) {
+        document.getElementById('IdOpcionPago').value = id;
+        document.getElementById('Nombre').value = nombre;
+        document.getElementById('IdMoneda').value = idMoneda;
+        document.getElementById('Logo').value = logo;
+        document.getElementById('Activa').checked = activa;
+        document.getElementById('formTitle').textContent = 'Editar Opcion de Pago #' + id;
+        document.getElementById('btnGuardar').innerHTML =
+            '<i class="fa-solid fa-floppy-disk me-1"></i>Actualizar';
+        updateIconPreview();
+        document.getElementById('Nombre').focus();
+    }
+
+    function resetForm() {
+        document.getElementById('IdOpcionPago').value = '0';
+        document.getElementById('Nombre').value = '';
+        document.getElementById('IdMoneda').selectedIndex = 0;
+        document.getElementById('Logo').selectedIndex = 0;
+        document.getElementById('Activa').checked = true;
+        document.getElementById('formTitle').textContent = 'Nueva Opcion de Pago';
+        document.getElementById('btnGuardar').innerHTML =
+            '<i class="fa-solid fa-floppy-disk me-1"></i>Registrar';
+        updateIconPreview();
+        document.getElementById('Nombre').focus();
+    }
+
+    // Preview inicial
+    updateIconPreview();
+</script>
+}
