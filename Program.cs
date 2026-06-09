@@ -32,33 +32,55 @@ var amlConfig = new AmlConfig();
 builder.Configuration.GetSection("AmlConfig").Bind(amlConfig);
 builder.Services.AddSingleton(amlConfig);
 
-// Catalog Service (Grupos, Monedas, Defaults, etc.)
-var diamondsConnStr = builder.Configuration.GetConnectionString("DiamondsDb")!;
-builder.Services.AddScoped<CatalogService>(sp => new CatalogService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<CatalogService>>()));
-
-// AML Service
-builder.Services.AddScoped<AmlService>(sp => new AmlService(
-    diamondsConnStr,
-    sp.GetRequiredService<AmlConfig>(),
-    sp.GetRequiredService<ILogger<AmlService>>()));
-
-// Jerarquias Service (config etiquetas)
-builder.Services.AddScoped<JerarquiasService>(sp => new JerarquiasService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<JerarquiasService>>()));
-
 // SPPLD Config & Service
 var sppldConfig = new SppldConfig();
 builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
-// Etiquetas Service
-builder.Services.AddScoped<EtiquetaService>(sp => new EtiquetaService(
+// Diamonds DB connection string (compartido por todos los servicios)
+var diamondsConnStr = builder.Configuration.GetConnectionString("DiamondsDb")!;
+
+// Helper: registra un servicio con (connectionString, ILogger<T>)
+void AddDiamondsService<T>(IServiceCollection svc) where T : class =>
+    svc.AddScoped<T>(sp => (T)Activator.CreateInstance(typeof(T),
+        diamondsConnStr, sp.GetRequiredService<ILogger<T>>())!);
+
+// AML Service (constructor especial: connectionString + AmlConfig + ILogger)
+builder.Services.AddScoped<AmlService>(sp => new AmlService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<EtiquetaService>>()));
+    sp.GetRequiredService<AmlConfig>(),
+    sp.GetRequiredService<ILogger<AmlService>>()));
+
+// Servicios de dominio Diamonds
+AddDiamondsService<ActualizacionService>(builder.Services);
+AddDiamondsService<ActualizacionesService>(builder.Services);
+AddDiamondsService<BajasService>(builder.Services);
+AddDiamondsService<CambioStatusService>(builder.Services);
+AddDiamondsService<CatalogService>(builder.Services);
+AddDiamondsService<CatalogoRepetidasService>(builder.Services);
+AddDiamondsService<CompuestaService>(builder.Services);
+AddDiamondsService<ConsignacionService>(builder.Services);
+AddDiamondsService<DevolucionService>(builder.Services);
+AddDiamondsService<DevolucionesService>(builder.Services);
+AddDiamondsService<DiamantesService>(builder.Services);
+AddDiamondsService<DivisoresService>(builder.Services);
+AddDiamondsService<EtiquetaService>(builder.Services);
+AddDiamondsService<GruposService>(builder.Services);
+AddDiamondsService<InventarioFisicoService>(builder.Services);
+AddDiamondsService<InventoryService>(builder.Services);
+AddDiamondsService<JerarquiasService>(builder.Services);
+AddDiamondsService<LotesRepetidasService>(builder.Services);
+AddDiamondsService<MonedaService>(builder.Services);
+AddDiamondsService<NotasService>(builder.Services);
+AddDiamondsService<OpcionPagoService>(builder.Services);
+AddDiamondsService<PiezaService>(builder.Services);
+AddDiamondsService<ProveedorService>(builder.Services);
+AddDiamondsService<PuntoVentaService>(builder.Services);
+AddDiamondsService<RemisionService>(builder.Services);
+AddDiamondsService<SalesService>(builder.Services);
+AddDiamondsService<TiposCambioService>(builder.Services);
+AddDiamondsService<TransferService>(builder.Services);
 
 var app = builder.Build();
 
