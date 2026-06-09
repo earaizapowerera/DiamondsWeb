@@ -50,10 +50,10 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
-// Consignacion Service
-builder.Services.AddScoped<ConsignacionService>(sp => new ConsignacionService(
+// Transfer Service (Transferencias de Mercancía)
+builder.Services.AddScoped<TransferService>(sp => new TransferService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<ConsignacionService>>()));
+    sp.GetRequiredService<ILogger<TransferService>>()));
 
 var app = builder.Build();
 
