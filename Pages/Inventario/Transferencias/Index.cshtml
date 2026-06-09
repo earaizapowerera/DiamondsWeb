@@ -1,0 +1,424 @@
+@page
+@model DiamondsWeb.Pages.Inventario.Transferencias.IndexModel
+@{
+    ViewData["Title"] = "Transferencias de Mercancia";
+    var tiendaActual = Model.Tiendas.FirstOrDefault(t => t.IdTienda == Model.IdTienda);
+    var otherTiendas = Model.Tiendas.Where(t => t.IdTienda != Model.IdTienda).ToList();
+}
+
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.SuccessMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Selector de tienda -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row align-items-center g-2">
+            <div class="col-auto">
+                <label class="form-label mb-0 fw-bold"><i class="fa-solid fa-store me-1"></i>Tienda:</label>
+            </div>
+            <div class="col-auto">
+                <select name="IdTienda" class="form-select form-select-sm" onchange="this.form.submit()">
+                    @foreach (var t in Model.Tiendas)
+                    {
+                        if (t.IdTienda == Model.IdTienda)
+                        {
+                            <option value="@t.IdTienda" selected>@t.NombreTienda</option>
+                        }
+                        else
+                        {
+                            <option value="@t.IdTienda">@t.NombreTienda</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-auto">
+                <span class="badge bg-primary">ID: @Model.IdTienda</span>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabs de operaciones -->
+<ul class="nav nav-tabs mb-3" id="transferTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="recibir-tab" data-bs-toggle="tab" data-bs-target="#recibir" type="button">
+            <i class="fa-solid fa-download me-1"></i>Recibir
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="enviar-tab" data-bs-toggle="tab" data-bs-target="#enviar" type="button">
+            <i class="fa-solid fa-upload me-1"></i>Enviar Individual
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="repetidas-tab" data-bs-toggle="tab" data-bs-target="#repetidas" type="button">
+            <i class="fa-solid fa-boxes-stacked me-1"></i>Enviar Repetidas
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="log-tab" data-bs-toggle="tab" data-bs-target="#log" type="button">
+            <i class="fa-solid fa-clock-rotate-left me-1"></i>Log
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="transferTabContent">
+    <!-- Tab: Recibir -->
+    <div class="tab-pane fade show active" id="recibir" role="tabpanel">
+        <div class="card mb-3">
+            <div class="card-header bg-success text-white">
+                <i class="fa-solid fa-download me-2"></i>Recibir Pieza
+            </div>
+            <div class="card-body">
+                <form method="post" asp-page-handler="Recibir" class="row g-2 align-items-end">
+                    <input type="hidden" name="idTienda" value="@Model.IdTienda" />
+                    <div class="col-md-4">
+                        <label class="form-label">Codigo de Barras</label>
+                        <input type="text" name="codigoBarras" class="form-control" maxlength="8"
+                               placeholder="Escanear o escribir..." autofocus id="txtRecibir" />
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fa-solid fa-download me-1"></i>Recibir
+                        </button>
+                    </div>
+                </form>
+                <small class="text-muted mt-1 d-block">
+                    Ingrese el codigo de barras con el lector o teclado y presione Enter.
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Enviar Individual -->
+    <div class="tab-pane fade" id="enviar" role="tabpanel">
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <i class="fa-solid fa-upload me-2"></i>Enviar Pieza Individual
+            </div>
+            <div class="card-body">
+                <form method="post" asp-page-handler="Enviar" class="row g-2 align-items-end">
+                    <input type="hidden" name="idTienda" value="@Model.IdTienda" />
+                    <div class="col-md-3">
+                        <label class="form-label">Tienda Destino</label>
+                        <select name="idTiendaDestino" class="form-select" required>
+                            <option value="">-- Seleccionar --</option>
+                            @foreach (var t in otherTiendas)
+                            {
+                                <option value="@t.IdTienda">@t.NombreTienda</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Codigo de Barras</label>
+                        <input type="text" name="codigoBarras" class="form-control" maxlength="8"
+                               placeholder="Escanear o escribir..." id="txtEnviar" />
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-upload me-1"></i>Enviar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Enviar Repetidas -->
+    <div class="tab-pane fade" id="repetidas" role="tabpanel">
+        <div class="card mb-3">
+            <div class="card-header bg-warning text-dark">
+                <i class="fa-solid fa-boxes-stacked me-2"></i>Enviar Piezas Repetidas
+            </div>
+            <div class="card-body">
+                <form method="post" asp-page-handler="EnviarRepetidas" class="row g-2 align-items-end">
+                    <input type="hidden" name="idTienda" value="@Model.IdTienda" />
+                    <div class="col-md-2">
+                        <label class="form-label">Destino</label>
+                        <select name="idTiendaDestino" class="form-select" required>
+                            <option value="">-- Seleccionar --</option>
+                            @foreach (var t in otherTiendas)
+                            {
+                                <option value="@t.IdTienda">@t.NombreTienda</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Cantidad</label>
+                        <input type="number" name="cantidad" class="form-control" min="1" value="1" required />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Codigo de Barras</label>
+                        <input type="text" name="codigoBarras" class="form-control" maxlength="8"
+                               placeholder="Codigo repetida..." />
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fa-solid fa-paper-plane me-1"></i>Enviar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Log Reciente -->
+    <div class="tab-pane fade" id="log" role="tabpanel">
+        @if (Model.LogReciente.Any())
+        {
+        <div class="card mb-3">
+            <div class="card-header bg-secondary text-white">
+                <i class="fa-solid fa-clock-rotate-left me-2"></i>Ultimas Transferencias
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Codigo</th>
+                                <th>Origen</th>
+                                <th>Destino</th>
+                                <th class="text-center">Cant.</th>
+                                <th>Fecha</th>
+                                <th>Usuario</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var log in Model.LogReciente)
+                            {
+                            <tr>
+                                <td><code>@log.CodigoBarras</code></td>
+                                <td>@log.NombreOrigen</td>
+                                <td>@log.NombreDestino</td>
+                                <td class="text-center">@log.Cantidad</td>
+                                <td>
+                                    <span class="utc-date" data-utc="@log.FechaCaptura.ToString("o")">
+                                        @log.FechaCaptura.ToString("dd/MM/yyyy HH:mm")
+                                    </span>
+                                </td>
+                                <td>@log.IdUsuario</td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        }
+        else
+        {
+        <div class="text-center text-muted py-4">
+            <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+            No hay transferencias registradas.
+        </div>
+        }
+    </div>
+</div>
+
+<!-- Grids de piezas en transito -->
+<div class="row mt-3">
+    <!-- Piezas individuales en transito -->
+    <div class="col-lg-7 mb-3">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-route me-2"></i>Piezas en Transito (@Model.PiezasEnTransito.Count)</span>
+                @if (Model.PiezasEnTransito.Any())
+                {
+                <button type="button" class="btn btn-sm btn-outline-dark" onclick="imprimirTransferencias()">
+                    <i class="fa-solid fa-print me-1"></i>Imprimir
+                </button>
+                }
+            </div>
+            <div class="card-body p-0">
+                @if (Model.PiezasEnTransito.Any())
+                {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0" id="tblPiezasTransito">
+                        <thead class="table-light">
+                            <tr>
+                                <th><input type="checkbox" id="selectAllPiezas" onclick="toggleAll(this, 'chkPieza')" /></th>
+                                <th>Codigo</th>
+                                <th>Descripcion</th>
+                                <th>Destino</th>
+                                <th>Tipo</th>
+                                <th class="text-end">Precio</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in Model.PiezasEnTransito)
+                            {
+                            <tr>
+                                <td><input type="checkbox" class="chkPieza" value="@p.CodigoBarras" /></td>
+                                <td><code>@p.CodigoBarras</code></td>
+                                <td title="@p.Descripcion">@(p.Descripcion.Length > 40 ? p.Descripcion[..40] + "..." : p.Descripcion)</td>
+                                <td><span class="badge bg-info text-dark">@p.NombreLocalizacion</span></td>
+                                <td>
+                                    @if (p.TipoPieza == "Compuesta")
+                                    {<span class="badge bg-purple">Compuesta</span>}
+                                    else
+                                    {<span class="badge bg-secondary">Sencilla</span>}
+                                </td>
+                                <td class="text-end">@p.Precio.ToString("N0")</td>
+                                <td>@p.FechaUltEdicion?.ToString("dd/MM/yy")</td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+                else
+                {
+                <div class="text-center text-muted py-3">
+                    <small>No hay piezas individuales en transito.</small>
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Repetidas en transito -->
+    <div class="col-lg-5 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <i class="fa-solid fa-boxes-stacked me-2"></i>Repetidas en Transito (@Model.RepetidasEnTransito.Count)
+            </div>
+            <div class="card-body p-0">
+                @if (Model.RepetidasEnTransito.Any())
+                {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Codigo</th>
+                                <th>Descripcion</th>
+                                <th class="text-center">Cant.</th>
+                                <th>Destino</th>
+                                <th>Accion</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in Model.RepetidasEnTransito)
+                            {
+                            <tr>
+                                <td><code>@r.CodigoBarras</code></td>
+                                <td title="@r.Descripcion">@(r.Descripcion.Length > 30 ? r.Descripcion[..30] + "..." : r.Descripcion)</td>
+                                <td class="text-center"><strong>@r.Cantidad</strong></td>
+                                <td><span class="badge bg-info text-dark">@r.NombreLocalizacion</span></td>
+                                <td>
+                                    <form method="post" asp-page-handler="RecibirRepetidas" class="d-inline">
+                                        <input type="hidden" name="idLote" value="@r.IdLote" />
+                                        <input type="hidden" name="cantidad" value="@r.Cantidad" />
+                                        <input type="hidden" name="idTienda" value="@Model.IdTienda" />
+                                        <button type="submit" class="btn btn-sm btn-outline-success"
+                                                title="Recibir lote completo (@r.Cantidad pzas)"
+                                                onclick="return confirm('Recibir lote @r.IdLote: @r.Cantidad pzas de @r.CodigoBarras?')">
+                                            <i class="fa-solid fa-check"></i> Recibir
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+                else
+                {
+                <div class="text-center text-muted py-3">
+                    <small>No hay lotes de repetidas en transito.</small>
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Auto-submit en Enter para campos de codigo de barras (simula lector)
+    document.querySelectorAll('input[name="codigoBarras"]').forEach(function(input) {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.closest('form').submit();
+            }
+        });
+    });
+
+    // Select/deselect all checkboxes
+    function toggleAll(source, className) {
+        document.querySelectorAll('.' + className).forEach(function(cb) {
+            cb.checked = source.checked;
+        });
+    }
+
+    // Imprimir nota de transferencia con registros seleccionados (3 copias como el VB6)
+    function imprimirTransferencias() {
+        var selected = document.querySelectorAll('.chkPieza:checked');
+        if (selected.length === 0) {
+            alert('Seleccione al menos un registro para imprimir.');
+            return;
+        }
+
+        var rows = [];
+        selected.forEach(function(cb) {
+            var tr = cb.closest('tr');
+            var cells = tr.querySelectorAll('td');
+            rows.push({
+                codigo: cells[1].textContent.trim(),
+                descripcion: cells[2].textContent.trim(),
+                destino: cells[3].textContent.trim(),
+                tipo: cells[4].textContent.trim(),
+                precio: cells[5].textContent.trim(),
+                fecha: cells[6].textContent.trim()
+            });
+        });
+
+        var tienda = '@(tiendaActual?.NombreTienda ?? "")';
+        var ahora = new Date().toLocaleString('es-MX');
+
+        var html = '<html><head><title>Hoja de Transferencia</title>';
+        html += '<style>body{font-family:Arial,sans-serif;font-size:11px;margin:20px}';
+        html += 'h2{margin-bottom:5px}table{width:100%;border-collapse:collapse;margin:10px 0}';
+        html += 'th,td{border:1px solid #333;padding:4px 6px;text-align:left}th{background:#eee}';
+        html += '.firma{margin-top:40px;display:flex;justify-content:space-between}';
+        html += '.firma div{width:30%;border-top:1px solid #333;padding-top:5px;text-align:center}</style></head><body>';
+
+        // 3 copias como el VB6 original
+        for (var copy = 0; copy < 3; copy++) {
+            if (copy > 0) html += '<div style="page-break-before:always"></div>';
+            html += '<h2>Hoja de Transferencia</h2>';
+            html += '<p>Tienda: <strong>' + tienda + '</strong> &nbsp;|&nbsp; Fecha: ' + ahora;
+            html += ' &nbsp;|&nbsp; Copia ' + (copy + 1) + ' de 3</p>';
+            html += '<table><thead><tr><th>Codigo</th><th>Descripcion</th><th>Destino</th>';
+            html += '<th>Tipo</th><th>Precio</th><th>Fecha</th></tr></thead><tbody>';
+            rows.forEach(function(r) {
+                html += '<tr><td>' + r.codigo + '</td><td>' + r.descripcion + '</td>';
+                html += '<td>' + r.destino + '</td><td>' + r.tipo + '</td>';
+                html += '<td style="text-align:right">' + r.precio + '</td><td>' + r.fecha + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            html += '<div class="firma"><div>Envia<br><br></div><div>Intermediario<br><br></div><div>Recibe<br><br></div></div>';
+        }
+        html += '</body></html>';
+
+        var w = window.open('', '_blank');
+        w.document.write(html);
+        w.document.close();
+        w.print();
+    }
+</script>
+}
