@@ -50,15 +50,10 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
-// Servicios de dominio Diamonds
-builder.Services.AddScoped<CatalogService>(sp => new CatalogService(
-    diamondsConnStr, sp.GetRequiredService<ILogger<CatalogService>>()));
-builder.Services.AddScoped<InventoryService>(sp => new InventoryService(
-    diamondsConnStr, sp.GetRequiredService<ILogger<InventoryService>>()));
-builder.Services.AddScoped<SalesService>(sp => new SalesService(
-    diamondsConnStr, sp.GetRequiredService<ILogger<SalesService>>()));
-builder.Services.AddScoped<ActualizacionesService>(sp => new ActualizacionesService(
-    diamondsConnStr, sp.GetRequiredService<ILogger<ActualizacionesService>>()));
+// Actualización Pieza por Pieza Service
+builder.Services.AddScoped<ActualizacionService>(sp => new ActualizacionService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<ActualizacionService>>()));
 
 var app = builder.Build();
 
