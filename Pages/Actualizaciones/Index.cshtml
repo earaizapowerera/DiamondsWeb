@@ -235,7 +235,7 @@
                     <!-- Panel de Costos (visible al seleccionar pieza) -->
                     <div class="costos-panel mt-2" id="panelCostos" style="display:none;">
                         <form method="post" asp-page-handler="AsignarPieza" id="formAsignar">
-                            <input type="hidden" name="idFactura" value="@Model.FacturaActual.IdFactura" />
+                            <input type="hidden" name="idFactura" value="@Model.FacturaActual!.IdFactura" />
                             <input type="hidden" name="codigoBarras" id="costCodigo" />
                             <input type="hidden" name="filtroPiezas" value="@Model.FiltroPiezas" />
                             <div class="mb-1">
@@ -284,7 +284,7 @@
                         <div class="remision-group mt-2">
                             <form method="post" asp-page-handler="AsignarRemision"
                                   onsubmit="return confirm('¿Asignar toda la remisión a esta factura?');">
-                                <input type="hidden" name="idFactura" value="@Model.FacturaActual.IdFactura" />
+                                <input type="hidden" name="idFactura" value="@Model.FacturaActual!.IdFactura" />
                                 <input type="hidden" name="filtroPiezas" value="@Model.FiltroPiezas" />
                                 <div class="row g-2 align-items-end">
                                     <div class="col-auto">
@@ -338,6 +338,7 @@
                             <thead class="table-light sticky-top">
                                 <tr>
                                     <th>Código</th>
+                                    <th>Descripción</th>
                                     <th>Obs2</th>
                                     <th>Remisión</th>
                                     <th class="text-end">CB Pieza</th>
@@ -353,10 +354,12 @@
                                         data-obs2="@p.Obs2"
                                         data-cb="@(p.CBPieza ?? 0)"
                                         data-cn="@(p.CNPieza ?? 0)"
-                                        data-tc="@(p.TCCosto ?? 1)">
+                                        data-tc="@(p.TCCosto ?? 1)"
+                                        data-desc-pieza="@(p.DescPieza ?? 0)">
                                         <td><code>@p.CodigoBarras</code></td>
+                                        <td><small>@p.Descripcion</small></td>
                                         <td>@p.Obs2</td>
-                                        <td>@p.IdRemision</td>
+                                        <td>@(p.Remision ?? p.IdRemision?.ToString())</td>
                                         <td class="text-end">@(p.CBPieza?.ToString("N2") ?? "-")</td>
                                         <td class="text-end">@(p.CNPieza?.ToString("N2") ?? "-")</td>
                                         <td class="text-end">@(p.TCCosto?.ToString("N4") ?? "1.0000")</td>
@@ -370,7 +373,7 @@
             else if (!string.IsNullOrWhiteSpace(Model.FiltroPiezas))
             {
                 <div class="alert alert-info">
-                    <i class="fa-solid fa-info-circle me-2"></i>No se encontraron piezas disponibles con "<strong>@Model.FiltroPiezas</strong>".
+                    <i class="fa-solid fa-info-circle me-2"></i>No se encontraron piezas disponibles con &quot;<strong>@Model.FiltroPiezas</strong>&quot;.
                 </div>
             }
 
@@ -552,6 +555,8 @@
     var costNetoMN = document.getElementById('costNetoMN');
     var ultimoTC = null; // Recordar último TC usado (VB6: UltimoTipoCambio)
 
+    var descPiezaActual = 0; // Descuento de la pieza seleccionada
+
     function seleccionarPieza(row) {
         // Deseleccionar otras
         document.querySelectorAll('.pieza-row.selected').forEach(function(r) { r.classList.remove('selected'); });
@@ -562,6 +567,7 @@
         var cb = parseFloat(row.dataset.cb) || 0;
         var cn = parseFloat(row.dataset.cn) || 0;
         var tc = parseFloat(row.dataset.tc) || 1;
+        descPiezaActual = parseFloat(row.dataset.descPieza) || 0;
 
         // Si hay un TC guardado de la operación anterior, usarlo
         if (ultimoTC !== null && ultimoTC > 0) tc = ultimoTC;
@@ -596,8 +602,14 @@
         });
     }
 
-    // Recalcular al cambiar costos
-    if (costCB) costCB.addEventListener('input', recalcularMN);
+    // Recalcular CN automáticamente al cambiar CB (VB6: txtCN = txtCB * (1 - DescPieza/100))
+    if (costCB) costCB.addEventListener('input', function() {
+        if (descPiezaActual > 0) {
+            var cb = parseFloat(costCB.value) || 0;
+            costCN.value = (cb * (1 - descPiezaActual / 100)).toFixed(2);
+        }
+        recalcularMN();
+    });
     if (costCN) costCN.addEventListener('input', recalcularMN);
     if (costTC) costTC.addEventListener('input', recalcularMN);
 

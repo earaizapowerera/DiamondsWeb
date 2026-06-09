@@ -114,8 +114,8 @@ public class ActualizacionesService
                     IdRazonSocialProveedor, FechaFactura, FechaCaptura,
                     FechaUltEdicion, IdUsuario, IdTienda, Pedimento)
                 VALUES (@IdFactura, @FolioFactura, @Proveedor,
-                    @IdRazonSocialProveedor, @FechaFactura, GETUTCDATE(),
-                    GETUTCDATE(), @IdUsuario, @IdTienda, @Pedimento)",
+                    @IdRazonSocialProveedor, @FechaFactura, GETDATE(),
+                    GETDATE(), @IdUsuario, @IdTienda, @Pedimento)",
                 new
                 {
                     IdFactura = nuevoId,
@@ -152,7 +152,7 @@ public class ActualizacionesService
                 Proveedor = @Proveedor,
                 IdRazonSocialProveedor = @IdRazonSocialProveedor,
                 FechaFactura = @FechaFactura,
-                FechaUltEdicion = GETUTCDATE(),
+                FechaUltEdicion = GETDATE(),
                 Pedimento = @Pedimento
             WHERE IdFactura = @IdFactura",
             new
@@ -290,7 +290,7 @@ public class ActualizacionesService
                 CBFactura = @CBFactura,
                 CNFactura = @CNFactura,
                 DescFactura = @DescFactura,
-                FechaUltEdicion = GETUTCDATE()
+                FechaUltEdicion = GETDATE()
             WHERE CodigoBarras = @CodigoBarras",
             new
             {
@@ -310,7 +310,7 @@ public class ActualizacionesService
                 CBFactura = @CBFactura,
                 CNFactura = @CNFactura,
                 DescFactura = @DescFactura,
-                FechaUltEdicion = GETUTCDATE()
+                FechaUltEdicion = GETDATE()
             WHERE CodigoBarras = @CodigoBarras",
             new
             {
@@ -325,11 +325,11 @@ public class ActualizacionesService
         // Actualizar ultimosmovimientos
         await db.ExecuteAsync(@"
             IF EXISTS (SELECT TOP 1 1 FROM ultimosmovimientos WHERE tabla='Piezas' AND idtienda=1)
-                UPDATE ultimosmovimientos SET FechaMovimiento = GETUTCDATE()
+                UPDATE ultimosmovimientos SET FechaMovimiento = GETDATE()
                 WHERE tabla='Piezas' AND idtienda=1
             ELSE
                 INSERT INTO ultimosmovimientos (idtienda, tabla, FechaMovimiento)
-                VALUES (1, 'Piezas', GETUTCDATE())");
+                VALUES (1, 'Piezas', GETDATE())");
 
         _logger.LogInformation("Pieza {CB} asignada a factura {IdFactura}",
             req.CodigoBarras, req.IdFactura);
@@ -354,7 +354,7 @@ public class ActualizacionesService
                 TCCosto = @TC,
                 CBFactura = @TC * CBPieza,
                 CNFactura = @TC * CNPieza,
-                FechaUltEdicion = GETUTCDATE()
+                FechaUltEdicion = GETDATE()
             WHERE IdRemision = @IdRemision
               AND (IdFactura IS NULL OR IdFactura <> @IdFactura)",
             new { IdFactura = idFactura, TC = tipoCambio, IdRemision = idRemision });
@@ -362,11 +362,11 @@ public class ActualizacionesService
         // Actualizar ultimosmovimientos
         await db.ExecuteAsync(@"
             IF EXISTS (SELECT TOP 1 1 FROM ultimosmovimientos WHERE tabla='Piezas' AND idtienda=1)
-                UPDATE ultimosmovimientos SET FechaMovimiento = GETUTCDATE()
+                UPDATE ultimosmovimientos SET FechaMovimiento = GETDATE()
                 WHERE tabla='Piezas' AND idtienda=1
             ELSE
                 INSERT INTO ultimosmovimientos (idtienda, tabla, FechaMovimiento)
-                VALUES (1, 'Piezas', GETUTCDATE())");
+                VALUES (1, 'Piezas', GETDATE())");
 
         _logger.LogInformation("Remisión {IdRem} ({Rows} piezas) asignada a factura {IdFact}",
             idRemision, rows, idFactura);
@@ -393,18 +393,18 @@ public class ActualizacionesService
         await db.ExecuteAsync(@"
             UPDATE piezas SET
                 IdFactura = NULL,
-                FechaUltEdicion = GETUTCDATE()
+                FechaUltEdicion = GETDATE()
             WHERE CodigoBarras = @cb AND IdFactura = @idFactura",
             new { cb = codigoBarras, idFactura });
 
         // Actualizar ultimosmovimientos
         await db.ExecuteAsync(@"
             IF EXISTS (SELECT TOP 1 1 FROM ultimosmovimientos WHERE tabla='Piezas' AND idtienda=1)
-                UPDATE ultimosmovimientos SET FechaMovimiento = GETUTCDATE()
+                UPDATE ultimosmovimientos SET FechaMovimiento = GETDATE()
                 WHERE tabla='Piezas' AND idtienda=1
             ELSE
                 INSERT INTO ultimosmovimientos (idtienda, tabla, FechaMovimiento)
-                VALUES (1, 'Piezas', GETUTCDATE())");
+                VALUES (1, 'Piezas', GETDATE())");
 
         _logger.LogInformation("Pieza {CB} quitada de factura {IdFactura}",
             codigoBarras, idFactura);
