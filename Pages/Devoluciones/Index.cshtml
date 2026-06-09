@@ -1,0 +1,380 @@
+@page
+@model DiamondsWeb.Pages.Devoluciones.IndexModel
+@{
+    ViewData["Title"] = "Devoluciones a Proveedor";
+    var pendientes = Model.Devoluciones.Where(d => string.IsNullOrWhiteSpace(d.Remision)).ToList();
+    var conRemision = Model.Devoluciones.Where(d => !string.IsNullOrWhiteSpace(d.Remision)).ToList();
+}
+
+<!-- Alertas -->
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.MensajeExito
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.MensajeError
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Info Panel -->
+<div class="info-panel">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h6><i class="fa-solid fa-truck-arrow-right me-2"></i>Devoluciones a Proveedor</h6>
+            <small class="text-muted">Registro de piezas devueltas al proveedor con remision o nota de credito</small>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrar">
+                <i class="fa-solid fa-plus me-1"></i>Nueva Devolucion
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-primary-custom">
+            <div class="stat-number">@Model.Stats.TotalDevoluciones</div>
+            <div class="stat-label"><i class="fa-solid fa-boxes-stacked me-1"></i>Total devoluciones</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-warning-custom">
+            <div class="stat-number">@Model.Stats.PendientesRemision</div>
+            <div class="stat-label"><i class="fa-solid fa-clock me-1"></i>Pendientes de remision</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-success-custom">
+            <div class="stat-number">@Model.Stats.ConRemision</div>
+            <div class="stat-label"><i class="fa-solid fa-check me-1"></i>Con remision aplicada</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-info-custom">
+            <div class="stat-number">@Model.Stats.DevolucionesHoy</div>
+            <div class="stat-label"><i class="fa-solid fa-calendar-day me-1"></i>Hoy</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="filter-panel">
+    <form method="get">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label"><small>Buscar</small></label>
+                <input type="text" class="form-control form-control-sm" name="BuscarTexto"
+                       value="@Model.BuscarTexto" placeholder="Codigo, descripcion, motivo, proveedor..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Estado de remision</small></label>
+                <select class="form-select form-select-sm" name="FiltroRemision">
+                    <option value="" selected="@(string.IsNullOrEmpty(Model.FiltroRemision))">Todas</option>
+                    <option value="pendiente" selected="@(Model.FiltroRemision == "pendiente")">Pendientes</option>
+                    <option value="aplicada" selected="@(Model.FiltroRemision == "aplicada")">Con remision</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-3 text-end">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnAplicarRemision"
+                        data-bs-toggle="modal" data-bs-target="#modalAplicarRemision" disabled>
+                    <i class="fa-solid fa-file-invoice me-1"></i>Aplicar Remision (<span id="conteoSeleccion">0</span>)
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla de Devoluciones -->
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-list me-2"></i>Devoluciones (@Model.Devoluciones.Count)</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-dev table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width:40px;">
+                            <input type="checkbox" id="chkSelectAll" title="Seleccionar todo" />
+                        </th>
+                        <th>Codigo</th>
+                        <th>Descripcion</th>
+                        <th>Motivo</th>
+                        <th class="text-end">Peso</th>
+                        <th class="text-end">Costo B.</th>
+                        <th class="text-end">Costo N.</th>
+                        <th>Proveedor</th>
+                        <th>Remision</th>
+                        <th>Fecha</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Devoluciones.Any())
+                    {
+                    <tr>
+                        <td colspan="11" class="text-center text-muted py-4">
+                            <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                            No hay devoluciones registradas
+                        </td>
+                    </tr>
+                    }
+                    @foreach (var d in Model.Devoluciones)
+                    {
+                        var sinRemision = string.IsNullOrWhiteSpace(d.Remision);
+                    <tr class="@(sinRemision ? "" : "table-light")">
+                        <td class="text-center">
+                            @if (sinRemision)
+                            {
+                                <input type="checkbox" class="chk-devolucion" value="@d.CodigoBarras" />
+                            }
+                        </td>
+                        <td><code>@d.CodigoBarras</code></td>
+                        <td>@(d.Descripcion ?? "-")</td>
+                        <td>@(d.MotivoDevolucion ?? "-")</td>
+                        <td class="text-end">@(d.Peso?.ToString("N2") ?? "-")</td>
+                        <td class="text-end">@(d.CBTotal?.ToString("C2") ?? "-")</td>
+                        <td class="text-end">@(d.CNTotal?.ToString("C2") ?? "-")</td>
+                        <td>@(d.NombreProveedor ?? "-")</td>
+                        <td>
+                            @if (sinRemision)
+                            {
+                                <span class="badge bg-warning text-dark"><i class="fa-solid fa-clock me-1"></i>Pendiente</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">@d.Remision</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="utc-date" data-utc="@d.FechaDevolucion.ToString("o")">
+                                @d.FechaDevolucion.ToString("dd/MM/yyyy HH:mm")
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <form method="post" asp-page-handler="Eliminar" class="d-inline">
+                                <input type="hidden" name="codigoBarras" value="@d.CodigoBarras" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        title="Eliminar devolucion y restaurar pieza"
+                                        onclick="return confirm('Eliminar devolucion de @d.CodigoBarras y restaurar la pieza al inventario?')">
+                                    <i class="fa-solid fa-rotate-left"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Registrar Devolucion -->
+<div class="modal fade" id="modalRegistrar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Registrar">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fa-solid fa-plus me-2"></i>Nueva Devolucion</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Motivo de devolucion <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="motivo" id="inputMotivo"
+                               placeholder="Ej: Consignacion Devolucion, Defecto, etc." required maxlength="100" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Remision o Nota de Credito</label>
+                        <input type="text" class="form-control" name="remision" id="inputRemision"
+                               placeholder="Opcional - puede aplicarse despues" maxlength="50" />
+                        <div class="form-text">Si se deja vacio, la devolucion quedara pendiente de remision.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Codigo de Barras <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="codigoBarras" id="inputCodigoBarras"
+                                   placeholder="Escanear o escribir codigo" required maxlength="8"
+                                   autofocus autocomplete="off" />
+                            <button type="button" class="btn btn-outline-secondary" id="btnValidar">
+                                <i class="fa-solid fa-barcode"></i>
+                            </button>
+                        </div>
+                        <div id="validacionPieza" class="form-text"></div>
+                    </div>
+                    <div id="infoPieza" class="d-none">
+                        <div class="card bg-light">
+                            <div class="card-body py-2">
+                                <div class="row">
+                                    <div class="col-6"><small class="text-muted">Descripcion:</small><br/><strong id="piezaDesc">-</strong></div>
+                                    <div class="col-3"><small class="text-muted">Precio:</small><br/><strong id="piezaPrecio">-</strong></div>
+                                    <div class="col-3"><small class="text-muted">Captura:</small><br/><strong id="piezaFecha">-</strong></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btnRegistrar">
+                        <i class="fa-solid fa-check me-1"></i>Registrar Devolucion
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Aplicar Remision -->
+<div class="modal fade" id="modalAplicarRemision" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="AplicarRemision" id="formAplicarRemision">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fa-solid fa-file-invoice me-2"></i>Aplicar Remision</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Remision o Nota de Credito <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="remision" id="inputRemisionAplicar"
+                               placeholder="Ej: IDREM 111222" required maxlength="50" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Devoluciones seleccionadas:</label>
+                        <div id="listaSeleccionados" class="small"></div>
+                    </div>
+                    <!-- Hidden inputs for selected items (populated by JS) -->
+                    <div id="hiddenSeleccionados"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa-solid fa-check me-1"></i>Aplicar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // === Seleccion de checkboxes para aplicar remision ===
+    var checkAll = document.getElementById('chkSelectAll');
+    var btnAplicar = document.getElementById('btnAplicarRemision');
+    var conteoSpan = document.getElementById('conteoSeleccion');
+
+    function getChecked() {
+        return document.querySelectorAll('.chk-devolucion:checked');
+    }
+
+    function actualizarConteo() {
+        var checked = getChecked();
+        conteoSpan.textContent = checked.length;
+        btnAplicar.disabled = checked.length === 0;
+    }
+
+    if (checkAll) {
+        checkAll.addEventListener('change', function () {
+            document.querySelectorAll('.chk-devolucion').forEach(function (cb) {
+                cb.checked = checkAll.checked;
+            });
+            actualizarConteo();
+        });
+    }
+
+    document.querySelectorAll('.chk-devolucion').forEach(function (cb) {
+        cb.addEventListener('change', actualizarConteo);
+    });
+
+    // Al abrir modal de aplicar remision, poblar hidden inputs
+    var modalAplicar = document.getElementById('modalAplicarRemision');
+    if (modalAplicar) {
+        modalAplicar.addEventListener('show.bs.modal', function () {
+            var checked = getChecked();
+            var listaDiv = document.getElementById('listaSeleccionados');
+            var hiddenDiv = document.getElementById('hiddenSeleccionados');
+            listaDiv.innerHTML = '';
+            hiddenDiv.innerHTML = '';
+            checked.forEach(function (cb) {
+                var row = cb.closest('tr');
+                var desc = row.cells[2].textContent.trim();
+                listaDiv.innerHTML += '<div><code>' + cb.value + '</code> - ' + desc + '</div>';
+                hiddenDiv.innerHTML += '<input type="hidden" name="seleccionados" value="' + cb.value + '" />';
+            });
+        });
+    }
+
+    // === Validar pieza por AJAX ===
+    var inputCB = document.getElementById('inputCodigoBarras');
+    var btnValidar = document.getElementById('btnValidar');
+    var validacionDiv = document.getElementById('validacionPieza');
+    var infoDiv = document.getElementById('infoPieza');
+
+    function validarPieza() {
+        var cb = inputCB.value.trim();
+        if (!cb) {
+            validacionDiv.innerHTML = '<span class="text-warning">Ingrese un codigo de barras</span>';
+            infoDiv.classList.add('d-none');
+            return;
+        }
+        validacionDiv.innerHTML = '<span class="text-muted">Validando...</span>';
+
+        fetch('?handler=ValidarPieza&cb=' + encodeURIComponent(cb))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.existe) {
+                    validacionDiv.innerHTML = '<span class="text-success"><i class="fa-solid fa-check-circle me-1"></i>Pieza encontrada</span>';
+                    document.getElementById('piezaDesc').textContent = data.descripcion || '-';
+                    document.getElementById('piezaPrecio').textContent = formatMXN(data.precio);
+                    document.getElementById('piezaFecha').textContent = data.fechaCaptura;
+                    infoDiv.classList.remove('d-none');
+                } else {
+                    validacionDiv.innerHTML = '<span class="text-danger"><i class="fa-solid fa-times-circle me-1"></i>' + data.mensaje + '</span>';
+                    infoDiv.classList.add('d-none');
+                }
+            })
+            .catch(function () {
+                validacionDiv.innerHTML = '<span class="text-danger">Error de conexion</span>';
+            });
+    }
+
+    if (btnValidar) btnValidar.addEventListener('click', validarPieza);
+    if (inputCB) {
+        inputCB.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                validarPieza();
+            }
+        });
+        // Auto-validar al pegar o al perder foco si tiene contenido
+        inputCB.addEventListener('blur', function () {
+            if (inputCB.value.trim()) validarPieza();
+        });
+    }
+
+    // Focus motivo al abrir modal
+    var modalRegistrar = document.getElementById('modalRegistrar');
+    if (modalRegistrar) {
+        modalRegistrar.addEventListener('shown.bs.modal', function () {
+            document.getElementById('inputMotivo').focus();
+        });
+    }
+});
+</script>
+}
