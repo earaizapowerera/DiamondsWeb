@@ -1,0 +1,212 @@
+@page
+@model DiamondsWeb.Pages.Proveedores.RazonesSocialesModel
+@{
+    ViewData["Title"] = "Razones Sociales de Proveedores";
+}
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.MensajeExito
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.MensajeError
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Filtro de búsqueda -->
+<div class="filter-panel mb-3">
+    <form method="get">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label"><small>Buscar por razón social o RFC</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Nombre, RFC..." />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-5 text-end">
+                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalRazonSocial"
+                        onclick="limpiarFormulario()">
+                    <i class="fa-solid fa-plus me-1"></i>Nueva Razón Social
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla de razones sociales -->
+<div class="card">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-building me-2"></i>Razones Sociales (@Model.RazonesSociales.Count)</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:60px">ID</th>
+                        <th>Razón Social</th>
+                        <th>RFC</th>
+                        <th>Calle</th>
+                        <th>Colonia</th>
+                        <th>Municipio</th>
+                        <th>Estado</th>
+                        <th>C.P.</th>
+                        <th style="width:140px" class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.RazonesSociales.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron razones sociales
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var rs in Model.RazonesSociales)
+                    {
+                        <tr>
+                            <td>@rs.IdRazonSocialProveedor</td>
+                            <td><strong>@rs.RazonSocialProveedorNombre</strong></td>
+                            <td>@(string.IsNullOrWhiteSpace(rs.RFC) ? "-" : rs.RFC)</td>
+                            <td>@(string.IsNullOrWhiteSpace(rs.Calle) ? "-" : rs.Calle)</td>
+                            <td>@(string.IsNullOrWhiteSpace(rs.Colonia) ? "-" : rs.Colonia)</td>
+                            <td>@(string.IsNullOrWhiteSpace(rs.Municipio) ? "-" : rs.Municipio)</td>
+                            <td>@(string.IsNullOrWhiteSpace(rs.Estado) ? "-" : rs.Estado)</td>
+                            <td>@(string.IsNullOrWhiteSpace(rs.CodigoPostal) ? "-" : rs.CodigoPostal)</td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary" title="Editar"
+                                            data-bs-toggle="modal" data-bs-target="#modalRazonSocial"
+                                            onclick="editarRazonSocial(@rs.IdRazonSocialProveedor, '@System.Web.HttpUtility.JavaScriptStringEncode(rs.RazonSocialProveedorNombre)', '@System.Web.HttpUtility.JavaScriptStringEncode(rs.RFC ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(rs.Calle ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(rs.CodigoPostal ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(rs.Colonia ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(rs.Municipio ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(rs.Estado ?? "")')">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <a href="/Proveedores/Asignaciones?idRazonSocial=@rs.IdRazonSocialProveedor"
+                                       class="btn btn-outline-info" title="Ver proveedores asignados">
+                                        <i class="fa-solid fa-link"></i>
+                                    </a>
+                                    <form method="post" asp-page-handler="Eliminar" class="d-inline">
+                                        <input type="hidden" name="id" value="@rs.IdRazonSocialProveedor" />
+                                        <button type="submit" class="btn btn-outline-danger" title="Eliminar"
+                                                onclick="return confirm('¿Eliminar la razón social @System.Web.HttpUtility.JavaScriptStringEncode(rs.RazonSocialProveedorNombre)?')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Link a asignaciones -->
+<div class="mt-3 text-end">
+    <a href="/Proveedores/Asignaciones" class="btn btn-outline-dark btn-sm">
+        <i class="fa-solid fa-link me-1"></i>Ver todas las asignaciones
+    </a>
+</div>
+
+<!-- Modal Crear/Editar -->
+<div class="modal fade" id="modalRazonSocial" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Guardar">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalLabel">
+                        <i class="fa-solid fa-building me-2"></i>
+                        <span id="modalTitulo">Nueva Razón Social</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="IdRazonSocialProveedor" id="formId" value="0" />
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Razón Social <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="RazonSocial" id="formRazonSocial"
+                                   required maxlength="50" placeholder="Nombre de la razón social" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">RFC</label>
+                            <input type="text" class="form-control" name="RFC" id="formRFC"
+                                   maxlength="13" placeholder="RFC (máx. 13)" />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Calle</label>
+                            <input type="text" class="form-control" name="Calle" id="formCalle"
+                                   maxlength="50" placeholder="Calle y número" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Código Postal</label>
+                            <input type="text" class="form-control" name="CodigoPostal" id="formCP"
+                                   maxlength="5" pattern="\d{0,5}" placeholder="C.P." />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Colonia</label>
+                            <input type="text" class="form-control" name="Colonia" id="formColonia"
+                                   maxlength="30" placeholder="Colonia" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Municipio</label>
+                            <input type="text" class="form-control" name="Municipio" id="formMunicipio"
+                                   maxlength="30" placeholder="Municipio" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Estado</label>
+                            <input type="text" class="form-control" name="Estado" id="formEstado"
+                                   maxlength="26" placeholder="Estado" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-save me-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function limpiarFormulario() {
+        document.getElementById('formId').value = '0';
+        document.getElementById('formRazonSocial').value = '';
+        document.getElementById('formRFC').value = '';
+        document.getElementById('formCalle').value = '';
+        document.getElementById('formCP').value = '';
+        document.getElementById('formColonia').value = '';
+        document.getElementById('formMunicipio').value = '';
+        document.getElementById('formEstado').value = '';
+        document.getElementById('modalTitulo').textContent = 'Nueva Razón Social';
+    }
+
+    function editarRazonSocial(id, nombre, rfc, calle, cp, colonia, municipio, estado) {
+        document.getElementById('formId').value = id;
+        document.getElementById('formRazonSocial').value = nombre;
+        document.getElementById('formRFC').value = rfc;
+        document.getElementById('formCalle').value = calle;
+        document.getElementById('formCP').value = cp;
+        document.getElementById('formColonia').value = colonia;
+        document.getElementById('formMunicipio').value = municipio;
+        document.getElementById('formEstado').value = estado;
+        document.getElementById('modalTitulo').textContent = 'Editar Razón Social #' + id;
+    }
+</script>
+}
