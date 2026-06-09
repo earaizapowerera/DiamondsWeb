@@ -39,6 +39,11 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
+// Bajas Service (Consulta de Piezas Vendidas)
+builder.Services.AddScoped<BajasService>(sp => new BajasService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<BajasService>>()));
+
 // SPPLD Config & Service
 var sppldConfig = new SppldConfig();
 builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
