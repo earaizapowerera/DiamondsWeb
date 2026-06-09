@@ -47,6 +47,30 @@ public class IndexModel : PageModel
     {
         try
         {
+            if (NuevoDesde < 0 || NuevoHasta < 0)
+            {
+                TempData["Error"] = "Los valores de precio no pueden ser negativos.";
+                return RedirectToPage();
+            }
+
+            if (NuevoDesde >= NuevoHasta)
+            {
+                TempData["Error"] = "El valor 'Desde' debe ser menor que 'Hasta'.";
+                return RedirectToPage();
+            }
+
+            if (NuevoUtilidadExtra <= 0)
+            {
+                TempData["Error"] = "La utilidad extra debe ser mayor a 0.";
+                return RedirectToPage();
+            }
+
+            if (await _catalogService.ExisteRangoSolapadoAsync(NuevoDesde, NuevoHasta))
+            {
+                TempData["Error"] = $"El rango {NuevoDesde:N2} - {NuevoHasta:N2} se solapa con un rango existente.";
+                return RedirectToPage();
+            }
+
             var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
             await _catalogService.CrearUtilidadExtraPrecioGramoAsync(NuevoDesde, NuevoHasta, NuevoUtilidadExtra, idUsuario);
             TempData["Success"] = "Rango creado exitosamente.";
@@ -67,6 +91,30 @@ public class IndexModel : PageModel
             if (EditId == null)
             {
                 TempData["Error"] = "Datos incompletos para editar.";
+                return RedirectToPage();
+            }
+
+            if (EditDesde < 0 || EditHasta < 0)
+            {
+                TempData["Error"] = "Los valores de precio no pueden ser negativos.";
+                return RedirectToPage();
+            }
+
+            if (EditDesde >= EditHasta)
+            {
+                TempData["Error"] = "El valor 'Desde' debe ser menor que 'Hasta'.";
+                return RedirectToPage();
+            }
+
+            if (EditUtilidadExtra <= 0)
+            {
+                TempData["Error"] = "La utilidad extra debe ser mayor a 0.";
+                return RedirectToPage();
+            }
+
+            if (await _catalogService.ExisteRangoSolapadoAsync(EditDesde, EditHasta, EditId.Value))
+            {
+                TempData["Error"] = $"El rango {EditDesde:N2} - {EditHasta:N2} se solapa con otro rango existente.";
                 return RedirectToPage();
             }
 
