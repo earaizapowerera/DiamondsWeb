@@ -1,0 +1,571 @@
+@page
+@model DiamondsWeb.Pages.Piezas.AltaModel
+@{
+    ViewData["Title"] = Model.EsEdicion ? $"Editar Pieza {Model.Cb}" : "Alta de Pieza";
+}
+
+<link rel="stylesheet" href="/css/piezas.css?v=20260609" />
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.MensajeExito
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.MensajeError
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h5 class="mb-0">
+            <i class="fa-solid fa-gem me-2"></i>
+            @if (Model.EsEdicion)
+            {
+                <span>Editar Pieza <code>@Model.Cb</code></span>
+            }
+            else
+            {
+                <span>Alta de Pieza Sencilla</span>
+            }
+        </h5>
+        @if (Model.RemisionActual != null)
+        {
+            <small class="text-muted">
+                Remision #@Model.RemisionActual.IdRemision - @Model.RemisionActual.NombreProveedor
+                (@Model.RemisionActual.NumeroRemision)
+            </small>
+        }
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-page="Index" asp-route-IdRemision="@Model.IdRemision" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-arrow-left me-1"></i>Regresar
+        </a>
+    </div>
+</div>
+
+<form method="post" asp-page-handler="Guardar" id="formPieza">
+    <input type="hidden" asp-for="Cb" />
+    <input type="hidden" asp-for="IdRemision" />
+    <input type="hidden" asp-for="Pieza.IdRemision" />
+    <input type="hidden" asp-for="Pieza.IdFactura" />
+    <input type="hidden" asp-for="Pieza.IdTienda" value="1" />
+    <input type="hidden" asp-for="Pieza.IdLocalizacion" value="1" />
+    <input type="hidden" asp-for="TabCaracteristica" id="hidTabCaracteristica" />
+    <input type="hidden" asp-for="TabCosto" id="hidTabCosto" />
+
+    <div class="row g-3">
+        <!-- Columna izquierda: Datos generales + Costos -->
+        <div class="col-lg-8">
+            <!-- Datos generales -->
+            <div class="card mb-3">
+                <div class="card-header py-2">
+                    <i class="fa-solid fa-circle-info me-1"></i>Datos Generales
+                </div>
+                <div class="card-body py-2">
+                    <div class="row g-2">
+                        <div class="col-md-8">
+                            <label class="form-label form-label-sm mb-0">Descripcion <span class="text-danger">*</span></label>
+                            <input type="text" asp-for="Pieza.Descripcion" class="form-control form-control-sm" required maxlength="100"
+                                   placeholder="Descripcion de la pieza..." />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label form-label-sm mb-0">Grupo <span class="text-danger">*</span></label>
+                            <select asp-for="Pieza.IdGrupo" class="form-select form-select-sm" id="selGrupo" required>
+                                <option value="">Seleccionar...</option>
+                                @foreach (var g in Model.Grupos)
+                                {
+                                    <option value="@g.IdGrupo">@g.Grupo</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs de Costos -->
+            <div class="card mb-3">
+                <div class="card-header py-2">
+                    <i class="fa-solid fa-calculator me-1"></i>Costos
+                </div>
+                <div class="card-body py-2">
+                    <ul class="nav nav-tabs nav-tabs-sm" id="tabsCosto" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link @(Model.TabCosto == "Pieza" ? "active" : "")" id="tab-pieza-tab"
+                                    data-bs-toggle="tab" data-bs-target="#tab-pieza" type="button" role="tab"
+                                    onclick="document.getElementById('hidTabCosto').value='Pieza'">
+                                Por Pieza
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link @(Model.TabCosto == "Peso" ? "active" : "")" id="tab-peso-tab"
+                                    data-bs-toggle="tab" data-bs-target="#tab-peso" type="button" role="tab"
+                                    onclick="document.getElementById('hidTabCosto').value='Peso'">
+                                Por Peso
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="tab-extras-tab"
+                                    data-bs-toggle="tab" data-bs-target="#tab-extras" type="button" role="tab">
+                                Extras
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="tab-factura-tab"
+                                    data-bs-toggle="tab" data-bs-target="#tab-factura" type="button" role="tab">
+                                Factura
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content pt-3" id="tabsCostoContent">
+                        <!-- Tab: Por Pieza -->
+                        <div class="tab-pane fade @(Model.TabCosto == "Pieza" ? "show active" : "")" id="tab-pieza" role="tabpanel">
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label form-label-sm mb-0">Costo Bruto Pieza</label>
+                                    <input type="number" asp-for="Pieza.CBPieza" class="form-control form-control-sm text-end"
+                                           step="0.01" min="0" id="cbPieza" onchange="calcularCostos()" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label form-label-sm mb-0">Descuento %</label>
+                                    <input type="number" asp-for="Pieza.DescPieza" class="form-control form-control-sm text-end"
+                                           step="0.01" min="0" max="100" id="descPieza" onchange="calcularCostos()" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label form-label-sm mb-0">Costo Neto Pieza</label>
+                                    <input type="number" asp-for="Pieza.CNPieza" class="form-control form-control-sm text-end bg-light"
+                                           step="0.01" id="cnPieza" readonly tabindex="-1" />
+                                </div>
+                            </div>
+                            <div class="row g-2 mt-1">
+                                <div class="col-md-4">
+                                    <label class="form-label form-label-sm mb-0">Bruto con IVA</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="brutoConIVA" class="form-control form-control-sm text-end"
+                                               step="0.01" min="0" onchange="calcularDesdeIVA()" />
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="calcularDesdeIVA()" title="Calcular CB desde bruto con IVA (Ctrl+I)">
+                                            IVA
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab: Por Peso -->
+                        <div class="tab-pane fade @(Model.TabCosto == "Peso" ? "show active" : "")" id="tab-peso" role="tabpanel">
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <label class="form-label form-label-sm mb-0">Peso (g)</label>
+                                    <input type="number" asp-for="Pieza.Peso" class="form-control form-control-sm text-end"
+                                           step="0.001" min="0" id="peso" onchange="calcularCostos()" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label form-label-sm mb-0">Precio/Gramo</label>
+                                    <input type="number" asp-for="Pieza.PrecioGramo" class="form-control form-control-sm text-end"
+                                           step="0.01" min="0" id="precioGramo" onchange="calcularCostos()" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label form-label-sm mb-0">C. Bruto</label>
+                                    <input type="number" asp-for="Pieza.CBPeso" class="form-control form-control-sm text-end bg-light"
+                                           step="0.01" id="cbPeso" readonly tabindex="-1" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label form-label-sm mb-0">Desc %</label>
+                                    <input type="number" asp-for="Pieza.DescPeso" class="form-control form-control-sm text-end"
+                                           step="0.01" min="0" max="100" id="descPeso" onchange="calcularCostos()" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label form-label-sm mb-0">C. Neto</label>
+                                    <input type="number" asp-for="Pieza.CNPeso" class="form-control form-control-sm text-end bg-light"
+                                           step="0.01" id="cnPeso" readonly tabindex="-1" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab: Extras (Mano de Obra) -->
+                        <div class="tab-pane fade" id="tab-extras" role="tabpanel">
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <label class="form-label form-label-sm mb-0">Costo Bruto M.O.</label>
+                                    <input type="number" asp-for="Pieza.CBManoObra" class="form-control form-control-sm text-end"
+                                           step="0.01" min="0" id="cbManoObra" onchange="calcularCostos()" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label form-label-sm mb-0">Descuento %</label>
+                                    <input type="number" asp-for="Pieza.DescManoObra" class="form-control form-control-sm text-end"
+                                           step="0.01" min="0" max="100" id="descManoObra" onchange="calcularCostos()" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label form-label-sm mb-0">Costo Neto M.O.</label>
+                                    <input type="number" asp-for="Pieza.CNManoObra" class="form-control form-control-sm text-end bg-light"
+                                           step="0.01" id="cnManoObra" readonly tabindex="-1" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label form-label-sm mb-0">Descripcion M.O.</label>
+                                    <input type="text" asp-for="Pieza.DescripcionManoObra" class="form-control form-control-sm" maxlength="50" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab: Factura -->
+                        <div class="tab-pane fade" id="tab-factura" role="tabpanel">
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label form-label-sm mb-0">Costo Bruto Factura</label>
+                                    <input type="number" asp-for="Pieza.CBFactura" class="form-control form-control-sm text-end"
+                                           step="0.01" min="0" id="cbFactura" onchange="calcularCostos()" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label form-label-sm mb-0">Descuento %</label>
+                                    <input type="number" asp-for="Pieza.DescFactura" class="form-control form-control-sm text-end"
+                                           step="0.01" min="0" max="100" id="descFactura" onchange="calcularCostos()" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label form-label-sm mb-0">Costo Neto Factura</label>
+                                    <input type="number" asp-for="Pieza.CNFactura" class="form-control form-control-sm text-end bg-light"
+                                           step="0.01" id="cnFactura" readonly tabindex="-1" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumen de costos + factores de precio -->
+            <div class="card mb-3">
+                <div class="card-header py-2">
+                    <i class="fa-solid fa-tag me-1"></i>Precio de Venta
+                </div>
+                <div class="card-body py-2">
+                    <div class="row g-2">
+                        <div class="col-md-2">
+                            <label class="form-label form-label-sm mb-0">C. Bruto Total</label>
+                            <input type="number" asp-for="Pieza.CBTotal" class="form-control form-control-sm text-end bg-light fw-bold"
+                                   id="cbTotal" readonly tabindex="-1" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label form-label-sm mb-0">C. Neto Total</label>
+                            <input type="number" asp-for="Pieza.CNTotal" class="form-control form-control-sm text-end bg-light fw-bold"
+                                   id="cnTotal" readonly tabindex="-1" />
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label form-label-sm mb-0">Utilidad</label>
+                            <input type="number" asp-for="Pieza.Utilidad" class="form-control form-control-sm text-end"
+                                   step="0.001" id="utilidad" onchange="calcularPrecio()" />
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label form-label-sm mb-0">Util. Extra</label>
+                            <input type="number" asp-for="Pieza.UtilidadExtra" class="form-control form-control-sm text-end"
+                                   step="0.001" id="utilidadExtra" onchange="calcularPrecio()" />
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label form-label-sm mb-0">Impuesto</label>
+                            <input type="number" asp-for="Pieza.Impuesto" class="form-control form-control-sm text-end"
+                                   step="0.001" id="impuesto" onchange="calcularPrecio()" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label form-label-sm mb-0">Divisor</label>
+                            <select asp-for="Pieza.IdDivisor" class="form-select form-select-sm" id="selDivisor"
+                                    onchange="onDivisorChange()">
+                                @foreach (var d in Model.Divisores)
+                                {
+                                    <option value="@d.IdDivisor" data-divisor="@d.Divisor">
+                                        @d.Divisor.ToString("N4") - @d.Descripcion
+                                    </option>
+                                }
+                            </select>
+                            <input type="hidden" asp-for="Pieza.Divisor" id="divisorValor" />
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label form-label-sm mb-0">TC Cot.</label>
+                            <input type="number" asp-for="Pieza.TCCotizacion" class="form-control form-control-sm text-end"
+                                   step="0.0001" id="tcCotizacion" onchange="calcularPrecio()" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label form-label-sm mb-0 text-primary fw-bold">PRECIO</label>
+                            <input type="number" asp-for="Pieza.Precio" class="form-control form-control-sm text-end fw-bold fs-5 bg-warning-subtle"
+                                   id="precio" readonly tabindex="-1" />
+                        </div>
+                    </div>
+                    <div class="row g-2 mt-1">
+                        <div class="col-md-3">
+                            <label class="form-label form-label-sm mb-0">Moneda</label>
+                            <select asp-for="Pieza.IdMoneda" class="form-select form-select-sm" id="selMoneda"
+                                    onchange="onMonedaChange()">
+                                @foreach (var m in Model.Monedas)
+                                {
+                                    <option value="@m.IdMoneda" data-extranjera="@m.Extranjera.ToString().ToLower()">
+                                        @m.NombreMoneda
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label form-label-sm mb-0">TC Costo</label>
+                            <input type="number" asp-for="Pieza.TCCosto" class="form-control form-control-sm text-end"
+                                   step="0.0001" id="tcCosto" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label form-label-sm mb-0">Etiqueta</label>
+                            <select asp-for="IdEtiqueta" class="form-select form-select-sm">
+                                @foreach (var e in Model.Etiquetas)
+                                {
+                                    <option value="@e.IdTabla">@e.Descripcion</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna derecha: Caracteristicas + Observaciones -->
+        <div class="col-lg-4">
+            <!-- Caracteristicas por tipo -->
+            <div class="card mb-3">
+                <div class="card-header py-2">
+                    <i class="fa-solid fa-list-check me-1"></i>Caracteristicas
+                </div>
+                <div class="card-body py-2">
+                    <ul class="nav nav-pills nav-pills-sm mb-2" id="tabsCaracteristica" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link @(Model.TabCaracteristica == "Oro" ? "active" : "") py-1 px-2" id="tab-oro-tab"
+                                    data-bs-toggle="pill" data-bs-target="#tab-oro" type="button" role="tab"
+                                    onclick="document.getElementById('hidTabCaracteristica').value='Oro'">
+                                <i class="fa-solid fa-ring me-1"></i>Oro
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link @(Model.TabCaracteristica == "Diamante" ? "active" : "") py-1 px-2" id="tab-diamante-tab"
+                                    data-bs-toggle="pill" data-bs-target="#tab-diamante" type="button" role="tab"
+                                    onclick="document.getElementById('hidTabCaracteristica').value='Diamante'">
+                                <i class="fa-solid fa-gem me-1"></i>Diamante
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link @(Model.TabCaracteristica == "Reloj" ? "active" : "") py-1 px-2" id="tab-reloj-tab"
+                                    data-bs-toggle="pill" data-bs-target="#tab-reloj" type="button" role="tab"
+                                    onclick="document.getElementById('hidTabCaracteristica').value='Reloj'">
+                                <i class="fa-solid fa-clock me-1"></i>Reloj
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="tabsCaracteristicaContent">
+                        <!-- Oro -->
+                        <div class="tab-pane fade @(Model.TabCaracteristica == "Oro" ? "show active" : "")" id="tab-oro" role="tabpanel">
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-0">Kilates</label>
+                                <select asp-for="Pieza.Kilates" class="form-select form-select-sm" id="selKilatesOro">
+                                    <option value="">--</option>
+                                    <option value="8">8k</option>
+                                    <option value="10">10k</option>
+                                    <option value="14">14k</option>
+                                    <option value="18">18k</option>
+                                    <option value="22">22k</option>
+                                    <option value="24">24k</option>
+                                    <option value="PL">Plata</option>
+                                    <option value="PT">Platino</option>
+                                    <option value="AC">Acero</option>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-0">Modelo</label>
+                                <input type="text" asp-for="Pieza.Modelo" class="form-control form-control-sm" maxlength="20" id="modeloOro" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-0">Linea</label>
+                                <input type="text" asp-for="Pieza.Linea" class="form-control form-control-sm" maxlength="15" id="lineaOro" />
+                            </div>
+                        </div>
+
+                        <!-- Diamante -->
+                        <div class="tab-pane fade @(Model.TabCaracteristica == "Diamante" ? "show active" : "")" id="tab-diamante" role="tabpanel">
+                            <div class="row g-2 mb-2">
+                                <div class="col-6">
+                                    <label class="form-label form-label-sm mb-0">Kilates</label>
+                                    <select class="form-select form-select-sm" id="selKilatesDiam"
+                                            onchange="syncKilates(this.value)">
+                                        <option value="">--</option>
+                                        <option value="8">8k</option>
+                                        <option value="10">10k</option>
+                                        <option value="14">14k</option>
+                                        <option value="18">18k</option>
+                                        <option value="22">22k</option>
+                                        <option value="24">24k</option>
+                                        <option value="PL">Plata</option>
+                                        <option value="PT">Platino</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label form-label-sm mb-0">Quilates</label>
+                                    <input type="number" asp-for="Pieza.Quilates" class="form-control form-control-sm text-end"
+                                           step="0.01" min="0" />
+                                </div>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-6">
+                                    <label class="form-label form-label-sm mb-0">Color</label>
+                                    <select asp-for="Pieza.Color" class="form-select form-select-sm">
+                                        <option value="">--</option>
+                                        <option>D</option><option>E</option><option>F</option>
+                                        <option>G</option><option>H</option><option>I</option>
+                                        <option>J</option><option>K</option><option>L</option>
+                                        <option>M</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label form-label-sm mb-0">Pureza</label>
+                                    <select asp-for="Pieza.Pureza" class="form-select form-select-sm">
+                                        <option value="">--</option>
+                                        <option>FL</option><option>IF</option>
+                                        <option>VVS1</option><option>VVS2</option>
+                                        <option>VS1</option><option>VS2</option>
+                                        <option>SI1</option><option>SI2</option>
+                                        <option>SI3</option>
+                                        <option>I1</option><option>I2</option><option>I3</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-0">Corte</label>
+                                <select asp-for="Pieza.Corte" class="form-select form-select-sm">
+                                    <option value="">--</option>
+                                    <option>Redondo</option><option>Princesa</option>
+                                    <option>Esmeralda</option><option>Marquesa</option>
+                                    <option>Ovalo</option><option>Pera</option>
+                                    <option>Corazon</option><option>Baguette</option>
+                                    <option>Otro</option>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-0">Obs. 1</label>
+                                <input type="text" asp-for="Pieza.Obs1" class="form-control form-control-sm" maxlength="16" id="obs1Diam" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-0">Obs. 2</label>
+                                <input type="text" asp-for="Pieza.Obs2" class="form-control form-control-sm" maxlength="16" />
+                            </div>
+                        </div>
+
+                        <!-- Reloj -->
+                        <div class="tab-pane fade @(Model.TabCaracteristica == "Reloj" ? "show active" : "")" id="tab-reloj" role="tabpanel">
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-0">Modelo</label>
+                                <input type="text" class="form-control form-control-sm" maxlength="20" id="modeloReloj"
+                                       value="@Model.Pieza.Modelo" onchange="syncModelo(this.value)" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-0">Linea</label>
+                                <input type="text" class="form-control form-control-sm" maxlength="15" id="lineaReloj"
+                                       value="@Model.Pieza.Linea" onchange="syncLinea(this.value)" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-0">Numero de Serie</label>
+                                <input type="text" asp-for="Pieza.NumSerie" class="form-control form-control-sm" maxlength="16" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-0">Obs. 1</label>
+                                <input type="text" class="form-control form-control-sm" maxlength="16" id="obs1Reloj"
+                                       value="@Model.Pieza.Obs1" onchange="syncObs1(this.value)" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Observaciones -->
+            <div class="card mb-3">
+                <div class="card-header py-2">
+                    <i class="fa-solid fa-comment me-1"></i>Observaciones
+                </div>
+                <div class="card-body py-2">
+                    <textarea asp-for="Observaciones" class="form-control form-control-sm" rows="3"
+                              maxlength="300" placeholder="Observaciones adicionales..."></textarea>
+                </div>
+            </div>
+
+            <!-- Formula visible -->
+            <div class="card mb-3 border-info">
+                <div class="card-body py-2">
+                    <small class="text-muted d-block mb-1"><i class="fa-solid fa-function me-1"></i>Formula de Precio</small>
+                    <div class="formula-display" id="formulaDisplay">
+                        <code>Precio = CNTotal x Utilidad x Util.Extra x Impuesto / Divisor x TC</code>
+                    </div>
+                    <div class="formula-values mt-1" id="formulaValues">
+                        <small class="text-muted">
+                            <span id="fvCN">0</span> x
+                            <span id="fvUtil">1</span> x
+                            <span id="fvUE">1</span> x
+                            <span id="fvImp">1</span> /
+                            <span id="fvDiv">1</span> x
+                            <span id="fvTC">1</span> =
+                            <strong id="fvPrecio">$0</strong>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botones de accion -->
+    <div class="card mt-2">
+        <div class="card-body py-2 d-flex justify-content-between">
+            <a asp-page="Index" asp-route-IdRemision="@Model.IdRemision" class="btn btn-outline-secondary">
+                <i class="fa-solid fa-xmark me-1"></i>Cancelar
+            </a>
+            <div class="d-flex gap-2">
+                @if (Model.EsEdicion)
+                {
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-save me-1"></i>Guardar Cambios
+                    </button>
+                }
+                else
+                {
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa-solid fa-check me-1"></i>Registrar Pieza (F12)
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+<script src="/js/piezas.js?v=20260609"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Searchable dropdowns
+    if (typeof TomSelect !== 'undefined') {
+        var selGrupo = document.getElementById('selGrupo');
+        if (selGrupo) new TomSelect(selGrupo, { allowEmptyOption: true });
+        var selDivisor = document.getElementById('selDivisor');
+        if (selDivisor) new TomSelect(selDivisor, { allowEmptyOption: false });
+    }
+
+    // Sincronizar divisor seleccionado
+    onDivisorChange();
+
+    // Calcular precio inicial
+    calcularCostos();
+
+    // Atajos de teclado
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F12') {
+            e.preventDefault();
+            document.getElementById('formPieza').requestSubmit();
+        }
+        if (e.ctrlKey && e.key === 'i') {
+            e.preventDefault();
+            calcularDesdeIVA();
+        }
+    });
+});
+</script>
+}
