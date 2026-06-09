@@ -45,6 +45,11 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
+// Tipos de Cambio Service
+builder.Services.AddScoped<TiposCambioService>(sp => new TiposCambioService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<TiposCambioService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware

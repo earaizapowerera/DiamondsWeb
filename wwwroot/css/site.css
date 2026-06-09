@@ -106,6 +106,20 @@
     font-weight: 700;
 }
 
+/* Tipos de Cambio Table */
+.table-tc thead th {
+    background-color: #343a40;
+    color: #fff;
+    border: none;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table-tc tbody tr:hover {
+    background-color: #e8f4f8;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .stat-card {
