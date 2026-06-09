@@ -1,84 +1,48 @@
 namespace DiamondsWeb.Models;
 
 /// <summary>
-/// Proveedor con datos de la vista vProveedores (incluye joins a catálogos)
+/// Razón social de un proveedor (entidad fiscal)
+/// Tabla: RAZONES_SOCIALES_PROVEEDORES
 /// </summary>
-public class ProveedorResumen
+public class RazonSocialProveedor
 {
-    public int Proveedor { get; set; }
-    public string NombreProveedor { get; set; } = string.Empty;
-    public string? Direccion { get; set; }
-    public string? Telefono { get; set; }
-    public string? Telefono2 { get; set; }
-    public string? Atiende { get; set; }
-    public string CaracteristicaDefault { get; set; } = string.Empty;
-    public string CostoDefault { get; set; } = string.Empty;
-    public string? Moneda { get; set; }
-    public string? DefaultUtilidad { get; set; }
-    public bool UtilizarMoneda { get; set; }
-    public bool UtilidadExtra { get; set; }
-    public DateTime FechaCaptura { get; set; }
+    public int IdRazonSocialProveedor { get; set; }
+    public string? RFC { get; set; }
+    public string RazonSocialProveedorNombre { get; set; } = string.Empty;
+    public string? Calle { get; set; }
+    public string? CodigoPostal { get; set; }
+    public string? Colonia { get; set; }
+    public string? Municipio { get; set; }
+    public string? Estado { get; set; }
+    public DateTime? FechaCaptura { get; set; }
+    public DateTime? FechaUltEdicion { get; set; }
+    public int? IdUsuario { get; set; }
 }
 
 /// <summary>
-/// Detalle completo de un proveedor (para crear/editar)
+/// Asignación N:N entre razón social y proveedor
+/// Tabla: RAZONES_SOCIALES_PROVEEDORES_PROVEEDORES
 /// </summary>
-public class ProveedorDetalle
-{
-    public int Proveedor { get; set; }
-    public string NombreProveedor { get; set; } = string.Empty;
-    public string? Direccion { get; set; }
-    public string? Telefono { get; set; }
-    public string? Telefono2 { get; set; }
-    public string? Atiende { get; set; }
-    public int IdDefaultUtilidad { get; set; }
-    public string? DefaultUtilidad { get; set; }
-    public int? IdDefaultUtilidadExtra { get; set; }
-    public int? IdMoneda { get; set; }
-    public bool UtilidadExtra { get; set; }
-    public string CaracteristicaDefault { get; set; } = "Oro";
-    public string CostoDefault { get; set; } = "Pieza";
-    public int IdDivisor { get; set; }
-    public int IdTabla { get; set; }
-    public bool UtilizarMoneda { get; set; }
-
-    // Campos de solo lectura del view
-    public decimal? DefaultUtilidadOro { get; set; }
-    public decimal? DefaultUtilidadGemas { get; set; }
-    public decimal? DefaultUtilidadReloj { get; set; }
-    public decimal? DefaultUtilidadExtraVal { get; set; }
-    public string? Moneda { get; set; }
-    public decimal? Divisor { get; set; }
-    public string? DivisorDescripcion { get; set; }
-    public string? TablaDescripcion { get; set; }
-}
-
-/// <summary>
-/// Item genérico para dropdowns con Id int y texto
-/// </summary>
-public class CatalogoItem
+public class RazonSocialProveedorAsignacion
 {
     public int Id { get; set; }
-    public string Texto { get; set; } = string.Empty;
+    public int IdRazonSocialProveedor { get; set; }
+    public int Proveedor { get; set; }
+    public DateTime FechaCaptura { get; set; }
+    public DateTime? FechaUltEdicion { get; set; }
+    public int? IdUsuario { get; set; }
+
+    // Campos de la vista vRazonesSocialesProveedoresProveedores
+    public string? NombreProveedor { get; set; }
+    public string? RazonSocialProveedorNombre { get; set; }
 }
 
 /// <summary>
-/// Item de DefaultsUtilidad con sus valores de utilidad por tipo
+/// Proveedor (catálogo simple para dropdowns)
+/// Tabla: PROVEEDORES
 /// </summary>
-public class DefaultUtilidadItem
+public class ProveedorSimple
 {
-    public int IdDefaultUtilidad { get; set; }
-    public decimal DefaultUtilidad { get; set; }
-    public decimal DefaultUtilidadGemas { get; set; }
-    public decimal DefaultUtilidadReloj { get; set; }
-}
-
-/// <summary>
-/// Item de Divisor con su valor numérico
-/// </summary>
-public class DivisorItem
-{
-    public int IdDivisor { get; set; }
-    public decimal Divisor { get; set; }
-    public string? Descripcion { get; set; }
+    public int Proveedor { get; set; }
+    public string NombreProveedor { get; set; } = string.Empty;
 }

@@ -6,8 +6,8 @@ using Microsoft.Data.SqlClient;
 namespace DiamondsWeb.Services;
 
 /// <summary>
-/// CRUD de proveedores con catálogos asociados.
-/// Tablas: Proveedores, vProveedores, DefaultsUtilidad, Divisores, Monedas, TablasJerarquias.
+/// Servicio para CRUD de Razones Sociales de Proveedores y asignaciones N:N.
+/// Tablas: RAZONES_SOCIALES_PROVEEDORES, RAZONES_SOCIALES_PROVEEDORES_PROVEEDORES, PROVEEDORES
 /// </summary>
 public class ProveedorService
 {
@@ -22,202 +22,188 @@ public class ProveedorService
 
     private IDbConnection CreateConnection() => new SqlConnection(_connectionString);
 
-    // ── LIST ──────────────────────────────────────────────────────────
+    // ─── Razones Sociales ─────────────────────────────────────────────
 
-    public async Task<List<ProveedorResumen>> ListarAsync(string? buscar)
+    public async Task<List<RazonSocialProveedor>> ObtenerRazonesSocialesAsync(string? buscar = null)
     {
-        using var conn = CreateConnection();
         var sql = @"
-            SELECT TOP 50
-                   Proveedor, NombreProveedor, Direccion, Telefono, Telefono2,
-                   Atiende, CaracteristicaDefault, CostoDefault, Moneda,
-                   DefaultUtilidad, UtilizarMoneda, UtilidadExtra, FechaCaptura
-            FROM   vProveedores
-            WHERE  1=1
-                   AND (@Buscar IS NULL
-                        OR NombreProveedor LIKE '%' + @Buscar + '%'
-                        OR Atiende LIKE '%' + @Buscar + '%'
-                        OR Telefono LIKE '%' + @Buscar + '%'
-                        OR Direccion LIKE '%' + @Buscar + '%')
-            ORDER BY NombreProveedor";
+            SELECT TOP 200
+                IdRazonSocialProveedor,
+                RFC,
+                RazonSocialProveedor AS RazonSocialProveedorNombre,
+                Calle, CodigoPostal, Colonia, Municipio, Estado,
+                FechaCaptura, FechaUltEdicion, IdUsuario
+            FROM RAZONES_SOCIALES_PROVEEDORES
+            WHERE (@Buscar IS NULL
+                OR RazonSocialProveedor LIKE '%' + @Buscar + '%'
+                OR RFC LIKE '%' + @Buscar + '%')
+            ORDER BY RazonSocialProveedor";
 
-        var result = await conn.QueryAsync<ProveedorResumen>(sql, new { Buscar = buscar });
-        return result.AsList();
+        using var conn = CreateConnection();
+        return (await conn.QueryAsync<RazonSocialProveedor>(sql, new
+        {
+            Buscar = string.IsNullOrWhiteSpace(buscar) ? null : buscar
+        })).ToList();
     }
 
-    // ── GET BY ID ────────────────────────────────────────────────────
-
-    public async Task<ProveedorDetalle?> ObtenerPorIdAsync(int proveedorId)
+    public async Task<RazonSocialProveedor?> ObtenerRazonSocialPorIdAsync(int id)
     {
-        using var conn = CreateConnection();
         var sql = @"
             SELECT TOP 1
-                   p.Proveedor, p.NombreProveedor, p.Direccion, p.Telefono, p.Telefono2,
-                   p.Atiende, p.IdDefaultUtilidad, p.IdDefaultUtilidadExtra, p.IdMoneda,
-                   p.UtilidadExtra, p.CaracteristicaDefault, p.CostoDefault,
-                   p.IdDivisor, p.IdTabla, p.UtilizarMoneda,
-                   v.DefaultUtilidad, v.DefaultUtilidadOro, v.DefaultUtilidadGemas,
-                   v.DefaultUtilidadReloj,
-                   v.Moneda, v.Divisor,
-                   dv.Descripcion AS DivisorDescripcion,
-                   tj.Descripcion AS TablaDescripcion
-            FROM   Proveedores p
-            LEFT JOIN vProveedores v ON v.Proveedor = p.Proveedor
-            LEFT JOIN Divisores dv ON dv.IdDivisor = p.IdDivisor
-            LEFT JOIN TablasJerarquias tj ON tj.IdTabla = p.IdTabla
-            WHERE  p.Proveedor = @Id";
+                IdRazonSocialProveedor,
+                RFC,
+                RazonSocialProveedor AS RazonSocialProveedorNombre,
+                Calle, CodigoPostal, Colonia, Municipio, Estado,
+                FechaCaptura, FechaUltEdicion, IdUsuario
+            FROM RAZONES_SOCIALES_PROVEEDORES
+            WHERE IdRazonSocialProveedor = @Id";
 
-        // Map DefaultUtilidadExtra from the extra table if present
-        var prov = await conn.QueryFirstOrDefaultAsync<ProveedorDetalle>(sql, new { Id = proveedorId });
-        if (prov != null && prov.IdDefaultUtilidadExtra.HasValue && prov.IdDefaultUtilidadExtra > 0)
+        using var conn = CreateConnection();
+        return await conn.QueryFirstOrDefaultAsync<RazonSocialProveedor>(sql, new { Id = id });
+    }
+
+    public async Task<int> CrearRazonSocialAsync(RazonSocialProveedor rs)
+    {
+        var sql = @"
+            INSERT INTO RAZONES_SOCIALES_PROVEEDORES
+                (RFC, RazonSocialProveedor, Calle, CodigoPostal, Colonia, Municipio, Estado,
+                 FechaCaptura, FechaUltEdicion, IdUsuario)
+            VALUES
+                (@RFC, @RazonSocialProveedorNombre, @Calle, @CodigoPostal, @Colonia, @Municipio, @Estado,
+                 GETUTCDATE(), GETUTCDATE(), @IdUsuario);
+            SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+        using var conn = CreateConnection();
+        var newId = await conn.QuerySingleAsync<int>(sql, rs);
+        _logger.LogInformation("Razón social creada: Id={Id}, Nombre={Nombre}", newId, rs.RazonSocialProveedorNombre);
+        return newId;
+    }
+
+    public async Task ActualizarRazonSocialAsync(RazonSocialProveedor rs)
+    {
+        var sql = @"
+            UPDATE RAZONES_SOCIALES_PROVEEDORES SET
+                RFC = @RFC,
+                RazonSocialProveedor = @RazonSocialProveedorNombre,
+                Calle = @Calle,
+                CodigoPostal = @CodigoPostal,
+                Colonia = @Colonia,
+                Municipio = @Municipio,
+                Estado = @Estado,
+                FechaUltEdicion = GETUTCDATE(),
+                IdUsuario = @IdUsuario
+            WHERE IdRazonSocialProveedor = @IdRazonSocialProveedor";
+
+        using var conn = CreateConnection();
+        await conn.ExecuteAsync(sql, rs);
+        _logger.LogInformation("Razón social actualizada: Id={Id}", rs.IdRazonSocialProveedor);
+    }
+
+    public async Task<bool> EliminarRazonSocialAsync(int id)
+    {
+        // Verificar si tiene asignaciones
+        var sqlCheck = "SELECT TOP 1 COUNT(*) FROM RAZONES_SOCIALES_PROVEEDORES_PROVEEDORES WHERE IdRazonSocialProveedor = @Id";
+        using var conn = CreateConnection();
+        var count = await conn.ExecuteScalarAsync<int>(sqlCheck, new { Id = id });
+        if (count > 0)
         {
-            var extraSql = @"SELECT TOP 1 DefaultUtilidad FROM DefaultsUtilidad WHERE IdDefaultUtilidad = @ExtraId";
-            prov.DefaultUtilidadExtraVal = await conn.QueryFirstOrDefaultAsync<decimal?>(extraSql,
-                new { ExtraId = prov.IdDefaultUtilidadExtra });
+            _logger.LogWarning("No se puede eliminar razón social {Id}: tiene {Count} asignaciones", id, count);
+            return false;
         }
 
-        return prov;
+        var sql = "DELETE FROM RAZONES_SOCIALES_PROVEEDORES WHERE IdRazonSocialProveedor = @Id";
+        await conn.ExecuteAsync(sql, new { Id = id });
+        _logger.LogInformation("Razón social eliminada: Id={Id}", id);
+        return true;
     }
 
-    // ── CREATE ───────────────────────────────────────────────────────
+    // ─── Asignaciones N:N ─────────────────────────────────────────────
 
-    public async Task<int> CrearAsync(ProveedorDetalle prov)
+    public async Task<List<RazonSocialProveedorAsignacion>> ObtenerAsignacionesAsync(
+        int? idRazonSocial = null, string? buscar = null)
     {
-        using var conn = CreateConnection();
+        var sql = @"
+            SELECT TOP 200
+                v.Id, v.IdRazonSocialProveedor, v.Proveedor,
+                v.NombreProveedor, v.RazonSocialProveedor AS RazonSocialProveedorNombre,
+                v.FechaCaptura, v.FechaUltEdicion, v.IdUsuario
+            FROM vRazonesSocialesProveedoresProveedores v
+            WHERE (@IdRazonSocial IS NULL OR v.IdRazonSocialProveedor = @IdRazonSocial)
+              AND (@Buscar IS NULL
+                   OR v.NombreProveedor LIKE '%' + @Buscar + '%'
+                   OR v.RazonSocialProveedor LIKE '%' + @Buscar + '%')
+            ORDER BY v.RazonSocialProveedor, v.NombreProveedor";
 
-        // Get next available Id
-        var nextId = await conn.QueryFirstAsync<int>("SELECT TOP 1 ISNULL(MAX(Proveedor), 0) + 1 FROM Proveedores");
+        using var conn = CreateConnection();
+        return (await conn.QueryAsync<RazonSocialProveedorAsignacion>(sql, new
+        {
+            IdRazonSocial = idRazonSocial,
+            Buscar = string.IsNullOrWhiteSpace(buscar) ? null : buscar
+        })).ToList();
+    }
+
+    public async Task<int> CrearAsignacionAsync(int idRazonSocial, int proveedor, int? idUsuario)
+    {
+        // Verificar duplicado
+        var sqlCheck = @"SELECT TOP 1 COUNT(*) FROM RAZONES_SOCIALES_PROVEEDORES_PROVEEDORES
+                         WHERE IdRazonSocialProveedor = @IdRS AND Proveedor = @Prov";
+        using var conn = CreateConnection();
+        var exists = await conn.ExecuteScalarAsync<int>(sqlCheck,
+            new { IdRS = idRazonSocial, Prov = proveedor });
+        if (exists > 0)
+        {
+            _logger.LogWarning("Asignación duplicada: RS={RS}, Prov={Prov}", idRazonSocial, proveedor);
+            return -1;
+        }
 
         var sql = @"
-            INSERT INTO Proveedores
-                (Proveedor, NombreProveedor, Direccion, Telefono, Telefono2,
-                 Atiende, IdDefaultUtilidad, IdDefaultUtilidadExtra, IdMoneda,
-                 UtilidadExtra, CaracteristicaDefault, CostoDefault,
-                 IdDivisor, IdTabla, UtilizarMoneda, IdUsuario, FechaCaptura)
+            INSERT INTO RAZONES_SOCIALES_PROVEEDORES_PROVEEDORES
+                (IdRazonSocialProveedor, Proveedor, FechaCaptura, FechaUltEdicion, IdUsuario)
             VALUES
-                (@Proveedor, @NombreProveedor, @Direccion, @Telefono, @Telefono2,
-                 @Atiende, @IdDefaultUtilidad, @IdDefaultUtilidadExtra, @IdMoneda,
-                 @UtilidadExtra, @CaracteristicaDefault, @CostoDefault,
-                 @IdDivisor, @IdTabla, @UtilizarMoneda, 1, GETUTCDATE())";
+                (@IdRazonSocial, @Proveedor, GETUTCDATE(), GETUTCDATE(), @IdUsuario);
+            SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
-        await conn.ExecuteAsync(sql, new
+        var newId = await conn.QuerySingleAsync<int>(sql, new
         {
-            Proveedor = nextId,
-            prov.NombreProveedor,
-            prov.Direccion,
-            prov.Telefono,
-            prov.Telefono2,
-            prov.Atiende,
-            prov.IdDefaultUtilidad,
-            IdDefaultUtilidadExtra = prov.IdDefaultUtilidadExtra ?? (int?)null,
-            IdMoneda = prov.IdMoneda ?? 1,
-            prov.UtilidadExtra,
-            prov.CaracteristicaDefault,
-            prov.CostoDefault,
-            prov.IdDivisor,
-            prov.IdTabla,
-            prov.UtilizarMoneda
+            IdRazonSocial = idRazonSocial,
+            Proveedor = proveedor,
+            IdUsuario = idUsuario
         });
 
-        _logger.LogInformation("Proveedor creado: Id={Id}, Nombre={Nombre}", nextId, prov.NombreProveedor);
-        return nextId;
+        _logger.LogInformation("Asignación creada: Id={Id}, RS={RS}, Prov={Prov}",
+            newId, idRazonSocial, proveedor);
+        return newId;
     }
 
-    // ── UPDATE ───────────────────────────────────────────────────────
-
-    public async Task ActualizarAsync(ProveedorDetalle prov)
+    public async Task EliminarAsignacionAsync(int id)
     {
+        var sql = "DELETE FROM RAZONES_SOCIALES_PROVEEDORES_PROVEEDORES WHERE Id = @Id";
         using var conn = CreateConnection();
-        var sql = @"
-            UPDATE Proveedores SET
-                NombreProveedor = @NombreProveedor,
-                Direccion = @Direccion,
-                Telefono = @Telefono,
-                Telefono2 = @Telefono2,
-                Atiende = @Atiende,
-                IdDefaultUtilidad = @IdDefaultUtilidad,
-                IdDefaultUtilidadExtra = @IdDefaultUtilidadExtra,
-                IdMoneda = @IdMoneda,
-                UtilidadExtra = @UtilidadExtra,
-                CaracteristicaDefault = @CaracteristicaDefault,
-                CostoDefault = @CostoDefault,
-                IdDivisor = @IdDivisor,
-                IdTabla = @IdTabla,
-                UtilizarMoneda = @UtilizarMoneda,
-                FechaUltEdicion = GETUTCDATE()
-            WHERE Proveedor = @Proveedor";
-
-        await conn.ExecuteAsync(sql, new
-        {
-            prov.Proveedor,
-            prov.NombreProveedor,
-            prov.Direccion,
-            prov.Telefono,
-            prov.Telefono2,
-            prov.Atiende,
-            prov.IdDefaultUtilidad,
-            IdDefaultUtilidadExtra = prov.IdDefaultUtilidadExtra ?? (int?)null,
-            IdMoneda = prov.IdMoneda ?? 1,
-            prov.UtilidadExtra,
-            prov.CaracteristicaDefault,
-            prov.CostoDefault,
-            prov.IdDivisor,
-            prov.IdTabla,
-            prov.UtilizarMoneda
-        });
-
-        _logger.LogInformation("Proveedor actualizado: Id={Id}, Nombre={Nombre}", prov.Proveedor, prov.NombreProveedor);
+        await conn.ExecuteAsync(sql, new { Id = id });
+        _logger.LogInformation("Asignación eliminada: Id={Id}", id);
     }
 
-    // ── DELETE ────────────────────────────────────────────────────────
+    // ─── Catálogos para dropdowns ─────────────────────────────────────
 
-    public async Task<bool> EliminarAsync(int proveedorId)
+    public async Task<List<ProveedorSimple>> ObtenerProveedoresAsync()
     {
+        var sql = @"SELECT TOP 500 Proveedor, NombreProveedor
+                    FROM PROVEEDORES ORDER BY NombreProveedor";
+
         using var conn = CreateConnection();
-        var rows = await conn.ExecuteAsync(
-            "DELETE FROM Proveedores WHERE Proveedor = @Id",
-            new { Id = proveedorId });
-
-        if (rows > 0)
-            _logger.LogInformation("Proveedor eliminado: Id={Id}", proveedorId);
-
-        return rows > 0;
+        return (await conn.QueryAsync<ProveedorSimple>(sql)).ToList();
     }
 
-    // ── CATÁLOGOS ────────────────────────────────────────────────────
-
-    public async Task<List<DefaultUtilidadItem>> ObtenerDefaultsUtilidadAsync()
+    public async Task<List<RazonSocialProveedor>> ObtenerRazonesSocialesParaComboAsync()
     {
-        using var conn = CreateConnection();
-        var sql = @"SELECT TOP 50 IdDefaultUtilidad, DefaultUtilidad, DefaultUtilidadGemas, DefaultUtilidadReloj
-                    FROM DefaultsUtilidad ORDER BY IdDefaultUtilidad";
-        return (await conn.QueryAsync<DefaultUtilidadItem>(sql)).AsList();
-    }
+        var sql = @"SELECT TOP 500
+                        IdRazonSocialProveedor,
+                        RazonSocialProveedor AS RazonSocialProveedorNombre,
+                        RFC
+                    FROM RAZONES_SOCIALES_PROVEEDORES
+                    ORDER BY RazonSocialProveedor";
 
-    public async Task<List<CatalogoItem>> ObtenerMonedasAsync()
-    {
         using var conn = CreateConnection();
-        var sql = "SELECT TOP 50 IdMoneda AS Id, Moneda AS Texto FROM Monedas ORDER BY Moneda";
-        return (await conn.QueryAsync<CatalogoItem>(sql)).AsList();
-    }
-
-    public async Task<List<DivisorItem>> ObtenerDivisoresAsync()
-    {
-        using var conn = CreateConnection();
-        var sql = "SELECT TOP 50 IdDivisor, Divisor, Descripcion FROM Divisores ORDER BY Descripcion";
-        return (await conn.QueryAsync<DivisorItem>(sql)).AsList();
-    }
-
-    public async Task<List<CatalogoItem>> ObtenerTablasJerarquiasAsync()
-    {
-        using var conn = CreateConnection();
-        var sql = "SELECT TOP 50 IdTabla AS Id, Descripcion AS Texto FROM TablasJerarquias ORDER BY Descripcion";
-        return (await conn.QueryAsync<CatalogoItem>(sql)).AsList();
-    }
-
-    public async Task<int> ContarProveedoresAsync()
-    {
-        using var conn = CreateConnection();
-        return await conn.QueryFirstAsync<int>("SELECT TOP 1 COUNT(*) FROM Proveedores");
+        return (await conn.QueryAsync<RazonSocialProveedor>(sql)).ToList();
     }
 }

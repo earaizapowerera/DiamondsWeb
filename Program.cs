@@ -39,7 +39,7 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
-// Proveedor Service
+// Proveedor Service (Razones Sociales)
 builder.Services.AddScoped<ProveedorService>(sp => new ProveedorService(
     diamondsConnStr,
     sp.GetRequiredService<ILogger<ProveedorService>>()));
