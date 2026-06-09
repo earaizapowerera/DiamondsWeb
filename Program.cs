@@ -45,6 +45,11 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
+// Actualizaciones desde Facturas — vincula piezas a facturas de proveedor
+builder.Services.AddScoped<ActualizacionesService>(sp => new ActualizacionesService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<ActualizacionesService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware
