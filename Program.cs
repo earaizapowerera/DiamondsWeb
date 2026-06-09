@@ -45,6 +45,11 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
+// Etiquetas Service
+builder.Services.AddScoped<EtiquetaService>(sp => new EtiquetaService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<EtiquetaService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware
