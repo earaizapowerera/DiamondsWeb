@@ -1,0 +1,261 @@
+@page
+@model DiamondsWeb.Pages.Proveedores.EditarModel
+@{
+    ViewData["Title"] = Model.EsNuevo ? "Nuevo Proveedor" : $"Editar Proveedor #{Model.Prov.Proveedor}";
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Header -->
+<div class="info-panel d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h5 class="mb-0">
+            <i class="fa-solid fa-@(Model.EsNuevo ? "plus" : "pen-to-square") me-2"></i>
+            @(Model.EsNuevo ? "Nuevo Proveedor" : $"Editar: {Model.Prov.NombreProveedor}")
+        </h5>
+    </div>
+    <a href="/Proveedores" class="btn btn-outline-secondary btn-sm">
+        <i class="fa-solid fa-arrow-left me-1"></i>Regresar
+    </a>
+</div>
+
+<form method="post">
+    <input type="hidden" asp-for="Prov.Proveedor" />
+
+    <div class="row">
+        <!-- Columna izquierda: Datos generales -->
+        <div class="col-lg-6">
+            <div class="card mb-3">
+                <div class="card-header"><i class="fa-solid fa-user me-2"></i>Datos Generales</div>
+                <div class="card-body">
+                    @if (!Model.EsNuevo)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label"><small>Id Proveedor</small></label>
+                            <input type="text" class="form-control form-control-sm bg-light" value="@Model.Prov.Proveedor" disabled />
+                        </div>
+                    }
+                    <div class="mb-3">
+                        <label class="form-label"><small>Nombre Proveedor <span class="text-danger">*</span></small></label>
+                        <input type="text" asp-for="Prov.NombreProveedor" class="form-control form-control-sm" maxlength="80" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><small>Direccion</small></label>
+                        <input type="text" asp-for="Prov.Direccion" class="form-control form-control-sm" maxlength="100" />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><small>Telefono</small></label>
+                            <input type="text" asp-for="Prov.Telefono" class="form-control form-control-sm" maxlength="14" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><small>Telefono 2</small></label>
+                            <input type="text" asp-for="Prov.Telefono2" class="form-control form-control-sm" maxlength="14" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><small>Atiende</small></label>
+                        <input type="text" asp-for="Prov.Atiende" class="form-control form-control-sm" maxlength="50" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna derecha: Defaults y configuracion -->
+        <div class="col-lg-6">
+            <div class="card mb-3">
+                <div class="card-header"><i class="fa-solid fa-sliders me-2"></i>Configuracion de Defaults</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><small>Caracteristica Default</small></label>
+                            <select asp-for="Prov.CaracteristicaDefault" class="form-select form-select-sm">
+                                @foreach (var c in EditarModel.CaracteristicaOpciones)
+                                {
+                                    <option value="@c">@c</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><small>Tipo Costo Default</small></label>
+                            <select asp-for="Prov.CostoDefault" class="form-select form-select-sm">
+                                @foreach (var c in EditarModel.CostoOpciones)
+                                {
+                                    <option value="@c">@c</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><small>Default Utilidad</small></label>
+                        <select asp-for="Prov.IdDefaultUtilidad" class="form-select form-select-sm" id="selUtilidad">
+                            @foreach (var u in Model.DefaultsUtilidad)
+                            {
+                                <option value="@u.IdDefaultUtilidad"
+                                        data-oro="@u.DefaultUtilidad"
+                                        data-gemas="@u.DefaultUtilidadGemas"
+                                        data-reloj="@u.DefaultUtilidadReloj">
+                                    #@u.IdDefaultUtilidad - Oro: @u.DefaultUtilidad | Gemas: @u.DefaultUtilidadGemas | Reloj: @u.DefaultUtilidadReloj
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Utilidades de solo lectura -->
+                    <div class="row" id="utilidadesInfo">
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label"><small>Utilidad Joyeria</small></label>
+                            <input type="text" class="form-control form-control-sm bg-light" id="txtUtilidadOro" disabled />
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label"><small>Utilidad Gemas</small></label>
+                            <input type="text" class="form-control form-control-sm bg-light" id="txtUtilidadGemas" disabled />
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label"><small>Utilidad Relojes</small></label>
+                            <input type="text" class="form-control form-control-sm bg-light" id="txtUtilidadReloj" disabled />
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <!-- Moneda -->
+                    <div class="row align-items-end">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" asp-for="Prov.UtilizarMoneda" class="form-check-input" id="chkMoneda" />
+                                <label class="form-check-label" for="chkMoneda"><small>Utilizar Moneda Default</small></label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><small>Moneda</small></label>
+                            <select asp-for="Prov.IdMoneda" class="form-select form-select-sm" id="selMoneda">
+                                @foreach (var m in Model.Monedas)
+                                {
+                                    <option value="@m.Id">@m.Texto</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <!-- Utilidad extra -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" asp-for="Prov.UtilidadExtra" class="form-check-input" id="chkUtilidadExtra" />
+                            <label class="form-check-label" for="chkUtilidadExtra">
+                                <small>Utiliza Utilidad Extra segun Precios por Gramo</small>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="divUtilidadExtra">
+                        <label class="form-label"><small>Default Utilidad Extra</small></label>
+                        <select asp-for="Prov.IdDefaultUtilidadExtra" class="form-select form-select-sm" id="selUtilidadExtra">
+                            <option value="">-- Sin utilidad extra --</option>
+                            @foreach (var u in Model.DefaultsUtilidad)
+                            {
+                                <option value="@u.IdDefaultUtilidad">
+                                    #@u.IdDefaultUtilidad - Oro: @u.DefaultUtilidad | Gemas: @u.DefaultUtilidadGemas | Reloj: @u.DefaultUtilidadReloj
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <hr />
+
+                    <!-- Divisor y Etiqueta -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><small>Default Divisor Venta</small></label>
+                            <select asp-for="Prov.IdDivisor" class="form-select form-select-sm" id="selDivisor">
+                                @foreach (var d in Model.Divisores)
+                                {
+                                    <option value="@d.IdDivisor">@d.Descripcion (@d.Divisor)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><small>Default Etiqueta</small></label>
+                            <select asp-for="Prov.IdTabla" class="form-select form-select-sm" id="selTabla">
+                                @foreach (var t in Model.TablasJerarquias)
+                                {
+                                    <option value="@t.Id">@t.Texto</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botones -->
+    <div class="d-flex justify-content-end gap-2 mb-4">
+        <a href="/Proveedores" class="btn btn-secondary">
+            <i class="fa-solid fa-xmark me-1"></i>Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-floppy-disk me-1"></i>@(Model.EsNuevo ? "Registrar" : "Guardar Cambios")
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var selUtilidad = document.getElementById('selUtilidad');
+        var txtOro = document.getElementById('txtUtilidadOro');
+        var txtGemas = document.getElementById('txtUtilidadGemas');
+        var txtReloj = document.getElementById('txtUtilidadReloj');
+        var chkMoneda = document.getElementById('chkMoneda');
+        var selMoneda = document.getElementById('selMoneda');
+        var chkExtra = document.getElementById('chkUtilidadExtra');
+        var divExtra = document.getElementById('divUtilidadExtra');
+
+        function actualizarUtilidades() {
+            var opt = selUtilidad.options[selUtilidad.selectedIndex];
+            if (opt) {
+                txtOro.value = opt.getAttribute('data-oro') || '';
+                txtGemas.value = opt.getAttribute('data-gemas') || '';
+                txtReloj.value = opt.getAttribute('data-reloj') || '';
+            }
+        }
+
+        function toggleMoneda() {
+            selMoneda.disabled = !chkMoneda.checked;
+        }
+
+        function toggleExtra() {
+            divExtra.style.display = chkExtra.checked ? 'block' : 'none';
+        }
+
+        selUtilidad.addEventListener('change', actualizarUtilidades);
+        chkMoneda.addEventListener('change', toggleMoneda);
+        chkExtra.addEventListener('change', toggleExtra);
+
+        // Init
+        actualizarUtilidades();
+        toggleMoneda();
+        toggleExtra();
+
+        // TomSelect para dropdowns con muchas opciones
+        if (typeof TomSelect !== 'undefined') {
+            var tomOpts = { allowEmptyOption: true, sortField: { field: 'text', direction: 'asc' } };
+            ['selDivisor', 'selTabla', 'selMoneda', 'selUtilidad', 'selUtilidadExtra'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) {
+                    try { new TomSelect(el, tomOpts); } catch (e) { }
+                }
+            });
+        }
+    });
+</script>
+}

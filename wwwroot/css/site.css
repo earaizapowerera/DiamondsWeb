@@ -106,8 +106,8 @@
     font-weight: 700;
 }
 
-/* Compuestas Table */
-.table-comp thead th {
+/* Proveedores Table */
+.table-prov thead th {
     background-color: #343a40;
     color: #fff;
     border: none;
@@ -116,12 +116,24 @@
     letter-spacing: 0.5px;
 }
 
-.table-comp tbody tr:hover {
+.table-prov tbody tr:hover {
     background-color: #e8f4f8;
 }
 
-.table-comp .font-monospace {
-    font-size: 0.9rem;
+/* Caracteristica Badges */
+.badge.bg-caract-oro {
+    background-color: #d4a017 !important;
+    color: #fff;
+}
+
+.badge.bg-caract-diamante {
+    background-color: #6c63ff !important;
+    color: #fff;
+}
+
+.badge.bg-caract-reloj {
+    background-color: #2d9cdb !important;
+    color: #fff;
 }
 
 /* Responsive */

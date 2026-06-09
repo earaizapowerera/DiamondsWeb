@@ -1,0 +1,143 @@
+@page
+@model DiamondsWeb.Pages.Proveedores.IndexModel
+@{
+    ViewData["Title"] = "Catalogo de Proveedores";
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.SuccessMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Header -->
+<div class="info-panel d-flex justify-content-between align-items-center">
+    <div>
+        <h5 class="mb-0"><i class="fa-solid fa-truck-field me-2"></i>Catalogo de Proveedores</h5>
+        <small class="text-muted">@Model.TotalProveedores proveedores registrados</small>
+    </div>
+    <a href="/Proveedores/Editar" class="btn btn-primary">
+        <i class="fa-solid fa-plus me-1"></i>Nuevo Proveedor
+    </a>
+</div>
+
+<!-- Filtro de busqueda -->
+<div class="filter-panel">
+    <form method="get">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label"><small>Buscar proveedor</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Nombre, contacto, telefono o direccion..." />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="/Proveedores" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-rotate me-1"></i>Limpiar
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla de proveedores -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-prov table-hover mb-0" id="tblProveedores">
+                <thead>
+                    <tr>
+                        <th style="width:60px">#</th>
+                        <th>Nombre</th>
+                        <th>Contacto</th>
+                        <th>Telefono</th>
+                        <th>Caracteristica</th>
+                        <th>Tipo Costo</th>
+                        <th>Moneda</th>
+                        <th>Utilidad</th>
+                        <th class="text-center" style="width:120px">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Proveedores.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron proveedores
+                                @if (!string.IsNullOrEmpty(Model.Buscar))
+                                {
+                                    <span>con el criterio "<strong>@Model.Buscar</strong>"</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var p in Model.Proveedores)
+                    {
+                        <tr>
+                            <td class="text-muted">@p.Proveedor</td>
+                            <td><strong>@p.NombreProveedor</strong></td>
+                            <td>@(string.IsNullOrWhiteSpace(p.Atiende) ? "-" : p.Atiende)</td>
+                            <td>
+                                @(string.IsNullOrWhiteSpace(p.Telefono) ? "-" : p.Telefono)
+                                @if (!string.IsNullOrWhiteSpace(p.Telefono2))
+                                {
+                                    <br /><small class="text-muted">@p.Telefono2</small>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge bg-caract-@p.CaracteristicaDefault.ToLower()">@p.CaracteristicaDefault</span>
+                            </td>
+                            <td>@p.CostoDefault</td>
+                            <td>
+                                @if (p.UtilizarMoneda && !string.IsNullOrEmpty(p.Moneda))
+                                {
+                                    <span>@p.Moneda</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td>@(p.DefaultUtilidad ?? "-")</td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/Proveedores/Editar?id=@p.Proveedor" class="btn btn-outline-primary" title="Editar">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </a>
+                                    <form method="post" asp-page-handler="Eliminar" class="d-inline">
+                                        <input type="hidden" name="id" value="@p.Proveedor" />
+                                        <button type="submit" class="btn btn-outline-danger" title="Eliminar"
+                                                onclick="return confirm('Eliminar proveedor @p.NombreProveedor (#@p.Proveedor)?')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (Model.Proveedores.Count >= 50)
+{
+<div class="text-muted text-center mt-2">
+    <small><i class="fa-solid fa-info-circle me-1"></i>Mostrando los primeros 50 resultados. Use el buscador para filtrar.</small>
+</div>
+}
