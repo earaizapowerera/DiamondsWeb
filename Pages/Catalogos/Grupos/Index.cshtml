@@ -1,0 +1,216 @@
+@page
+@model DiamondsWeb.Pages.Catalogos.Grupos.IndexModel
+@{
+    ViewData["Title"] = "Catálogo de Grupos";
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.SuccessMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Encabezado -->
+<div class="info-panel mb-3">
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <h5 class="mb-0"><i class="fa-solid fa-tags me-2"></i>Catálogo de Grupos</h5>
+            <small class="text-muted">Categorías de productos — @Model.Grupos.Count registros</small>
+        </div>
+        <div class="col-md-6 text-end">
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalGrupo"
+                    onclick="prepararNuevo()">
+                <i class="fa-solid fa-plus me-1"></i>Nuevo Grupo
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Búsqueda -->
+<div class="filter-panel mb-3">
+    <form method="get">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label"><small>Buscar por nombre</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Escriba para filtrar grupos..." />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="/Catalogos/Grupos" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-rotate-right me-1"></i>Limpiar
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Grid de Grupos -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-aml table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:70px">Id</th>
+                        <th>Grupo</th>
+                        <th>Fecha Registro</th>
+                        <th>Última Edición</th>
+                        <th>Usuario</th>
+                        <th class="text-center" style="width:120px">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Grupos.Any())
+                    {
+                        @foreach (var g in Model.Grupos)
+                        {
+                            <tr>
+                                <td>@g.IdGrupo</td>
+                                <td><strong>@g.Grupo</strong></td>
+                                <td>
+                                    @if (g.FechaCaptura.HasValue)
+                                    {
+                                        <span class="utc-date" data-utc="@g.FechaCaptura.Value.ToString("o")Z">
+                                            @g.FechaCaptura.Value.ToString("dd/MM/yyyy")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (g.FechaUltEdicion.HasValue)
+                                    {
+                                        <span class="utc-date" data-utc="@g.FechaUltEdicion.Value.ToString("o")Z">
+                                            @g.FechaUltEdicion.Value.ToString("dd/MM/yyyy")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>@(g.Nombre ?? "-")</td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-primary btn-editar" title="Editar"
+                                                data-bs-toggle="modal" data-bs-target="#modalGrupo"
+                                                data-id="@g.IdGrupo" data-nombre="@g.Grupo">
+                                            <i class="fa-solid fa-pencil"></i>
+                                        </button>
+                                        <form method="post" asp-page-handler="Eliminar" class="d-inline">
+                                            <input type="hidden" name="id" value="@g.IdGrupo" />
+                                            <button type="submit" class="btn btn-outline-danger btn-eliminar" title="Eliminar"
+                                                    data-nombre="@g.Grupo">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron grupos.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear/Editar -->
+<div class="modal fade" id="modalGrupo" tabindex="-1" aria-labelledby="modalGrupoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formGrupo" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalGrupoLabel">
+                        <i class="fa-solid fa-tags me-2"></i><span id="modalTitulo">Nuevo Grupo</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="EditId" id="editId" />
+                    <div class="mb-3">
+                        <label for="nombreGrupo" class="form-label">Nombre del Grupo <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="nombreGrupo" name="NombreGrupo"
+                               maxlength="30" required placeholder="Ej: Anillos, Cadenas, Broqueles..."
+                               autofocus />
+                        <div class="form-text">Máximo 30 caracteres.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fa-solid fa-xmark me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="btnRegistrar">
+                        <i class="fa-solid fa-floppy-disk me-1"></i>Registrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function prepararNuevo() {
+        document.getElementById('modalTitulo').textContent = 'Nuevo Grupo';
+        document.getElementById('editId').value = '';
+        document.getElementById('nombreGrupo').value = '';
+        document.getElementById('btnRegistrar').innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Registrar';
+        document.getElementById('formGrupo').action = '?handler=Crear';
+    }
+
+    // Botones de edición: leer data attributes
+    document.querySelectorAll('.btn-editar').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var id = this.getAttribute('data-id');
+            var nombre = this.getAttribute('data-nombre');
+            document.getElementById('modalTitulo').textContent = 'Editar Grupo';
+            document.getElementById('editId').value = id;
+            document.getElementById('nombreGrupo').value = nombre;
+            document.getElementById('btnRegistrar').innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Guardar Cambios';
+            document.getElementById('formGrupo').action = '?handler=Editar';
+        });
+    });
+
+    // Botones de eliminar: confirmación
+    document.querySelectorAll('.btn-eliminar').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            var nombre = this.getAttribute('data-nombre');
+            if (!confirm('¿Eliminar el grupo «' + nombre + '»?')) {
+                e.preventDefault();
+            }
+        });
+    });
+
+    // Focus en el input al abrir el modal
+    document.getElementById('modalGrupo').addEventListener('shown.bs.modal', function () {
+        document.getElementById('nombreGrupo').focus();
+    });
+</script>
+}

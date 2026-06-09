@@ -45,6 +45,11 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
+// Catálogos Service
+builder.Services.AddScoped<GruposService>(sp => new GruposService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<GruposService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware
