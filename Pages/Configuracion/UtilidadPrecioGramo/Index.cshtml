@@ -20,22 +20,27 @@
 }
 
 <div class="card mb-4">
-    <div class="card-header bg-primary text-white">
-        <i class="fa-solid fa-weight-hanging me-2"></i>Utilidad Extra por Precio/Gramo
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-weight-hanging me-2"></i>Utilidad Extra por Precio/Gramo</span>
+        <span class="badge bg-light text-primary">@Model.Rangos.Count rangos</span>
     </div>
     <div class="card-body">
+        <p class="text-muted small mb-3">
+            <i class="fa-solid fa-info-circle me-1"></i>
+            Define rangos escalonados de precio por gramo y el porcentaje de utilidad extra que aplica a cada rango.
+            Los rangos no deben solaparse.
+        </p>
+
         <!-- Tabla -->
         <div class="table-responsive">
-            <table class="table table-hover table-striped mb-0">
+            <table class="table table-hover table-striped mb-0" id="tblRangos">
                 <thead class="table-dark">
                     <tr>
-                        <th>ID</th>
-                        <th>Desde</th>
-                        <th>Hasta</th>
-                        <th>Utilidad Extra %</th>
-                        <th>Usuario</th>
-                        <th>Fecha</th>
-                        <th class="text-center">Acciones</th>
+                        <th style="width:60px">ID</th>
+                        <th class="text-end">Precio/Gramo Desde</th>
+                        <th class="text-end">Precio/Gramo Hasta</th>
+                        <th class="text-end">Utilidad Extra</th>
+                        <th class="text-center" style="width:120px">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -43,19 +48,13 @@
                     {
                         @foreach (var r in Model.Rangos)
                         {
-                            <tr>
-                                <td>@r.IdUtilidadExtra</td>
-                                <td>
-                                    <span id="display-desde-@r.IdUtilidadExtra">@r.PrecioGramoDesde.ToString("N2")</span>
+                            <tr id="row-@r.IdUtilidadExtra">
+                                <td class="text-muted">@r.IdUtilidadExtra</td>
+                                <td class="text-end">@r.PrecioGramoDesde.ToString("N2")</td>
+                                <td class="text-end">@r.PrecioGramoHasta.ToString("N2")</td>
+                                <td class="text-end">
+                                    <span class="badge bg-info fs-6">@r.UtilidadExtra.ToString("N3")</span>
                                 </td>
-                                <td>
-                                    <span id="display-hasta-@r.IdUtilidadExtra">@r.PrecioGramoHasta.ToString("N2")</span>
-                                </td>
-                                <td>
-                                    <span id="display-util-@r.IdUtilidadExtra">@r.UtilidadExtra.ToString("N2")</span>
-                                </td>
-                                <td>@r.IdUsuario</td>
-                                <td>@r.FechaCaptura?.ToString("dd/MM/yyyy HH:mm")</td>
                                 <td class="text-center">
                                     <div class="btn-group btn-group-sm">
                                         <button type="button" class="btn btn-outline-warning" title="Editar"
@@ -65,7 +64,7 @@
                                         <form method="post" asp-page-handler="Delete" class="d-inline">
                                             <input type="hidden" name="id" value="@r.IdUtilidadExtra" />
                                             <button type="submit" class="btn btn-outline-danger" title="Eliminar"
-                                                    onclick="return confirm('Eliminar rango?')">
+                                                    onclick="return confirm('Eliminar rango @r.PrecioGramoDesde.ToString("N2") - @r.PrecioGramoHasta.ToString("N2")?')">
                                                 <i class="fa-solid fa-trash"></i>
                                             </button>
                                         </form>
@@ -73,32 +72,38 @@
                                 </td>
                             </tr>
                             <!-- Inline edit row -->
-                            <tr class="d-none" id="edit-row-@r.IdUtilidadExtra">
-                                <td colspan="7">
-                                    <form method="post" asp-page-handler="Edit">
+                            <tr class="d-none table-warning" id="edit-row-@r.IdUtilidadExtra">
+                                <td colspan="5">
+                                    <form method="post" asp-page-handler="Edit" onsubmit="return validateRange('edit-@r.IdUtilidadExtra')">
                                         <input type="hidden" name="EditId" value="@r.IdUtilidadExtra" />
                                         <div class="row g-2 align-items-end">
                                             <div class="col-md-3">
-                                                <label class="form-label"><small>Desde</small></label>
-                                                <input type="number" class="form-control form-control-sm" name="EditDesde" value="@r.PrecioGramoDesde" step="0.01" required />
+                                                <label class="form-label"><small>Precio/Gramo Desde</small></label>
+                                                <input type="number" class="form-control form-control-sm"
+                                                       name="EditDesde" id="edit-@(r.IdUtilidadExtra)-desde"
+                                                       value="@r.PrecioGramoDesde" step="0.01" min="0" required />
                                             </div>
                                             <div class="col-md-3">
-                                                <label class="form-label"><small>Hasta</small></label>
-                                                <input type="number" class="form-control form-control-sm" name="EditHasta" value="@r.PrecioGramoHasta" step="0.01" required />
+                                                <label class="form-label"><small>Precio/Gramo Hasta</small></label>
+                                                <input type="number" class="form-control form-control-sm"
+                                                       name="EditHasta" id="edit-@(r.IdUtilidadExtra)-hasta"
+                                                       value="@r.PrecioGramoHasta" step="0.01" min="0.01" required />
                                             </div>
                                             <div class="col-md-3">
-                                                <label class="form-label"><small>Utilidad Extra %</small></label>
-                                                <input type="number" class="form-control form-control-sm" name="EditUtilidadExtra" value="@r.UtilidadExtra" step="0.01" required />
+                                                <label class="form-label"><small>Utilidad Extra</small></label>
+                                                <input type="number" class="form-control form-control-sm"
+                                                       name="EditUtilidadExtra" id="edit-@(r.IdUtilidadExtra)-util"
+                                                       value="@r.UtilidadExtra" step="0.001" min="0.001" required />
                                             </div>
-                                            <div class="col-md-1">
-                                                <button type="submit" class="btn btn-success btn-sm w-100">
-                                                    <i class="fa-solid fa-check"></i>
-                                                </button>
-                                            </div>
-                                            <div class="col-md-1">
-                                                <button type="button" class="btn btn-secondary btn-sm w-100" onclick="cancelEdit(@r.IdUtilidadExtra)">
-                                                    <i class="fa-solid fa-times"></i>
-                                                </button>
+                                            <div class="col-md-3">
+                                                <div class="btn-group btn-group-sm w-100">
+                                                    <button type="submit" class="btn btn-success">
+                                                        <i class="fa-solid fa-check me-1"></i>Guardar
+                                                    </button>
+                                                    <button type="button" class="btn btn-secondary" onclick="cancelEdit(@r.IdUtilidadExtra)">
+                                                        <i class="fa-solid fa-times me-1"></i>Cancelar
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </form>
@@ -109,9 +114,9 @@
                     else
                     {
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
+                            <td colspan="5" class="text-center text-muted py-4">
                                 <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
-                                No se encontraron rangos.
+                                No se encontraron rangos. Agrega el primer rango abajo.
                             </td>
                         </tr>
                     }
@@ -122,21 +127,25 @@
         <!-- Formulario Nuevo -->
         <hr />
         <h6><i class="fa-solid fa-plus me-2"></i>Agregar Rango</h6>
-        <form method="post" asp-page-handler="Create" class="row g-3 align-items-end">
+        <form method="post" asp-page-handler="Create" class="row g-3 align-items-end"
+              onsubmit="return validateRange('new')">
             <div class="col-md-3">
-                <label class="form-label"><small>Desde</small></label>
-                <input type="number" class="form-control form-control-sm" name="NuevoDesde" step="0.01" required
-                       placeholder="Precio gramo desde..." />
+                <label class="form-label"><small>Precio/Gramo Desde</small></label>
+                <input type="number" class="form-control form-control-sm" name="NuevoDesde"
+                       id="new-desde" step="0.01" min="0" required
+                       placeholder="0.00" />
             </div>
             <div class="col-md-3">
-                <label class="form-label"><small>Hasta</small></label>
-                <input type="number" class="form-control form-control-sm" name="NuevoHasta" step="0.01" required
-                       placeholder="Precio gramo hasta..." />
+                <label class="form-label"><small>Precio/Gramo Hasta</small></label>
+                <input type="number" class="form-control form-control-sm" name="NuevoHasta"
+                       id="new-hasta" step="0.01" min="0.01" required
+                       placeholder="0.00" />
             </div>
             <div class="col-md-3">
-                <label class="form-label"><small>Utilidad Extra %</small></label>
-                <input type="number" class="form-control form-control-sm" name="NuevoUtilidadExtra" step="0.01" required
-                       placeholder="% utilidad extra..." />
+                <label class="form-label"><small>Utilidad Extra</small></label>
+                <input type="number" class="form-control form-control-sm" name="NuevoUtilidadExtra"
+                       id="new-util" step="0.001" min="0.001" required
+                       placeholder="1.000" />
             </div>
             <div class="col-md-3">
                 <button type="submit" class="btn btn-success btn-sm w-100">
@@ -144,16 +153,63 @@
                 </button>
             </div>
         </form>
+        <div id="validation-msg" class="text-danger small mt-2 d-none"></div>
     </div>
 </div>
 
 @section Scripts {
 <script>
     function startEdit(id) {
+        // Ocultar cualquier otra edicion abierta
+        document.querySelectorAll('[id^="edit-row-"]').forEach(function(el) {
+            el.classList.add('d-none');
+        });
         document.getElementById('edit-row-' + id).classList.remove('d-none');
     }
+
     function cancelEdit(id) {
         document.getElementById('edit-row-' + id).classList.add('d-none');
+    }
+
+    function validateRange(prefix) {
+        var desde = parseFloat(document.getElementById(prefix + '-desde').value);
+        var hasta = parseFloat(document.getElementById(prefix + '-hasta').value);
+        var util = parseFloat(document.getElementById(prefix + '-util').value);
+        var msgEl = document.getElementById('validation-msg');
+
+        if (isNaN(desde) || isNaN(hasta) || isNaN(util)) {
+            showValidation('Todos los campos son requeridos.');
+            return false;
+        }
+
+        if (desde < 0 || hasta < 0) {
+            showValidation('Los valores de precio no pueden ser negativos.');
+            return false;
+        }
+
+        if (desde >= hasta) {
+            showValidation('El valor "Desde" debe ser menor que "Hasta".');
+            return false;
+        }
+
+        if (util <= 0) {
+            showValidation('La utilidad extra debe ser mayor a 0.');
+            return false;
+        }
+
+        hideValidation();
+        return true;
+    }
+
+    function showValidation(msg) {
+        var el = document.getElementById('validation-msg');
+        el.textContent = msg;
+        el.classList.remove('d-none');
+    }
+
+    function hideValidation() {
+        var el = document.getElementById('validation-msg');
+        el.classList.add('d-none');
     }
 </script>
 }

@@ -443,35 +443,53 @@ public class CatalogService
 
     // ══════════════════════════════════════════════
     // UTILIDAD EXTRA POR PRECIO/GRAMO
+    // Tabla real: Id, PrecioGramoDesde, PrecioGramoHasta, DefaultUtilidadExtra, FechaCaptura, IdUsuario, rowguid
     // ══════════════════════════════════════════════
     public async Task<List<UtilidadExtraPrecioGramo>> ObtenerUtilidadExtraPrecioGramoAsync()
     {
         using var conn = CreateConnection();
         return (await conn.QueryAsync<UtilidadExtraPrecioGramo>(@"
-            SELECT IdUtilidadExtra, PrecioGramoDesde, PrecioGramoHasta, UtilidadExtra, IdUsuario, FechaCaptura
+            SELECT Id AS IdUtilidadExtra, PrecioGramoDesde, PrecioGramoHasta,
+                   DefaultUtilidadExtra AS UtilidadExtra, IdUsuario, FechaCaptura
             FROM UtilidadExtra_PrecioGramo ORDER BY PrecioGramoDesde")).ToList();
     }
 
     public async Task<int> CrearUtilidadExtraPrecioGramoAsync(decimal desde, decimal hasta, decimal utilidad, int idUsuario)
     {
         using var conn = CreateConnection();
-        return await conn.ExecuteScalarAsync<int>(
-            "INSERT INTO UtilidadExtra_PrecioGramo (PrecioGramoDesde, PrecioGramoHasta, UtilidadExtra, IdUsuario, FechaCaptura) OUTPUT INSERTED.IdUtilidadExtra VALUES (@Desde, @Hasta, @Utilidad, @IdUsuario, GETDATE())",
+        return await conn.ExecuteScalarAsync<int>(@"
+            INSERT INTO UtilidadExtra_PrecioGramo (PrecioGramoDesde, PrecioGramoHasta, DefaultUtilidadExtra, IdUsuario, FechaCaptura)
+            OUTPUT INSERTED.Id
+            VALUES (@Desde, @Hasta, @Utilidad, @IdUsuario, GETUTCDATE())",
             new { Desde = desde, Hasta = hasta, Utilidad = utilidad, IdUsuario = idUsuario });
     }
 
     public async Task ActualizarUtilidadExtraPrecioGramoAsync(int id, decimal desde, decimal hasta, decimal utilidad)
     {
         using var conn = CreateConnection();
-        await conn.ExecuteAsync(
-            "UPDATE UtilidadExtra_PrecioGramo SET PrecioGramoDesde = @Desde, PrecioGramoHasta = @Hasta, UtilidadExtra = @Utilidad WHERE IdUtilidadExtra = @Id",
+        await conn.ExecuteAsync(@"
+            UPDATE UtilidadExtra_PrecioGramo
+            SET PrecioGramoDesde = @Desde, PrecioGramoHasta = @Hasta, DefaultUtilidadExtra = @Utilidad
+            WHERE Id = @Id",
             new { Id = id, Desde = desde, Hasta = hasta, Utilidad = utilidad });
     }
 
     public async Task EliminarUtilidadExtraPrecioGramoAsync(int id)
     {
         using var conn = CreateConnection();
-        await conn.ExecuteAsync("DELETE FROM UtilidadExtra_PrecioGramo WHERE IdUtilidadExtra = @Id", new { Id = id });
+        await conn.ExecuteAsync("DELETE FROM UtilidadExtra_PrecioGramo WHERE Id = @Id", new { Id = id });
+    }
+
+    public async Task<bool> ExisteRangoSolapadoAsync(decimal desde, decimal hasta, int? excluirId = null)
+    {
+        using var conn = CreateConnection();
+        var sql = @"SELECT TOP 1 1 FROM UtilidadExtra_PrecioGramo
+                    WHERE PrecioGramoDesde < @Hasta AND PrecioGramoHasta > @Desde";
+        if (excluirId.HasValue)
+            sql += " AND Id <> @ExcluirId";
+        var result = await conn.QueryFirstOrDefaultAsync<int?>(sql,
+            new { Desde = desde, Hasta = hasta, ExcluirId = excluirId });
+        return result.HasValue;
     }
 
     // ══════════════════════════════════════════════
