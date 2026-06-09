@@ -385,6 +385,14 @@ public class CatalogService
             new { Impuesto = impuesto, Divisor = divisor, IdUsuario = idUsuario });
     }
 
+    public async Task ActualizarDefaultFactorComunAsync(int id, decimal impuesto, decimal divisor, int idUsuario)
+    {
+        using var conn = CreateConnection();
+        await conn.ExecuteAsync(
+            "UPDATE DefaultsfactorComunes SET DefaultImpuesto = @Impuesto, DefaultDivisor = @Divisor, IdUsuario = @IdUsuario WHERE IdDefault = @Id",
+            new { Id = id, Impuesto = impuesto, Divisor = divisor, IdUsuario = idUsuario });
+    }
+
     public async Task EliminarDefaultFactorComunAsync(int id)
     {
         using var conn = CreateConnection();

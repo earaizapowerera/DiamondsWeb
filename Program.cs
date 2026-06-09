@@ -39,10 +39,10 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
-// Inventory Service
-builder.Services.AddScoped<InventoryService>(sp => new InventoryService(
+// Catalog Service
+builder.Services.AddScoped<CatalogService>(sp => new CatalogService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<InventoryService>>()));
+    sp.GetRequiredService<ILogger<CatalogService>>()));
 
 // SPPLD Config & Service
 var sppldConfig = new SppldConfig();
