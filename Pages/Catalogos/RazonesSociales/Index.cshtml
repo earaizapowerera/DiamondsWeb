@@ -1,0 +1,270 @@
+@page
+@model DiamondsWeb.Pages.Catalogos.RazonesSociales.IndexModel
+@{
+    ViewData["Title"] = "Razones Sociales";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Filtro -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-building me-2"></i>Razones Sociales
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end mb-4">
+            <div class="col-md-6">
+                <label class="form-label"><small>Buscar</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Buscar razon social o RFC..." />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-3">
+                <a href="/Catalogos/RazonesSociales" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+
+        <!-- Tabla -->
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Razon Social</th>
+                        <th>RFC</th>
+                        <th>Calle</th>
+                        <th>Colonia</th>
+                        <th>CP</th>
+                        <th>Municipio</th>
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.RazonesSociales.Any())
+                    {
+                        @foreach (var rs in Model.RazonesSociales)
+                        {
+                            <tr>
+                                <td>@rs.IdRazonSocialProveedor</td>
+                                <td>
+                                    <span id="display-@rs.IdRazonSocialProveedor">@rs.RazonSocialProveedor1</span>
+                                </td>
+                                <td>@rs.RFC</td>
+                                <td>@rs.Calle</td>
+                                <td>@rs.Colonia</td>
+                                <td>@rs.CodigoPostal</td>
+                                <td>@rs.Municipio</td>
+                                <td>@rs.Estado</td>
+                                <td>@rs.FechaCaptura?.ToString("dd/MM/yyyy")</td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-warning" title="Editar"
+                                                onclick="startEdit(@rs.IdRazonSocialProveedor)">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <a href="?VerAsignaciones=@rs.IdRazonSocialProveedor" class="btn btn-outline-info" title="Asignaciones">
+                                            <i class="fa-solid fa-link"></i>
+                                        </a>
+                                        <form method="post" asp-page-handler="Delete" class="d-inline">
+                                            <input type="hidden" name="id" value="@rs.IdRazonSocialProveedor" />
+                                            <button type="submit" class="btn btn-outline-danger" title="Eliminar"
+                                                    onclick="return confirm('Eliminar razon social @rs.RazonSocialProveedor1?')">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- Inline edit row (hidden) -->
+                            <tr class="d-none" id="edit-row-@rs.IdRazonSocialProveedor">
+                                <td colspan="10">
+                                    <form method="post" asp-page-handler="Edit">
+                                        <input type="hidden" name="EditId" value="@rs.IdRazonSocialProveedor" />
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-md-3">
+                                                <label class="form-label"><small>Razon Social</small></label>
+                                                <input type="text" class="form-control form-control-sm" name="EditRazonSocial" value="@rs.RazonSocialProveedor1" required />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label"><small>RFC</small></label>
+                                                <input type="text" class="form-control form-control-sm" name="EditRFC" value="@rs.RFC" />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label"><small>Calle</small></label>
+                                                <input type="text" class="form-control form-control-sm" name="EditCalle" value="@rs.Calle" />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label"><small>Colonia</small></label>
+                                                <input type="text" class="form-control form-control-sm" name="EditColonia" value="@rs.Colonia" />
+                                            </div>
+                                            <div class="col-md-1">
+                                                <label class="form-label"><small>CP</small></label>
+                                                <input type="text" class="form-control form-control-sm" name="EditCP" value="@rs.CodigoPostal" />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label"><small>Municipio</small></label>
+                                                <input type="text" class="form-control form-control-sm" name="EditMunicipio" value="@rs.Municipio" />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label"><small>Estado</small></label>
+                                                <input type="text" class="form-control form-control-sm" name="EditEstado" value="@rs.Estado" />
+                                            </div>
+                                            <div class="col-md-1">
+                                                <button type="submit" class="btn btn-success btn-sm w-100">
+                                                    <i class="fa-solid fa-check"></i>
+                                                </button>
+                                            </div>
+                                            <div class="col-md-1">
+                                                <button type="button" class="btn btn-secondary btn-sm w-100" onclick="cancelEdit(@rs.IdRazonSocialProveedor)">
+                                                    <i class="fa-solid fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="10" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron razones sociales.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Asignaciones Panel -->
+        @if (Model.VerAsignaciones.HasValue)
+        {
+            var rsName = Model.RazonesSociales.FirstOrDefault(r => r.IdRazonSocialProveedor == Model.VerAsignaciones)?.RazonSocialProveedor1 ?? "";
+            <hr />
+            <div class="card border-info mb-3">
+                <div class="card-header bg-info text-white">
+                    <i class="fa-solid fa-link me-2"></i>Proveedores asignados a: @rsName
+                </div>
+                <div class="card-body">
+                    @if (Model.Asignaciones.Any())
+                    {
+                        <ul class="list-group mb-3">
+                            @foreach (var a in Model.Asignaciones)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    @a.NombreProveedor
+                                    <form method="post" asp-page-handler="Desasignar" class="d-inline">
+                                        <input type="hidden" name="idRS" value="@a.IdRazonSocialProveedor" />
+                                        <input type="hidden" name="proveedor" value="@a.Proveedor" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                onclick="return confirm('Desasignar proveedor?')">
+                                            <i class="fa-solid fa-times"></i>
+                                        </button>
+                                    </form>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No hay proveedores asignados.</p>
+                    }
+                    <form method="post" asp-page-handler="Asignar" class="row g-2 align-items-end">
+                        <input type="hidden" name="AsignarIdRS" value="@Model.VerAsignaciones" />
+                        <div class="col-md-8">
+                            <label class="form-label"><small>Asignar proveedor</small></label>
+                            <select class="form-select form-select-sm" name="AsignarProveedor" required>
+                                <option value="">-- Seleccionar --</option>
+                                @foreach (var p in Model.Proveedores)
+                                {
+                                    <option value="@p.Proveedor1">@p.NombreProveedor</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-info btn-sm w-100">
+                                <i class="fa-solid fa-plus me-1"></i>Asignar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+
+        <!-- Formulario Nuevo -->
+        <hr />
+        <h6><i class="fa-solid fa-plus me-2"></i>Agregar Razon Social</h6>
+        <form method="post" asp-page-handler="Create">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label"><small>Razon Social</small></label>
+                    <input type="text" class="form-control form-control-sm" name="NuevoRazonSocial" required
+                           placeholder="Razon social..." />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>RFC</small></label>
+                    <input type="text" class="form-control form-control-sm" name="NuevoRFC" placeholder="RFC" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Calle</small></label>
+                    <input type="text" class="form-control form-control-sm" name="NuevoCalle" placeholder="Calle" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Colonia</small></label>
+                    <input type="text" class="form-control form-control-sm" name="NuevoColonia" placeholder="Colonia" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label"><small>CP</small></label>
+                    <input type="text" class="form-control form-control-sm" name="NuevoCP" placeholder="CP" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Municipio</small></label>
+                    <input type="text" class="form-control form-control-sm" name="NuevoMunicipio" placeholder="Municipio" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Estado</small></label>
+                    <input type="text" class="form-control form-control-sm" name="NuevoEstado" placeholder="Estado" />
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-success btn-sm w-100">
+                        <i class="fa-solid fa-plus me-1"></i>Crear Razon Social
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function startEdit(id) {
+        document.getElementById('edit-row-' + id).classList.remove('d-none');
+    }
+    function cancelEdit(id) {
+        document.getElementById('edit-row-' + id).classList.add('d-none');
+    }
+</script>
+}

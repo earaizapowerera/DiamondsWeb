@@ -1,0 +1,97 @@
+@page
+@model DiamondsWeb.Pages.Configuracion.DefaultsImpuesto.IndexModel
+@{
+    ViewData["Title"] = "Defaults Impuesto / Divisor";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-percent me-2"></i>Defaults Impuesto / Divisor
+    </div>
+    <div class="card-body">
+        <!-- Tabla -->
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Impuesto</th>
+                        <th>Divisor</th>
+                        <th>Usuario</th>
+                        <th>Fecha</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Defaults.Any())
+                    {
+                        @foreach (var d in Model.Defaults)
+                        {
+                            <tr>
+                                <td>@d.IdDefault</td>
+                                <td>@d.DefaultImpuesto</td>
+                                <td>@d.DefaultDivisor</td>
+                                <td>@d.IdUsuario</td>
+                                <td>@d.FechaCaptura?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="text-center">
+                                    <form method="post" asp-page-handler="Delete" class="d-inline">
+                                        <input type="hidden" name="id" value="@d.IdDefault" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Eliminar"
+                                                onclick="return confirm('Eliminar default?')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron defaults.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Formulario Nuevo -->
+        <hr />
+        <h6><i class="fa-solid fa-plus me-2"></i>Agregar Default</h6>
+        <form method="post" asp-page-handler="Create" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label"><small>Impuesto</small></label>
+                <input type="number" class="form-control form-control-sm" name="NuevoImpuesto" step="0.01" required
+                       placeholder="Ej: 16.00" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label"><small>Divisor</small></label>
+                <input type="number" class="form-control form-control-sm" name="NuevoDivisor" step="0.01" required
+                       placeholder="Ej: 1.00" />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-success btn-sm w-100">
+                    <i class="fa-solid fa-plus me-1"></i>Crear Default
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

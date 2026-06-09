@@ -1,0 +1,200 @@
+@page
+@model DiamondsWeb.Pages.Ventas.ConsultaNotas.IndexModel
+@{
+    ViewData["Title"] = "Consulta de Notas";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-file-invoice me-2"></i>Consulta de Notas
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end mb-4">
+            <div class="col-md-3">
+                <label class="form-label"><small>Desde</small></label>
+                <input type="date" class="form-control form-control-sm" name="Desde"
+                       value="@Model.Desde?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Hasta</small></label>
+                <input type="date" class="form-control form-control-sm" name="Hasta"
+                       value="@Model.Hasta?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Cliente</small></label>
+                <input type="text" class="form-control form-control-sm" name="NombreCliente"
+                       value="@Model.NombreCliente" placeholder="Nombre del cliente..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Codigo de Barras</small></label>
+                <input type="text" class="form-control form-control-sm" name="CodigoBarras"
+                       value="@Model.CodigoBarras" placeholder="Codigo de barras..." />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-3">
+                <a href="/Ventas/ConsultaNotas" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+
+        <!-- Tabla de Notas -->
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Nota</th>
+                        <th>Cliente</th>
+                        <th>Fecha</th>
+                        <th class="text-end">Bruto</th>
+                        <th class="text-end">Descuento</th>
+                        <th class="text-end">Neto</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-center">Piezas</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Notas.Any())
+                    {
+                        @foreach (var n in Model.Notas)
+                        {
+                            var isSelected = Model.NotaSeleccionada == n.IdNota;
+                            <tr class="@(isSelected ? "table-info" : "")">
+                                <td><strong>@n.IdNota</strong></td>
+                                <td>@n.NombreCliente</td>
+                                <td>@n.FechaBaja?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="text-end">@n.Bruto?.ToString("C2")</td>
+                                <td class="text-end">@n.Descuento?.ToString("N2")%</td>
+                                <td class="text-end">@n.Neto?.ToString("C2")</td>
+                                <td class="text-end">@n.Total?.ToString("C2")</td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary">@n.CantidadPiezas</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="?Desde=@Model.Desde?.ToString("yyyy-MM-dd")&Hasta=@Model.Hasta?.ToString("yyyy-MM-dd")&NombreCliente=@Model.NombreCliente&CodigoBarras=@Model.CodigoBarras&IdNotaDetalle=@n.IdNota"
+                                           class="btn btn-outline-info" title="Ver detalle">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </a>
+                                        <form method="post" asp-page-handler="Cancelar" class="d-inline">
+                                            <input type="hidden" name="idNota" value="@n.IdNota" />
+                                            <button type="submit" class="btn btn-outline-danger" title="Cancelar nota"
+                                                    onclick="return confirm('Cancelar nota @n.IdNota? Las piezas seran restauradas al inventario.')">
+                                                <i class="fa-solid fa-ban"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            @if (isSelected)
+                            {
+                                <tr>
+                                    <td colspan="9" class="p-0">
+                                        <div class="bg-light p-3 border-top">
+                                            <div class="row">
+                                                <!-- Piezas -->
+                                                <div class="col-md-7">
+                                                    <h6 class="mb-2"><i class="fa-solid fa-gem me-1"></i>Piezas de la Nota @n.IdNota</h6>
+                                                    <table class="table table-sm table-bordered mb-0">
+                                                        <thead class="table-secondary">
+                                                            <tr>
+                                                                <th>Codigo</th>
+                                                                <th>Descripcion</th>
+                                                                <th>Proveedor</th>
+                                                                <th class="text-end">Precio</th>
+                                                                <th class="text-end">Total</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @if (Model.PiezasDetalle.Any())
+                                                            {
+                                                                @foreach (var p in Model.PiezasDetalle)
+                                                                {
+                                                                    <tr>
+                                                                        <td>@p.CodigoBarras</td>
+                                                                        <td>@p.Descripcion</td>
+                                                                        <td>@p.NombreProveedor</td>
+                                                                        <td class="text-end">@p.Precio?.ToString("C2")</td>
+                                                                        <td class="text-end">@p.Total?.ToString("C2")</td>
+                                                                    </tr>
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                <tr><td colspan="5" class="text-center text-muted">Sin piezas</td></tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                <!-- Pagos -->
+                                                <div class="col-md-5">
+                                                    <h6 class="mb-2"><i class="fa-solid fa-credit-card me-1"></i>Pagos de la Nota @n.IdNota</h6>
+                                                    <table class="table table-sm table-bordered mb-0">
+                                                        <thead class="table-secondary">
+                                                            <tr>
+                                                                <th>Forma de Pago</th>
+                                                                <th class="text-end">Importe</th>
+                                                                <th class="text-end">T.C.</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @if (Model.PagosDetalle.Any())
+                                                            {
+                                                                @foreach (var pg in Model.PagosDetalle)
+                                                                {
+                                                                    <tr>
+                                                                        <td>@pg.OpcionPago</td>
+                                                                        <td class="text-end">@pg.Importe.ToString("C2")</td>
+                                                                        <td class="text-end">@pg.TipoCambio?.ToString("N4")</td>
+                                                                    </tr>
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                <tr><td colspan="3" class="text-center text-muted">Sin pagos</td></tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-file-invoice fa-2x mb-2 d-block"></i>
+                                Ingrese los filtros de busqueda y presione Buscar.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

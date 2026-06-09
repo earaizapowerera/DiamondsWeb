@@ -1,0 +1,234 @@
+@page
+@model DiamondsWeb.Pages.Catalogos.Repetidas.IndexModel
+@{
+    ViewData["Title"] = "Catalogo Repetidas";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Filtro -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-clone me-2"></i>Catalogo Repetidas
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end mb-4">
+            <div class="col-md-6">
+                <label class="form-label"><small>Buscar</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Buscar por descripcion o codigo..." />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-3">
+                <a href="/Catalogos/Repetidas" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+
+        <!-- Tabla -->
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Codigo Barras</th>
+                        <th>Descripcion</th>
+                        <th>Proveedor</th>
+                        <th>Grupo</th>
+                        <th>Kilates</th>
+                        <th>Precio</th>
+                        <th>Fecha</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Repetidas.Any())
+                    {
+                        @foreach (var r in Model.Repetidas)
+                        {
+                            <tr>
+                                <td><code>@r.CodigoBarras</code></td>
+                                <td>@r.Descripcion</td>
+                                <td>@r.NombreProveedor</td>
+                                <td>@r.Grupo</td>
+                                <td>@r.Kilates</td>
+                                <td>@r.Precio?.ToString("C2")</td>
+                                <td>@r.FechaCaptura?.ToString("dd/MM/yyyy")</td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-warning" title="Editar"
+                                                onclick="startEdit('@r.CodigoBarras')">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <form method="post" asp-page-handler="Delete" class="d-inline">
+                                            <input type="hidden" name="id" value="@r.CodigoBarras" />
+                                            <button type="submit" class="btn btn-outline-danger" title="Eliminar"
+                                                    onclick="return confirm('Eliminar repetida @r.CodigoBarras?')">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- Inline edit row -->
+                            <tr class="d-none" id="edit-row-@r.CodigoBarras">
+                                <td colspan="8">
+                                    <form method="post" asp-page-handler="Edit">
+                                        <input type="hidden" name="EditCodigoBarras" value="@r.CodigoBarras" />
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-md-3">
+                                                <label class="form-label"><small>Descripcion</small></label>
+                                                <input type="text" class="form-control form-control-sm" name="EditDescripcion" value="@r.Descripcion" required />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label"><small>Proveedor</small></label>
+                                                <select class="form-select form-select-sm" name="EditProveedor">
+                                                    <option value="">-- Ninguno --</option>
+                                                    @foreach (var p in Model.Proveedores)
+                                                    {
+                                                        <option value="@p.Proveedor1" selected="@(r.Proveedor == p.Proveedor1)">@p.NombreProveedor</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label"><small>Grupo</small></label>
+                                                <select class="form-select form-select-sm" name="EditIdGrupo">
+                                                    <option value="">-- Ninguno --</option>
+                                                    @foreach (var g in Model.Grupos)
+                                                    {
+                                                        <option value="@g.IdGrupo" selected="@(r.IdGrupo == g.IdGrupo)">@g.Grupo1</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-md-1">
+                                                <label class="form-label"><small>Kilates</small></label>
+                                                <input type="text" class="form-control form-control-sm" name="EditKilates" value="@r.Kilates" />
+                                            </div>
+                                            <div class="col-md-1">
+                                                <label class="form-label"><small>Precio</small></label>
+                                                <input type="number" class="form-control form-control-sm" name="EditPrecio" value="@r.Precio" step="0.01" />
+                                            </div>
+                                            <div class="col-md-1">
+                                                <label class="form-label"><small>Divisor</small></label>
+                                                <select class="form-select form-select-sm" name="EditIdDivisor">
+                                                    <option value="">--</option>
+                                                    @foreach (var d in Model.Divisores)
+                                                    {
+                                                        <option value="@d.IdDivisor" selected="@(r.IdDivisor == d.IdDivisor)">@d.Descripcion</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-md-1">
+                                                <button type="submit" class="btn btn-success btn-sm w-100">
+                                                    <i class="fa-solid fa-check"></i>
+                                                </button>
+                                            </div>
+                                            <div class="col-md-1">
+                                                <button type="button" class="btn btn-secondary btn-sm w-100" onclick="cancelEdit('@r.CodigoBarras')">
+                                                    <i class="fa-solid fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron repetidas.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Formulario Nuevo -->
+        <hr />
+        <h6><i class="fa-solid fa-plus me-2"></i>Agregar Repetida <small class="text-muted">(el codigo de barras se genera automaticamente)</small></h6>
+        <form method="post" asp-page-handler="Create">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label"><small>Descripcion</small></label>
+                    <input type="text" class="form-control form-control-sm" name="NuevoDescripcion" required
+                           placeholder="Descripcion..." />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Proveedor</small></label>
+                    <select class="form-select form-select-sm" name="NuevoProveedor">
+                        <option value="">-- Ninguno --</option>
+                        @foreach (var p in Model.Proveedores)
+                        {
+                            <option value="@p.Proveedor1">@p.NombreProveedor</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Grupo</small></label>
+                    <select class="form-select form-select-sm" name="NuevoIdGrupo">
+                        <option value="">-- Ninguno --</option>
+                        @foreach (var g in Model.Grupos)
+                        {
+                            <option value="@g.IdGrupo">@g.Grupo1</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label"><small>Kilates</small></label>
+                    <input type="text" class="form-control form-control-sm" name="NuevoKilates" placeholder="Kilates" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label"><small>Precio</small></label>
+                    <input type="number" class="form-control form-control-sm" name="NuevoPrecio" step="0.01" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label"><small>Divisor</small></label>
+                    <select class="form-select form-select-sm" name="NuevoIdDivisor">
+                        <option value="">--</option>
+                        @foreach (var d in Model.Divisores)
+                        {
+                            <option value="@d.IdDivisor">@d.Descripcion</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success btn-sm w-100">
+                        <i class="fa-solid fa-plus me-1"></i>Crear
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function startEdit(id) {
+        document.getElementById('edit-row-' + id).classList.remove('d-none');
+    }
+    function cancelEdit(id) {
+        document.getElementById('edit-row-' + id).classList.add('d-none');
+    }
+</script>
+}

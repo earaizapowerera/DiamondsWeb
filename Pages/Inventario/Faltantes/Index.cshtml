@@ -1,0 +1,113 @@
+@page
+@model DiamondsWeb.Pages.Inventario.Faltantes.IndexModel
+@{
+    ViewData["Title"] = "Faltantes";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Faltantes -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-magnifying-glass-minus me-2"></i>Piezas Faltantes
+    </div>
+    <div class="card-body">
+
+        <!-- Resumen -->
+        <div class="d-flex gap-3 mb-3">
+            <span class="badge bg-danger fs-6">
+                <i class="fa-solid fa-hashtag me-1"></i>Total: @Model.TotalFaltantes
+            </span>
+            <span class="badge bg-warning text-dark fs-6">
+                <i class="fa-solid fa-dollar-sign me-1"></i>Suma Precios: @Model.SumaPrecios.ToString("C2")
+            </span>
+        </div>
+
+        <!-- Tabla -->
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Codigo Barras</th>
+                        <th>Descripcion</th>
+                        <th class="text-end">Precio</th>
+                        <th>Proveedor</th>
+                        <th>Grupo</th>
+                        <th>Comentario</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Faltantes.Any())
+                    {
+                        @foreach (var f in Model.Faltantes)
+                        {
+                            <tr>
+                                <td><code>@f.CodigoBarras</code></td>
+                                <td>@f.Descripcion</td>
+                                <td class="text-end">@(f.Precio?.ToString("C2"))</td>
+                                <td>@f.NombreProveedor</td>
+                                <td>@f.Grupo</td>
+                                <td>
+                                    <span id="display-com-@f.CodigoBarras">@f.Comentario</span>
+                                    <form method="post" asp-page-handler="Comentario" class="d-none" id="edit-com-@f.CodigoBarras">
+                                        <div class="input-group input-group-sm">
+                                            <input type="hidden" name="ComentarioCB" value="@f.CodigoBarras" />
+                                            <input type="text" class="form-control" name="ComentarioTexto" value="@f.Comentario" />
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                <i class="fa-solid fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="cancelComment('@f.CodigoBarras')">
+                                                <i class="fa-solid fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </form>
+                                    <button type="button" class="btn btn-outline-warning btn-sm ms-1" title="Editar comentario"
+                                            id="btn-com-@f.CodigoBarras" onclick="startComment('@f.CodigoBarras')">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron piezas faltantes.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function startComment(cb) {
+        document.getElementById('display-com-' + cb).classList.add('d-none');
+        document.getElementById('btn-com-' + cb).classList.add('d-none');
+        document.getElementById('edit-com-' + cb).classList.remove('d-none');
+    }
+    function cancelComment(cb) {
+        document.getElementById('display-com-' + cb).classList.remove('d-none');
+        document.getElementById('btn-com-' + cb).classList.remove('d-none');
+        document.getElementById('edit-com-' + cb).classList.add('d-none');
+    }
+</script>
+}

@@ -1,0 +1,137 @@
+@page
+@model DiamondsWeb.Pages.Ventas.DevolucionesCliente.IndexModel
+@{
+    ViewData["Title"] = "Devoluciones de Cliente";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-rotate-left me-2"></i>Devoluciones de Cliente
+    </div>
+    <div class="card-body">
+        <!-- Busqueda por codigo -->
+        <form method="get" class="row g-3 align-items-end mb-4">
+            <div class="col-md-6">
+                <label class="form-label"><small>Codigo de Barras</small></label>
+                <input type="text" class="form-control form-control-sm" name="CodigoBarras"
+                       value="@Model.CodigoBarras" placeholder="Escanear o ingresar codigo de barras..." autofocus />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-3">
+                <a href="/Ventas/DevolucionesCliente" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+
+        @if (Model.Resultado != null)
+        {
+            var r = Model.Resultado;
+
+            <!-- Warning si ya fue reestablecida -->
+            @if (r.YaReestablecida)
+            {
+                <div class="alert alert-warning">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                    <strong>Esta pieza ya fue reestablecida anteriormente.</strong> No es posible reestablecerla nuevamente.
+                </div>
+            }
+
+            <!-- Informacion de la compra -->
+            <div class="card border-info mb-3">
+                <div class="card-header bg-info text-white">
+                    <i class="fa-solid fa-circle-info me-2"></i>Informacion de Compra
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr>
+                                    <th class="text-muted" style="width:40%;">Codigo de Barras</th>
+                                    <td><strong>@r.CodigoBarras</strong></td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Descripcion</th>
+                                    <td>@r.Descripcion</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Cliente</th>
+                                    <td>@r.NombreCliente</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Fecha de Compra</th>
+                                    <td>@r.FechaCompra?.ToString("dd/MM/yyyy HH:mm")</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr>
+                                    <th class="text-muted" style="width:40%;">Precio</th>
+                                    <td>@r.Precio?.ToString("C2")</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Descuento</th>
+                                    <td>@r.Descuento?.ToString("N2")%</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Precio Pagado</th>
+                                    <td><strong class="text-success">@r.PrecioPagado?.ToString("C2")</strong></td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Forma de Pago</th>
+                                    <td>@(r.FormaPago ?? "N/A")</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boton reestablecer -->
+            @if (!r.YaReestablecida)
+            {
+                <form method="post" asp-page-handler="Reestablecer">
+                    <input type="hidden" name="codigoBarras" value="@r.CodigoBarras" />
+                    <button type="submit" class="btn btn-warning"
+                            onclick="return confirm('Reestablecer la pieza @r.CodigoBarras al inventario?')">
+                        <i class="fa-solid fa-rotate-left me-2"></i>Reestablecer Pieza al Inventario
+                    </button>
+                </form>
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(Model.CodigoBarras))
+        {
+            <div class="text-center text-muted py-4">
+                <i class="fa-solid fa-rotate-left fa-2x mb-2 d-block"></i>
+                No se encontro informacion para el codigo ingresado.
+            </div>
+        }
+        else
+        {
+            <div class="text-center text-muted py-4">
+                <i class="fa-solid fa-rotate-left fa-2x mb-2 d-block"></i>
+                Ingrese un codigo de barras para buscar la informacion de compra.
+            </div>
+        }
+    </div>
+</div>

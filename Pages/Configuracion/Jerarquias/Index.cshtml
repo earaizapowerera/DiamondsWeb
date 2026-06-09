@@ -1,0 +1,174 @@
+@page
+@model DiamondsWeb.Pages.Configuracion.Jerarquias.IndexModel
+@{
+    ViewData["Title"] = "Jerarquias";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-sitemap me-2"></i>Jerarquias
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <!-- Left: Tablas -->
+            <div class="col-md-5">
+                <h6><i class="fa-solid fa-table me-1"></i>Tablas</h6>
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Descripcion</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Tablas.Any())
+                            {
+                                @foreach (var t in Model.Tablas)
+                                {
+                                    var isSelected = Model.TablaSeleccionada == t.IdTablaJerarquia;
+                                    <tr class="@(isSelected ? "table-active" : "")">
+                                        <td>@t.IdTablaJerarquia</td>
+                                        <td>@t.Descripcion</td>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="?TablaSeleccionada=@t.IdTablaJerarquia" class="btn btn-outline-primary" title="Ver columnas">
+                                                    <i class="fa-solid fa-columns"></i>
+                                                </a>
+                                                <form method="post" asp-page-handler="DeleteTabla" class="d-inline">
+                                                    <input type="hidden" name="id" value="@t.IdTablaJerarquia" />
+                                                    <button type="submit" class="btn btn-outline-danger" title="Eliminar"
+                                                            onclick="return confirm('Eliminar tabla y todas sus columnas?')">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-3">
+                                        <i class="fa-solid fa-inbox d-block mb-1"></i>Sin tablas.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Agregar tabla -->
+                <hr />
+                <form method="post" asp-page-handler="CreateTabla" class="row g-2 align-items-end">
+                    <div class="col-md-8">
+                        <label class="form-label"><small>Nueva tabla</small></label>
+                        <input type="text" class="form-control form-control-sm" name="NuevaTabla" required
+                               placeholder="Descripcion..." />
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-success btn-sm w-100">
+                            <i class="fa-solid fa-plus me-1"></i>Crear
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right: Columnas -->
+            <div class="col-md-7">
+                @if (Model.TablaSeleccionada.HasValue)
+                {
+                    var tablaName = Model.Tablas.FirstOrDefault(t => t.IdTablaJerarquia == Model.TablaSeleccionada)?.Descripcion ?? "";
+                    <h6><i class="fa-solid fa-columns me-1"></i>Columnas de: @tablaName</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Columna</th>
+                                    <th>Orden</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.Columnas.Any())
+                                {
+                                    @foreach (var c in Model.Columnas)
+                                    {
+                                        <tr>
+                                            <td>@c.IdJerarquia</td>
+                                            <td>@c.Columna</td>
+                                            <td>@c.Orden</td>
+                                            <td class="text-center">
+                                                <form method="post" asp-page-handler="DeleteColumna" class="d-inline">
+                                                    <input type="hidden" name="id" value="@c.IdJerarquia" />
+                                                    <input type="hidden" name="tablaId" value="@Model.TablaSeleccionada" />
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                            onclick="return confirm('Eliminar columna?')">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-3">
+                                            <i class="fa-solid fa-inbox d-block mb-1"></i>Sin columnas.
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Agregar columna -->
+                    <hr />
+                    <form method="post" asp-page-handler="CreateColumna" class="row g-2 align-items-end">
+                        <input type="hidden" name="NuevaColumnaTablaId" value="@Model.TablaSeleccionada" />
+                        <div class="col-md-5">
+                            <label class="form-label"><small>Columna</small></label>
+                            <input type="text" class="form-control form-control-sm" name="NuevaColumna" required
+                                   placeholder="Nombre columna..." />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label"><small>Orden</small></label>
+                            <input type="number" class="form-control form-control-sm" name="NuevaColumnaOrden" value="0" />
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-success btn-sm w-100">
+                                <i class="fa-solid fa-plus me-1"></i>Agregar Columna
+                            </button>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-5">
+                        <i class="fa-solid fa-arrow-left fa-2x mb-2 d-block"></i>
+                        Seleccione una tabla para ver sus columnas.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

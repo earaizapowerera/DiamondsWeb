@@ -1,0 +1,134 @@
+@page
+@model DiamondsWeb.Pages.Inventario.PiezasSencillas.IndexModel
+@{
+    ViewData["Title"] = "Piezas Sencillas";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Filtros -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-ring me-2"></i>Piezas Sencillas</span>
+        <a asp-page="Detalle" class="btn btn-light btn-sm">
+            <i class="fa-solid fa-plus me-1"></i>Nueva Pieza
+        </a>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end mb-4">
+            <div class="col-md-4">
+                <label class="form-label"><small>Buscar</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Descripcion, codigo, modelo, serie..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Grupo</small></label>
+                <select name="IdGrupo" class="form-select form-select-sm">
+                    <option value="">-- Todos --</option>
+                    @foreach (var g in Model.Grupos)
+                    {
+                        <option value="@g.IdGrupo" selected="@(Model.IdGrupo == g.IdGrupo)">@g.Grupo1</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Proveedor</small></label>
+                <select name="Proveedor" class="form-select form-select-sm">
+                    <option value="">-- Todos --</option>
+                    @foreach (var p in Model.Proveedores)
+                    {
+                        <option value="@p.Proveedor1" selected="@(Model.Proveedor == p.Proveedor1)">@p.NombreProveedor</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100" title="Buscar">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+            </div>
+            <div class="col-md-1">
+                <a href="/Inventario/PiezasSencillas" class="btn btn-outline-secondary btn-sm w-100" title="Limpiar">
+                    <i class="fa-solid fa-eraser"></i>
+                </a>
+            </div>
+        </form>
+
+        <!-- Tabla -->
+        <div class="table-responsive">
+            <table class="table table-hover table-striped table-sm mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Codigo</th>
+                        <th>Descripcion</th>
+                        <th>Grupo</th>
+                        <th>Proveedor</th>
+                        <th class="text-end">Precio</th>
+                        <th class="text-center">Status</th>
+                        <th>Fecha</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Piezas.Any())
+                    {
+                        @foreach (var p in Model.Piezas)
+                        {
+                            <tr>
+                                <td>
+                                    <code>@p.CodigoBarras</code>
+                                </td>
+                                <td>@p.Descripcion</td>
+                                <td><span class="badge bg-secondary">@p.Grupo</span></td>
+                                <td>@p.NombreProveedor</td>
+                                <td class="text-end fw-semibold">@(p.Precio?.ToString("C2"))</td>
+                                <td class="text-center">
+                                    @if (p.IdStatus == 1)
+                                    {
+                                        <span class="badge bg-success">Activa</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">@(p.IdStatus)</span>
+                                    }
+                                </td>
+                                <td>@p.FechaCaptura?.ToString("dd/MM/yyyy")</td>
+                                <td class="text-center">
+                                    <a asp-page="Detalle" asp-route-codigoBarras="@p.CodigoBarras"
+                                       class="btn btn-outline-primary btn-sm" title="Ver / Editar">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron piezas.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-3 text-muted">
+            <small><i class="fa-solid fa-circle-info me-1"></i>Se muestran hasta 200 resultados. Use los filtros para refinar la busqueda.</small>
+        </div>
+    </div>
+</div>

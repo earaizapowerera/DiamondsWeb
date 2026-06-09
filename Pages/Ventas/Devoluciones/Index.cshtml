@@ -1,0 +1,108 @@
+@page
+@model DiamondsWeb.Pages.Ventas.Devoluciones.IndexModel
+@{
+    ViewData["Title"] = "Devoluciones a Proveedor";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-undo me-2"></i>Devoluciones a Proveedor
+    </div>
+    <div class="card-body">
+        <!-- Formulario Nueva Devolucion -->
+        <h6><i class="fa-solid fa-plus me-2"></i>Registrar Devolucion</h6>
+        <form method="post" asp-page-handler="Crear" class="row g-3 align-items-end mb-4">
+            <div class="col-md-4">
+                <label class="form-label"><small>Codigo de Barras</small></label>
+                <input type="text" class="form-control form-control-sm" name="NuevoCodigoBarras" required
+                       placeholder="Escanear o ingresar codigo..." />
+            </div>
+            <div class="col-md-5">
+                <label class="form-label"><small>Motivo</small></label>
+                <input type="text" class="form-control form-control-sm" name="NuevoMotivo" required
+                       placeholder="Motivo de la devolucion..." />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-success btn-sm w-100">
+                    <i class="fa-solid fa-plus me-1"></i>Registrar
+                </button>
+            </div>
+        </form>
+
+        <hr />
+
+        <!-- Tabla de Devoluciones -->
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Codigo</th>
+                        <th>Descripcion</th>
+                        <th>Motivo</th>
+                        <th>Remision</th>
+                        <th>Usuario</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Devoluciones.Any())
+                    {
+                        @foreach (var d in Model.Devoluciones)
+                        {
+                            <tr>
+                                <td>@d.IdDevolucion</td>
+                                <td>@d.CodigoBarras</td>
+                                <td>@d.Descripcion</td>
+                                <td>@d.Motivo</td>
+                                <td>
+                                    @if (string.IsNullOrWhiteSpace(d.Remision))
+                                    {
+                                        <form method="post" asp-page-handler="Remision" class="d-flex gap-1">
+                                            <input type="hidden" name="RemisionDevolucionId" value="@d.IdDevolucion" />
+                                            <input type="text" class="form-control form-control-sm" name="RemisionValor"
+                                                   placeholder="Remision..." style="min-width:100px;" required />
+                                            <button type="submit" class="btn btn-outline-primary btn-sm" title="Asignar remision">
+                                                <i class="fa-solid fa-check"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">@d.Remision</span>
+                                    }
+                                </td>
+                                <td>@d.IdUsuario</td>
+                                <td>@d.FechaCaptura?.ToString("dd/MM/yyyy HH:mm")</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-undo fa-2x mb-2 d-block"></i>
+                                No se encontraron devoluciones.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

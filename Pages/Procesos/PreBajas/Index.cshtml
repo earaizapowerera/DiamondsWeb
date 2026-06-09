@@ -1,0 +1,149 @@
+@page
+@model DiamondsWeb.Pages.Procesos.PreBajas.IndexModel
+@{
+    ViewData["Title"] = "Pre-Bajas";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Formulario de Pre-Baja -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-clipboard-list me-2"></i>Registro de Pre-Bajas
+    </div>
+    <div class="card-body">
+        <form method="post" asp-page-handler="Crear" class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label"><small>Código de Barras</small></label>
+                <input type="text" class="form-control form-control-sm" name="CodigoBarras"
+                       placeholder="Escanee o ingrese código de barras..." required autofocus />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label"><small>Tipo de Baja</small></label>
+                <div class="d-flex gap-3 mt-1">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="TipoBaja" id="tipoVenta"
+                               value="1" checked />
+                        <label class="form-check-label" for="tipoVenta">
+                            <i class="fa-solid fa-cash-register me-1"></i>Venta
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="TipoBaja" id="tipoDevolucion"
+                               value="2" />
+                        <label class="form-check-label" for="tipoDevolucion">
+                            <i class="fa-solid fa-rotate-left me-1"></i>Devolución
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-success btn-sm w-100">
+                    <i class="fa-solid fa-plus me-1"></i>Registrar Pre-Baja
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Grid de Pre-Bajas de Hoy -->
+<div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+        <i class="fa-solid fa-list me-2"></i>Pre-Bajas del Día
+        <span class="badge bg-light text-dark ms-2">@Model.PreBajasHoy.Count</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped table-sm mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Código de Barras</th>
+                        <th>Descripción</th>
+                        <th>Tipo de Baja</th>
+                        <th>Fecha/Hora</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.PreBajasHoy.Any())
+                    {
+                        @foreach (var pb in Model.PreBajasHoy)
+                        {
+                            <tr>
+                                <td>@pb.CodigoBarras</td>
+                                <td>@pb.Descripcion</td>
+                                <td>
+                                    @if (pb.IdTipoBaja == 1)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="fa-solid fa-cash-register me-1"></i>Venta
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fa-solid fa-rotate-left me-1"></i>Devolución
+                                        </span>
+                                    }
+                                </td>
+                                <td>@pb.FechaCaptura?.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No hay pre-bajas registradas hoy.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Resumen -->
+@if (Model.PreBajasHoy.Any())
+{
+<div class="row">
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title">Ventas</h5>
+                <h2>@Model.PreBajasHoy.Count(p => p.IdTipoBaja == 1)</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-dark bg-warning mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title">Devoluciones</h5>
+                <h2>@Model.PreBajasHoy.Count(p => p.IdTipoBaja == 2)</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total</h5>
+                <h2>@Model.PreBajasHoy.Count</h2>
+            </div>
+        </div>
+    </div>
+</div>
+}

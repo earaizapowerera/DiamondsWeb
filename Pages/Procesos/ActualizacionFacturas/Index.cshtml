@@ -1,0 +1,213 @@
+@page
+@model DiamondsWeb.Pages.Procesos.ActualizacionFacturas.IndexModel
+@{
+    ViewData["Title"] = "Actualización de Facturas";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Selector de Factura -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-file-invoice-dollar me-2"></i>Actualización de Facturas
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end mb-3">
+            <div class="col-md-5">
+                <label class="form-label"><small>Factura</small></label>
+                <select name="FacturaSeleccionada" class="form-select form-select-sm">
+                    <option value="">-- Seleccione una factura --</option>
+                    @foreach (var f in Model.Facturas)
+                    {
+                        <option value="@f.IdFactura" selected="@(f.IdFactura == Model.FacturaSeleccionada ? "selected" : null)">
+                            @f.FolioFactura - @f.NombreProveedor (@f.FechaFactura?.ToString("dd/MM/yyyy"))
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Proveedor (filtro)</small></label>
+                <input type="number" class="form-control form-control-sm" name="ProveedorFiltro"
+                       value="@Model.ProveedorFiltro" placeholder="ID Proveedor" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Filtrar
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="/Procesos/ActualizacionFacturas" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Grids lado a lado -->
+<div class="row">
+    <!-- Piezas Disponibles (sin factura) -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <i class="fa-solid fa-box-open me-2"></i>Piezas Disponibles (sin factura)
+                <span class="badge bg-light text-dark ms-2">@Model.PiezasDisponibles.Count</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-hover table-striped table-sm mb-0">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>Código</th>
+                                <th>Descripción</th>
+                                <th>Proveedor</th>
+                                <th class="text-end">Precio</th>
+                                <th class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.PiezasDisponibles.Any())
+                            {
+                                @foreach (var p in Model.PiezasDisponibles)
+                                {
+                                    <tr>
+                                        <td><small>@p.CodigoBarras</small></td>
+                                        <td><small>@p.Descripcion</small></td>
+                                        <td><small>@p.NombreProveedor</small></td>
+                                        <td class="text-end"><small>@p.Precio?.ToString("C")</small></td>
+                                        <td class="text-center">
+                                            @if (!string.IsNullOrEmpty(Model.FacturaSeleccionada))
+                                            {
+                                                <form method="post" asp-page-handler="Asignar" class="d-inline">
+                                                    <input type="hidden" name="codigoBarras" value="@p.CodigoBarras" />
+                                                    <input type="hidden" name="idFactura" value="@Model.FacturaSeleccionada" />
+                                                    <button type="submit" class="btn btn-success btn-sm" title="Asignar a factura">
+                                                        <i class="fa-solid fa-arrow-right"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                        No hay piezas disponibles.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Piezas Asignadas a Factura -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <i class="fa-solid fa-file-circle-check me-2"></i>Piezas Asignadas a Factura
+                <span class="badge bg-light text-dark ms-2">@Model.PiezasAsignadas.Count</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-hover table-striped table-sm mb-0">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>Código</th>
+                                <th>Descripción</th>
+                                <th class="text-end">CB Factura</th>
+                                <th class="text-end">CN Factura</th>
+                                <th class="text-end">TC</th>
+                                <th class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.PiezasAsignadas.Any())
+                            {
+                                @foreach (var p in Model.PiezasAsignadas)
+                                {
+                                    <tr>
+                                        <td><small>@p.CodigoBarras</small></td>
+                                        <td><small>@p.Descripcion</small></td>
+                                        <td class="text-end"><small>@p.CBFactura?.ToString("N2")</small></td>
+                                        <td class="text-end"><small>@p.CNFactura?.ToString("N2")</small></td>
+                                        <td class="text-end"><small>@p.TCCosto?.ToString("N4")</small></td>
+                                        <td class="text-center">
+                                            <form method="post" asp-page-handler="Desasignar" class="d-inline">
+                                                <input type="hidden" name="codigoBarras" value="@p.CodigoBarras" />
+                                                <input type="hidden" name="idFactura" value="@Model.FacturaSeleccionada" />
+                                                <button type="submit" class="btn btn-danger btn-sm" title="Desasignar"
+                                                        onclick="return confirm('¿Desasignar pieza @p.CodigoBarras?')">
+                                                    <i class="fa-solid fa-arrow-left"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                        @(string.IsNullOrEmpty(Model.FacturaSeleccionada)
+                                            ? "Seleccione una factura para ver piezas asignadas."
+                                            : "No hay piezas asignadas a esta factura.")
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Info de Factura Seleccionada -->
+@if (!string.IsNullOrEmpty(Model.FacturaSeleccionada))
+{
+    var factSel = Model.Facturas.FirstOrDefault(f => f.IdFactura == Model.FacturaSeleccionada);
+    if (factSel != null)
+    {
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <i class="fa-solid fa-circle-info me-2"></i>Detalle de Factura Seleccionada
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>Folio:</strong> @factSel.FolioFactura
+                </div>
+                <div class="col-md-3">
+                    <strong>Proveedor:</strong> @factSel.NombreProveedor
+                </div>
+                <div class="col-md-3">
+                    <strong>Razón Social:</strong> @factSel.RazonSocial
+                </div>
+                <div class="col-md-3">
+                    <strong>Fecha:</strong> @factSel.FechaFactura?.ToString("dd/MM/yyyy")
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+}

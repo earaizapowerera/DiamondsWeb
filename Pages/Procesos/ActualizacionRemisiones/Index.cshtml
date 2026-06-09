@@ -1,0 +1,222 @@
+@page
+@model DiamondsWeb.Pages.Procesos.ActualizacionRemisiones.IndexModel
+@{
+    ViewData["Title"] = "Actualización de Remisiones";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Selector de Remisión -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-truck-ramp-box me-2"></i>Actualización de Remisiones
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end mb-3">
+            <div class="col-md-5">
+                <label class="form-label"><small>Remisión</small></label>
+                <select name="RemisionSeleccionada" class="form-select form-select-sm">
+                    <option value="">-- Seleccione una remisión --</option>
+                    @foreach (var r in Model.Remisiones)
+                    {
+                        <option value="@r.IdRemision" selected="@(r.IdRemision == Model.RemisionSeleccionada ? "selected" : null)">
+                            @r.NumRemision - @r.NombreProveedor (@r.FechaRemision?.ToString("dd/MM/yyyy"))
+                            @(r.Consignacion ? " [Consignación]" : "")
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Proveedor (filtro)</small></label>
+                <input type="number" class="form-control form-control-sm" name="ProveedorFiltro"
+                       value="@Model.ProveedorFiltro" placeholder="ID Proveedor" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Filtrar
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="/Procesos/ActualizacionRemisiones" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Info de Remisión Seleccionada -->
+@if (!string.IsNullOrEmpty(Model.RemisionSeleccionada))
+{
+    var remSel = Model.Remisiones.FirstOrDefault(r => r.IdRemision == Model.RemisionSeleccionada);
+    if (remSel != null)
+    {
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <i class="fa-solid fa-circle-info me-2"></i>Detalle de Remisión Seleccionada
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>No. Remisión:</strong> @remSel.NumRemision
+                </div>
+                <div class="col-md-3">
+                    <strong>Proveedor:</strong> @remSel.NombreProveedor
+                </div>
+                <div class="col-md-3">
+                    <strong>Fecha:</strong> @remSel.FechaRemision?.ToString("dd/MM/yyyy")
+                </div>
+                <div class="col-md-3">
+                    <strong>Consignación:</strong>
+                    @if (remSel.Consignacion)
+                    {
+                        <span class="badge bg-warning text-dark">Sí</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">No</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+}
+
+<!-- Grids lado a lado -->
+<div class="row">
+    <!-- Piezas Disponibles (sin remisión) -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <i class="fa-solid fa-box-open me-2"></i>Piezas Disponibles (sin remisión)
+                <span class="badge bg-light text-dark ms-2">@Model.PiezasDisponibles.Count</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-hover table-striped table-sm mb-0">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>Código</th>
+                                <th>Descripción</th>
+                                <th>Proveedor</th>
+                                <th class="text-end">Precio</th>
+                                <th class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.PiezasDisponibles.Any())
+                            {
+                                @foreach (var p in Model.PiezasDisponibles)
+                                {
+                                    <tr>
+                                        <td><small>@p.CodigoBarras</small></td>
+                                        <td><small>@p.Descripcion</small></td>
+                                        <td><small>@p.NombreProveedor</small></td>
+                                        <td class="text-end"><small>@p.Precio?.ToString("C")</small></td>
+                                        <td class="text-center">
+                                            @if (!string.IsNullOrEmpty(Model.RemisionSeleccionada))
+                                            {
+                                                <form method="post" asp-page-handler="Asignar" class="d-inline">
+                                                    <input type="hidden" name="codigoBarras" value="@p.CodigoBarras" />
+                                                    <input type="hidden" name="idRemision" value="@Model.RemisionSeleccionada" />
+                                                    <button type="submit" class="btn btn-success btn-sm" title="Asignar a remisión">
+                                                        <i class="fa-solid fa-arrow-right"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                        @(string.IsNullOrEmpty(Model.RemisionSeleccionada)
+                                            ? "Seleccione una remisión para ver piezas disponibles."
+                                            : "No hay piezas disponibles.")
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Piezas Asignadas a Remisión -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <i class="fa-solid fa-truck-loading me-2"></i>Piezas Asignadas a Remisión
+                <span class="badge bg-light text-dark ms-2">@Model.PiezasAsignadas.Count</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-hover table-striped table-sm mb-0">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>Código</th>
+                                <th>Descripción</th>
+                                <th>Proveedor</th>
+                                <th class="text-end">Precio</th>
+                                <th class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.PiezasAsignadas.Any())
+                            {
+                                @foreach (var p in Model.PiezasAsignadas)
+                                {
+                                    <tr>
+                                        <td><small>@p.CodigoBarras</small></td>
+                                        <td><small>@p.Descripcion</small></td>
+                                        <td><small>@p.NombreProveedor</small></td>
+                                        <td class="text-end"><small>@p.Precio?.ToString("C")</small></td>
+                                        <td class="text-center">
+                                            <form method="post" asp-page-handler="Desasignar" class="d-inline">
+                                                <input type="hidden" name="codigoBarras" value="@p.CodigoBarras" />
+                                                <input type="hidden" name="idRemision" value="@Model.RemisionSeleccionada" />
+                                                <button type="submit" class="btn btn-danger btn-sm" title="Desasignar"
+                                                        onclick="return confirm('¿Desasignar pieza @p.CodigoBarras?')">
+                                                    <i class="fa-solid fa-arrow-left"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                        @(string.IsNullOrEmpty(Model.RemisionSeleccionada)
+                                            ? "Seleccione una remisión para ver piezas asignadas."
+                                            : "No hay piezas asignadas a esta remisión.")
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

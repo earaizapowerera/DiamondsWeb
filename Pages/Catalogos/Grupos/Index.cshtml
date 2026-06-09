@@ -1,0 +1,142 @@
+@page
+@model DiamondsWeb.Pages.Catalogos.Grupos.IndexModel
+@{
+    ViewData["Title"] = "Grupos";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Filtro -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-layer-group me-2"></i>Grupos
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end mb-4">
+            <div class="col-md-6">
+                <label class="form-label"><small>Buscar</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Buscar grupo..." />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-3">
+                <a href="/Catalogos/Grupos" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+
+        <!-- Tabla -->
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Grupo</th>
+                        <th>Usuario</th>
+                        <th>Fecha Captura</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Grupos.Any())
+                    {
+                        @foreach (var g in Model.Grupos)
+                        {
+                            <tr>
+                                <td>@g.IdGrupo</td>
+                                <td>
+                                    <span id="display-@g.IdGrupo">@g.Grupo1</span>
+                                    <form method="post" asp-page-handler="Edit" class="d-none" id="edit-form-@g.IdGrupo">
+                                        <div class="input-group input-group-sm">
+                                            <input type="hidden" name="EditId" value="@g.IdGrupo" />
+                                            <input type="text" class="form-control" name="EditNombre" value="@g.Grupo1" />
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                <i class="fa-solid fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEdit(@g.IdGrupo)">
+                                                <i class="fa-solid fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </td>
+                                <td>@g.IdUsuario</td>
+                                <td>@g.FechaCaptura?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-warning" title="Editar"
+                                                onclick="startEdit(@g.IdGrupo)">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <form method="post" asp-page-handler="Delete" class="d-inline">
+                                            <input type="hidden" name="id" value="@g.IdGrupo" />
+                                            <button type="submit" class="btn btn-outline-danger" title="Eliminar"
+                                                    onclick="return confirm('Eliminar grupo @g.Grupo1?')">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron grupos.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Formulario Nuevo -->
+        <hr />
+        <h6><i class="fa-solid fa-plus me-2"></i>Agregar Grupo</h6>
+        <form method="post" asp-page-handler="Create" class="row g-3 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label"><small>Nombre del grupo</small></label>
+                <input type="text" class="form-control form-control-sm" name="NuevoNombre" required
+                       placeholder="Nombre del grupo..." />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-success btn-sm w-100">
+                    <i class="fa-solid fa-plus me-1"></i>Crear Grupo
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function startEdit(id) {
+        document.getElementById('display-' + id).classList.add('d-none');
+        document.getElementById('edit-form-' + id).classList.remove('d-none');
+    }
+    function cancelEdit(id) {
+        document.getElementById('display-' + id).classList.remove('d-none');
+        document.getElementById('edit-form-' + id).classList.add('d-none');
+    }
+</script>
+}

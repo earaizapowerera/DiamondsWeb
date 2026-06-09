@@ -1,0 +1,228 @@
+@page
+@model DiamondsWeb.Pages.Catalogos.OpcionesPago.IndexModel
+@{
+    ViewData["Title"] = "Opciones de Pago";
+    var logoIcons = new Dictionary<int, string>
+    {
+        { 1, "fa-money-bill-wave" },
+        { 2, "fa-credit-card" },
+        { 3, "fa-university" },
+        { 4, "fa-mobile-alt" },
+        { 5, "fa-wallet" },
+        { 6, "fa-hand-holding-usd" },
+        { 7, "fa-file-invoice-dollar" },
+        { 8, "fa-coins" }
+    };
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-credit-card me-2"></i>Opciones de Pago
+    </div>
+    <div class="card-body">
+        <!-- Filtro -->
+        <form method="get" class="row g-3 align-items-end mb-4">
+            <div class="col-md-6">
+                <label class="form-label"><small>Buscar</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Buscar opcion de pago..." />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-3">
+                <a href="/Catalogos/OpcionesPago" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+
+        <!-- Tabla -->
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Opcion de Pago</th>
+                        <th>Moneda</th>
+                        <th class="text-center">Logo</th>
+                        <th class="text-center">Activo</th>
+                        <th>Usuario</th>
+                        <th>Fecha Captura</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.OpcionesPago.Any())
+                    {
+                        @foreach (var op in Model.OpcionesPago)
+                        {
+                            var iconClass = op.IdLogo.HasValue && logoIcons.ContainsKey(op.IdLogo.Value)
+                                ? logoIcons[op.IdLogo.Value] : "fa-question-circle";
+                            <tr>
+                                <td>@op.IdOpcionPago</td>
+                                <td>
+                                    <span id="display-@op.IdOpcionPago">@op.OpcionPago1</span>
+                                    <form method="post" asp-page-handler="Edit" class="d-none" id="edit-form-@op.IdOpcionPago">
+                                        <input type="hidden" name="EditId" value="@op.IdOpcionPago" />
+                                        <div class="row g-2">
+                                            <div class="col-12">
+                                                <input type="text" class="form-control form-control-sm" name="EditNombre" value="@op.OpcionPago1" />
+                                            </div>
+                                            <div class="col-6">
+                                                <select class="form-select form-select-sm" name="EditIdMoneda">
+                                                    <option value="">-- Sin moneda --</option>
+                                                    @foreach (var m in Model.Monedas)
+                                                    {
+                                                        <option value="@m.IdMoneda" selected="@(op.IdMoneda == m.IdMoneda)">@m.Moneda1</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-3">
+                                                <select class="form-select form-select-sm" name="EditIdLogo">
+                                                    <option value="">--</option>
+                                                    @foreach (var logo in logoIcons)
+                                                    {
+                                                        <option value="@logo.Key" selected="@(op.IdLogo == logo.Key)">@logo.Key</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-3 d-flex align-items-center">
+                                                <div class="form-check">
+                                                    <input type="checkbox" class="form-check-input" name="EditActivo"
+                                                           value="true" @(op.Activo ? "checked" : "") />
+                                                    <label class="form-check-label"><small>Activo</small></label>
+                                                </div>
+                                            </div>
+                                            <div class="col-12">
+                                                <button type="submit" class="btn btn-success btn-sm">
+                                                    <i class="fa-solid fa-check me-1"></i>Guardar
+                                                </button>
+                                                <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEdit(@op.IdOpcionPago)">
+                                                    <i class="fa-solid fa-times me-1"></i>Cancelar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </td>
+                                <td>@(op.Moneda ?? "-")</td>
+                                <td class="text-center">
+                                    <i class="fa-solid @iconClass fa-lg text-primary"></i>
+                                    <small class="text-muted ms-1">(@(op.IdLogo?.ToString() ?? "-"))</small>
+                                </td>
+                                <td class="text-center">
+                                    @if (op.Activo)
+                                    {
+                                        <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i>Si</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger"><i class="fa-solid fa-times me-1"></i>No</span>
+                                    }
+                                </td>
+                                <td>@op.IdUsuario</td>
+                                <td>@op.FechaCaptura?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-warning" title="Editar"
+                                                onclick="startEdit(@op.IdOpcionPago)">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <form method="post" asp-page-handler="Delete" class="d-inline">
+                                            <input type="hidden" name="id" value="@op.IdOpcionPago" />
+                                            <button type="submit" class="btn btn-outline-danger" title="Eliminar"
+                                                    onclick="return confirm('Eliminar opcion de pago @op.OpcionPago1?')">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron opciones de pago.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Formulario Nuevo -->
+        <hr />
+        <h6><i class="fa-solid fa-plus me-2"></i>Agregar Opcion de Pago</h6>
+        <form method="post" asp-page-handler="Create" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label"><small>Nombre</small></label>
+                <input type="text" class="form-control form-control-sm" name="NuevoNombre" required
+                       placeholder="Nombre..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Moneda</small></label>
+                <select class="form-select form-select-sm" name="NuevoIdMoneda">
+                    <option value="">-- Sin moneda --</option>
+                    @foreach (var m in Model.Monedas)
+                    {
+                        <option value="@m.IdMoneda">@m.Moneda1</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Logo (ID)</small></label>
+                <select class="form-select form-select-sm" name="NuevoIdLogo">
+                    <option value="">-- Ninguno --</option>
+                    @foreach (var logo in logoIcons)
+                    {
+                        <option value="@logo.Key">@logo.Key - @logo.Value</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-1">
+                <div class="form-check mt-4">
+                    <input type="checkbox" class="form-check-input" name="NuevoActivo" value="true" id="chkActivo" checked />
+                    <label class="form-check-label" for="chkActivo">Activo</label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-success btn-sm w-100">
+                    <i class="fa-solid fa-plus me-1"></i>Crear Opcion
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function startEdit(id) {
+        document.getElementById('display-' + id).classList.add('d-none');
+        document.getElementById('edit-form-' + id).classList.remove('d-none');
+    }
+    function cancelEdit(id) {
+        document.getElementById('display-' + id).classList.remove('d-none');
+        document.getElementById('edit-form-' + id).classList.add('d-none');
+    }
+</script>
+}

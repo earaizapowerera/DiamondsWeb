@@ -1,0 +1,271 @@
+@page
+@model DiamondsWeb.Pages.Catalogos.Proveedores.IndexModel
+@{
+    ViewData["Title"] = "Proveedores";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Filtro -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-truck me-2"></i>Proveedores
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end mb-4">
+            <div class="col-md-6">
+                <label class="form-label"><small>Buscar</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Buscar proveedor..." />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-3">
+                <a href="/Catalogos/Proveedores" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+
+        <!-- Tabla -->
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Telefono</th>
+                        <th>Contacto</th>
+                        <th>Moneda Def.</th>
+                        <th>Usuario</th>
+                        <th>Fecha</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Proveedores.Any())
+                    {
+                        @foreach (var p in Model.Proveedores)
+                        {
+                            <tr>
+                                <td>@p.Proveedor1</td>
+                                <td>@p.NombreProveedor</td>
+                                <td>@p.Telefono</td>
+                                <td>@p.Contacto</td>
+                                <td>
+                                    @if (p.MonedaDefault)
+                                    {
+                                        <span class="badge bg-success">Si</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">No</span>
+                                    }
+                                </td>
+                                <td>@p.IdUsuario</td>
+                                <td>@p.FechaCaptura?.ToString("dd/MM/yyyy")</td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-warning" title="Editar"
+                                                onclick="startEdit(@p.Proveedor1)">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <form method="post" asp-page-handler="Delete" class="d-inline">
+                                            <input type="hidden" name="id" value="@p.Proveedor1" />
+                                            <button type="submit" class="btn btn-outline-danger" title="Eliminar"
+                                                    onclick="return confirm('Eliminar proveedor @p.NombreProveedor?')">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- Inline edit row (hidden) -->
+                            <tr class="d-none" id="edit-row-@p.Proveedor1">
+                                <td colspan="8">
+                                    <form method="post" asp-page-handler="Edit">
+                                        <input type="hidden" name="EditId" value="@p.Proveedor1" />
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-md-3">
+                                                <label class="form-label"><small>Nombre</small></label>
+                                                <input type="text" class="form-control form-control-sm" name="EditNombre" value="@p.NombreProveedor" required />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label"><small>Telefono</small></label>
+                                                <input type="text" class="form-control form-control-sm" name="EditTelefono" value="@p.Telefono" />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label"><small>Direccion</small></label>
+                                                <input type="text" class="form-control form-control-sm" name="EditDireccion" value="@p.Direccion" />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label"><small>Contacto</small></label>
+                                                <input type="text" class="form-control form-control-sm" name="EditContacto" value="@p.Contacto" />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label"><small>Caracteristica</small></label>
+                                                <input type="number" class="form-control form-control-sm" name="EditIdDefaultCaracteristica" value="@p.IdDefaultCaracteristica" />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label"><small>Tipo Costo</small></label>
+                                                <input type="number" class="form-control form-control-sm" name="EditIdDefaultTipoCosto" value="@p.IdDefaultTipoCosto" />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label"><small>Utilidad</small></label>
+                                                <select class="form-select form-select-sm" name="EditIdDefaultUtilidad">
+                                                    <option value="">-- Ninguno --</option>
+                                                    @foreach (var u in Model.Utilidades)
+                                                    {
+                                                        <option value="@u.IdDefaultUtilidad" selected="@(p.IdDefaultUtilidad == u.IdDefaultUtilidad)">@u.DefaultUtilidad1</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label"><small>Moneda</small></label>
+                                                <select class="form-select form-select-sm" name="EditIdMoneda">
+                                                    <option value="">-- Ninguna --</option>
+                                                    @foreach (var m in Model.Monedas)
+                                                    {
+                                                        <option value="@m.IdMoneda" selected="@(p.IdMoneda == m.IdMoneda)">@m.Moneda1</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-check mt-4">
+                                                    <input type="checkbox" class="form-check-input" name="EditMonedaDefault" value="true" @(p.MonedaDefault ? "checked" : "") />
+                                                    <label class="form-check-label"><small>Moneda Default</small></label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-check mt-4">
+                                                    <input type="checkbox" class="form-check-input" name="EditUtilidadExtraPrecioGramo" value="true" @(p.UtilidadExtraPrecioGramo ? "checked" : "") />
+                                                    <label class="form-check-label"><small>Util. Extra P/G</small></label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="submit" class="btn btn-success btn-sm w-100">
+                                                    <i class="fa-solid fa-check me-1"></i>Guardar
+                                                </button>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-secondary btn-sm w-100" onclick="cancelEdit(@p.Proveedor1)">
+                                                    <i class="fa-solid fa-times me-1"></i>Cancelar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron proveedores.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Formulario Nuevo -->
+        <hr />
+        <h6><i class="fa-solid fa-plus me-2"></i>Agregar Proveedor</h6>
+        <form method="post" asp-page-handler="Create">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label"><small>Nombre</small></label>
+                    <input type="text" class="form-control form-control-sm" name="NuevoNombre" required
+                           placeholder="Nombre del proveedor..." />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Telefono</small></label>
+                    <input type="text" class="form-control form-control-sm" name="NuevoTelefono" placeholder="Telefono" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><small>Direccion</small></label>
+                    <input type="text" class="form-control form-control-sm" name="NuevaDireccion" placeholder="Direccion" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Contacto</small></label>
+                    <input type="text" class="form-control form-control-sm" name="NuevoContacto" placeholder="Contacto" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Caracteristica</small></label>
+                    <input type="number" class="form-control form-control-sm" name="NuevoIdDefaultCaracteristica" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Tipo Costo</small></label>
+                    <input type="number" class="form-control form-control-sm" name="NuevoIdDefaultTipoCosto" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Utilidad</small></label>
+                    <select class="form-select form-select-sm" name="NuevoIdDefaultUtilidad">
+                        <option value="">-- Ninguno --</option>
+                        @foreach (var u in Model.Utilidades)
+                        {
+                            <option value="@u.IdDefaultUtilidad">@u.DefaultUtilidad1</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><small>Moneda</small></label>
+                    <select class="form-select form-select-sm" name="NuevoIdMoneda">
+                        <option value="">-- Ninguna --</option>
+                        @foreach (var m in Model.Monedas)
+                        {
+                            <option value="@m.IdMoneda">@m.Moneda1</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check mt-4">
+                        <input type="checkbox" class="form-check-input" name="NuevoMonedaDefault" value="true" />
+                        <label class="form-check-label"><small>Moneda Default</small></label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check mt-4">
+                        <input type="checkbox" class="form-check-input" name="NuevoUtilidadExtraPrecioGramo" value="true" />
+                        <label class="form-check-label"><small>Util. Extra P/G</small></label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-success btn-sm w-100">
+                        <i class="fa-solid fa-plus me-1"></i>Crear Proveedor
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function startEdit(id) {
+        document.getElementById('edit-row-' + id).classList.remove('d-none');
+    }
+    function cancelEdit(id) {
+        document.getElementById('edit-row-' + id).classList.add('d-none');
+    }
+</script>
+}
