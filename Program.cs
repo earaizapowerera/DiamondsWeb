@@ -45,10 +45,15 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
-// Actualizaciones desde Facturas — vincula piezas a facturas de proveedor
+// Servicios de dominio Diamonds
+builder.Services.AddScoped<CatalogService>(sp => new CatalogService(
+    diamondsConnStr, sp.GetRequiredService<ILogger<CatalogService>>()));
+builder.Services.AddScoped<InventoryService>(sp => new InventoryService(
+    diamondsConnStr, sp.GetRequiredService<ILogger<InventoryService>>()));
+builder.Services.AddScoped<SalesService>(sp => new SalesService(
+    diamondsConnStr, sp.GetRequiredService<ILogger<SalesService>>()));
 builder.Services.AddScoped<ActualizacionesService>(sp => new ActualizacionesService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<ActualizacionesService>>()));
+    diamondsConnStr, sp.GetRequiredService<ILogger<ActualizacionesService>>()));
 
 var app = builder.Build();
 
