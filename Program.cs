@@ -39,6 +39,11 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
+// OpcionPago Service (Catalogo de Opciones de Pago)
+builder.Services.AddScoped<OpcionPagoService>(sp => new OpcionPagoService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<OpcionPagoService>>()));
+
 // SPPLD Config & Service
 var sppldConfig = new SppldConfig();
 builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
