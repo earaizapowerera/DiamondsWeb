@@ -1,0 +1,269 @@
+@page
+@model DiamondsWeb.Pages.TiposCambio.IndexModel
+@{
+    ViewData["Title"] = "Tipos de Cambio";
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.SuccessMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Tipos de Cambio Vigentes (resumen por moneda) -->
+<div class="info-panel mb-4">
+    <h6><i class="fa-solid fa-coins me-2"></i>Tipos de Cambio Vigentes (mas reciente por moneda)</h6>
+    <div class="row mt-3">
+        @if (Model.Vigentes.Any())
+        {
+            @foreach (var v in Model.Vigentes)
+            {
+                <div class="col-md-3 col-sm-6 mb-2">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center py-2">
+                            <div class="fw-bold text-primary">@v.Moneda</div>
+                            <div class="fs-5 fw-bold">@v.TipoCambioCotizacion.ToString("N4")</div>
+                            @if (v.TipoCambioVenta.HasValue && v.TipoCambioVenta > 0)
+                            {
+                                <small class="text-muted">Venta: @v.TipoCambioVenta.Value.ToString("N4")</small>
+                            }
+                            <div><small class="text-muted">@v.FechaCaptura.ToString("dd/MM/yyyy")</small></div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-12">
+                <small class="text-muted">No hay tipos de cambio registrados.</small>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Formulario Nuevo Tipo de Cambio -->
+<div class="filter-panel mb-4">
+    <h6 class="mb-3"><i class="fa-solid fa-plus-circle me-2"></i>Registrar Tipo de Cambio</h6>
+    <form method="post" asp-page-handler="Crear">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label"><small>Moneda</small></label>
+                <select class="form-select form-select-sm" name="IdMoneda" id="selectMonedaCrear" required>
+                    <option value="">-- Seleccionar --</option>
+                    @foreach (var m in Model.Monedas)
+                    {
+                        <option value="@m.IdMoneda">@m.Moneda @(m.Extranjera ? "(Extranjera)" : "")</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Tipo Cambio Cotizacion</small></label>
+                <input type="number" step="0.0001" min="0.0001" class="form-control form-control-sm"
+                       name="TipoCambioCotizacion" placeholder="Ej: 17.5200" required />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Tipo Cambio Venta</small></label>
+                <input type="number" step="0.0001" min="0" class="form-control form-control-sm"
+                       name="TipoCambioVenta" placeholder="Ej: 18.0000" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-save me-1"></i>Registrar
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Filtro por moneda + Historial -->
+<div class="filter-panel mb-3">
+    <form method="get">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label"><small>Filtrar por Moneda</small></label>
+                <select class="form-select form-select-sm" name="FiltroMoneda" id="selectMonedaFiltro">
+                    <option value="">Todas</option>
+                    @foreach (var m in Model.Monedas)
+                    {
+                        <option value="@m.IdMoneda" selected="@(Model.FiltroMoneda == m.IdMoneda)">@m.Moneda</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                    <i class="fa-solid fa-filter me-1"></i>Filtrar
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla de historial -->
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-clock-rotate-left me-2"></i>Historial de Tipos de Cambio (@Model.TiposCambio.Count)</span>
+        @if (Model.FiltroMoneda.HasValue)
+        {
+            var monedaFiltrada = Model.Monedas.FirstOrDefault(m => m.IdMoneda == Model.FiltroMoneda);
+            <span class="badge bg-info">@monedaFiltrada?.Moneda</span>
+        }
+    </div>
+    <div class="card-body p-0">
+        @if (Model.TiposCambio.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-tc table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Moneda</th>
+                            <th class="text-end">Cotizacion</th>
+                            <th class="text-end">Venta</th>
+                            <th>Fecha</th>
+                            <th>Usuario</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.TiposCambio.Count; i++)
+                        {
+                            var tc = Model.TiposCambio[i];
+                            <tr>
+                                <td>@(i + 1)</td>
+                                <td><span class="badge bg-secondary">@tc.Moneda</span></td>
+                                <td class="text-end fw-bold">@tc.TipoCambioCotizacion.ToString("N4")</td>
+                                <td class="text-end">
+                                    @if (tc.TipoCambioVenta.HasValue && tc.TipoCambioVenta > 0)
+                                    {
+                                        @tc.TipoCambioVenta.Value.ToString("N4")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="utc-date" data-utc="@tc.FechaCaptura.ToString("o")">
+                                        @tc.FechaCaptura.ToString("dd/MM/yyyy HH:mm")
+                                    </span>
+                                </td>
+                                <td>@tc.Nombre</td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-warning btn-edit"
+                                                data-id="@tc.IdTipoCambio"
+                                                data-cotizacion="@tc.TipoCambioCotizacion"
+                                                data-venta="@(tc.TipoCambioVenta?.ToString() ?? "")"
+                                                data-moneda="@tc.Moneda"
+                                                title="Editar">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <form method="post" asp-page-handler="Eliminar" class="d-inline">
+                                            <input type="hidden" name="id" value="@tc.IdTipoCambio" />
+                                            <button type="submit" class="btn btn-outline-danger"
+                                                    title="Eliminar"
+                                                    onclick="return confirm('Eliminar tipo de cambio de @tc.Moneda (@tc.TipoCambioCotizacion.ToString("N4"))?')">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center text-muted py-5">
+                <i class="fa-solid fa-inbox fa-3x mb-3 d-block"></i>
+                <h5>No hay tipos de cambio registrados</h5>
+                <p>Usa el formulario de arriba para registrar el primer tipo de cambio.</p>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal de Edicion -->
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Editar">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa-solid fa-pen me-2"></i>Editar Tipo de Cambio</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="EditId" id="editId" />
+                    <div class="mb-3">
+                        <label class="form-label">Moneda</label>
+                        <input type="text" class="form-control" id="editMoneda" disabled />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo Cambio Cotizacion</label>
+                        <input type="number" step="0.0001" min="0.0001" class="form-control"
+                               name="EditCotizacion" id="editCotizacion" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo Cambio Venta</label>
+                        <input type="number" step="0.0001" min="0" class="form-control"
+                               name="EditVenta" id="editVenta" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-save me-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Editar: abrir modal con datos del registro
+    document.querySelectorAll('.btn-edit').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.getElementById('editId').value = this.dataset.id;
+            document.getElementById('editMoneda').value = this.dataset.moneda;
+            document.getElementById('editCotizacion').value = this.dataset.cotizacion;
+            document.getElementById('editVenta').value = this.dataset.venta || '';
+            var modal = new bootstrap.Modal(document.getElementById('modalEditar'));
+            modal.show();
+        });
+    });
+
+    // TomSelect para dropdowns si esta disponible
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof TomSelect !== 'undefined') {
+            var selCrear = document.getElementById('selectMonedaCrear');
+            if (selCrear) {
+                new TomSelect(selCrear, {
+                    allowEmptyOption: true,
+                    sortField: { field: 'text', direction: 'asc' }
+                });
+            }
+            var selFiltro = document.getElementById('selectMonedaFiltro');
+            if (selFiltro) {
+                new TomSelect(selFiltro, {
+                    allowEmptyOption: true,
+                    sortField: { field: 'text', direction: 'asc' }
+                });
+            }
+        }
+    });
+</script>
+}

@@ -50,19 +50,10 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
-// Catalog Services
-builder.Services.AddScoped<CatalogService>(sp => new CatalogService(
+// Tipos de Cambio Service
+builder.Services.AddScoped<TiposCambioService>(sp => new TiposCambioService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<CatalogService>>()));
-builder.Services.AddScoped<MonedaService>(sp => new MonedaService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<MonedaService>>()));
-builder.Services.AddScoped<InventoryService>(sp => new InventoryService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<InventoryService>>()));
-builder.Services.AddScoped<SalesService>(sp => new SalesService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<SalesService>>()));
+    sp.GetRequiredService<ILogger<TiposCambioService>>()));
 
 var app = builder.Build();
 

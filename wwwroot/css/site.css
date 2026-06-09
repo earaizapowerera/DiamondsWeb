@@ -106,8 +106,8 @@
     font-weight: 700;
 }
 
-/* Proveedores Table */
-.table-prov thead th {
+/* Tipos de Cambio Table */
+.table-tc thead th {
     background-color: #343a40;
     color: #fff;
     border: none;
@@ -116,24 +116,8 @@
     letter-spacing: 0.5px;
 }
 
-.table-prov tbody tr:hover {
+.table-tc tbody tr:hover {
     background-color: #e8f4f8;
-}
-
-/* Caracteristica Badges */
-.badge.bg-caract-oro {
-    background-color: #d4a017 !important;
-    color: #fff;
-}
-
-.badge.bg-caract-diamante {
-    background-color: #6c63ff !important;
-    color: #fff;
-}
-
-.badge.bg-caract-reloj {
-    background-color: #2d9cdb !important;
-    color: #fff;
 }
 
 /* Responsive */
