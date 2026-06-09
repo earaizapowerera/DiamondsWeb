@@ -60,6 +60,11 @@ builder.Services.AddScoped<EtiquetaService>(sp => new EtiquetaService(
     diamondsConnStr,
     sp.GetRequiredService<ILogger<EtiquetaService>>()));
 
+// Actualización Pieza por Pieza Service
+builder.Services.AddScoped<ActualizacionService>(sp => new ActualizacionService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<ActualizacionService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware

@@ -9,112 +9,167 @@ namespace DiamondsWeb.Pages.Procesos.ActualizacionPieza;
 [Authorize]
 public class IndexModel : PageModel
 {
-    private readonly SalesService _salesService;
-    private readonly InventoryService _inventoryService;
+    private readonly ActualizacionService _svc;
     private readonly ILogger<IndexModel> _logger;
 
-    public IndexModel(SalesService salesService, InventoryService inventoryService, ILogger<IndexModel> logger)
+    public IndexModel(ActualizacionService svc, ILogger<IndexModel> logger)
     {
-        _salesService = salesService;
-        _inventoryService = inventoryService;
+        _svc = svc;
         _logger = logger;
     }
 
-    public Pieza? PiezaEncontrada { get; set; }
-    public List<Factura> Facturas { get; set; } = new();
+    // ── Datos para la vista ──
+    public PiezaActualizacion? Pieza { get; set; }
+    public FacturaBusqueda? FacturaActual { get; set; }
+    public List<MonedaCatalogo> Monedas { get; set; } = new();
 
+    // ── Búsqueda ──
     [BindProperty(SupportsGet = true)]
     public string? CodigoBarras { get; set; }
 
-    [BindProperty]
-    public string? IdFactura { get; set; }
+    // ── Guardado ──
+    [BindProperty] public string? GuardarCB { get; set; }
+    [BindProperty] public int? GuardarIdFactura { get; set; }
+    [BindProperty] public decimal? GuardarCBPieza { get; set; }
+    [BindProperty] public decimal? GuardarCNPieza { get; set; }
+    [BindProperty] public decimal? GuardarDescPieza { get; set; }
+    [BindProperty] public int? GuardarIdMoneda { get; set; }
+    [BindProperty] public decimal? GuardarTC { get; set; }
+    [BindProperty] public decimal? GuardarCBFactura { get; set; }
+    [BindProperty] public decimal? GuardarCNFactura { get; set; }
 
-    [BindProperty]
-    public decimal? CBPieza { get; set; }
+    // ── Alta de factura ──
+    [BindProperty] public string? NuevaFolio { get; set; }
+    [BindProperty] public int? NuevaProveedor { get; set; }
+    [BindProperty] public int? NuevaRazonSocial { get; set; }
+    [BindProperty] public DateTime? NuevaFecha { get; set; }
 
-    [BindProperty]
-    public decimal? CNPieza { get; set; }
-
-    [BindProperty]
-    public decimal? DescPieza { get; set; }
-
-    [BindProperty]
-    public decimal? CBFactura { get; set; }
-
-    [BindProperty]
-    public decimal? CNFactura { get; set; }
-
-    [BindProperty]
-    public decimal? DescFactura { get; set; }
-
-    [BindProperty]
-    public decimal? TCCosto { get; set; }
-
+    // ═══════════════════════════════════════════
+    // GET principal
+    // ═══════════════════════════════════════════
     public async Task OnGetAsync()
     {
         try
         {
-            Facturas = await _salesService.ObtenerFacturasAsync();
+            Monedas = await _svc.ObtenerMonedasAsync();
 
             if (!string.IsNullOrWhiteSpace(CodigoBarras))
             {
-                PiezaEncontrada = await _inventoryService.ObtenerPiezaAsync(CodigoBarras.Trim());
-                if (PiezaEncontrada == null)
+                var piezas = await _svc.BuscarPiezasAsync(CodigoBarras.Trim());
+                Pieza = piezas.FirstOrDefault(p =>
+                    p.CodigoBarras == CodigoBarras.Trim());
+                Pieza ??= piezas.FirstOrDefault();
+
+                if (Pieza == null)
                 {
                     TempData["Error"] = $"Pieza '{CodigoBarras}' no encontrada.";
+                }
+                else if (Pieza.IdFactura.HasValue)
+                {
+                    FacturaActual = await _svc.ObtenerFacturaPorIdAsync(Pieza.IdFactura.Value);
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al buscar pieza");
-            TempData["Error"] = $"Error al buscar pieza: {ex.Message}";
+            _logger.LogError(ex, "Error buscando pieza {CB}", CodigoBarras);
+            TempData["Error"] = $"Error: {ex.Message}";
         }
     }
 
-    public async Task<IActionResult> OnPostActualizarAsync()
+    // ═══════════════════════════════════════════
+    // AJAX: Buscar factura por folio + proveedor
+    // ═══════════════════════════════════════════
+    public async Task<IActionResult> OnGetBuscarFacturaAsync(string folio, int proveedor)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(CodigoBarras))
-            {
-                TempData["Error"] = "Debe ingresar un código de barras.";
-                return RedirectToPage();
-            }
+            var factura = await _svc.BuscarFacturaPorFolioYProveedorAsync(folio.Trim(), proveedor);
+            if (factura != null)
+                return new JsonResult(new { encontrada = true, factura });
 
-            var pieza = await _inventoryService.ObtenerPiezaAsync(CodigoBarras.Trim());
-            if (pieza == null)
-            {
-                TempData["Error"] = $"Pieza '{CodigoBarras}' no encontrada.";
-                return RedirectToPage();
-            }
-
-            // Update cost fields
-            pieza.CBPieza = CBPieza;
-            pieza.CNPieza = CNPieza;
-            pieza.DescPieza = DescPieza;
-            pieza.CBFactura = CBFactura;
-            pieza.CNFactura = CNFactura;
-            pieza.DescFactura = DescFactura;
-            pieza.TCCosto = TCCosto;
-
-            if (!string.IsNullOrWhiteSpace(IdFactura))
-            {
-                await _salesService.AsignarPiezaFacturaAsync(CodigoBarras.Trim(), IdFactura, TCCosto, CBFactura, CNFactura);
-            }
-
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
-            pieza.IdUsuario = idUsuario;
-            await _inventoryService.ActualizarPiezaSencillaAsync(pieza);
-
-            TempData["Success"] = $"Pieza {CodigoBarras} actualizada exitosamente.";
+            var razones = await _svc.ObtenerRazonesSocialesPorProveedorAsync(proveedor);
+            return new JsonResult(new { encontrada = false, razonesSociales = razones });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al actualizar pieza");
-            TempData["Error"] = $"Error al actualizar pieza: {ex.Message}";
+            _logger.LogError(ex, "Error buscando factura");
+            return new JsonResult(new { error = ex.Message }) { StatusCode = 500 };
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // AJAX: Crear factura nueva
+    // ═══════════════════════════════════════════
+    public async Task<IActionResult> OnPostCrearFacturaAsync()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(NuevaFolio) || !NuevaProveedor.HasValue
+                || !NuevaRazonSocial.HasValue || !NuevaFecha.HasValue)
+                return new JsonResult(new { error = "Campos requeridos." }) { StatusCode = 400 };
+
+            var uid = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var u) ? u : 1;
+            var id = await _svc.CrearFacturaAsync(
+                NuevaFolio.Trim(), NuevaProveedor.Value,
+                NuevaRazonSocial.Value, NuevaFecha.Value, uid, idTienda: 1);
+
+            var factura = await _svc.ObtenerFacturaPorIdAsync(id);
+            return new JsonResult(new { success = true, factura });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creando factura");
+            return new JsonResult(new { error = ex.Message }) { StatusCode = 500 };
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // POST: Guardar costos (replica VB6 cmdAceptar_Click)
+    // ═══════════════════════════════════════════
+    public async Task<IActionResult> OnPostGuardarAsync()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(GuardarCB) || !GuardarIdFactura.HasValue)
+            {
+                TempData["Error"] = "Debe seleccionar pieza y factura.";
+                return RedirectToPage(new { CodigoBarras = GuardarCB });
+            }
+
+            var idMoneda = GuardarIdMoneda ?? 1;
+            var tc = GuardarTC ?? 1m;
+            var cbPieza = GuardarCBPieza ?? 0m;
+            var cnPieza = GuardarCNPieza ?? 0m;
+            var cbFactura = GuardarCBFactura ?? 0m;
+            var cnFactura = GuardarCNFactura ?? 0m;
+
+            // descFactura = 100 × (1 - neto/bruto) — lógica VB6
+            decimal descFactura = cbFactura > 0 ? 100m * (1m - cnFactura / cbFactura) : 0m;
+
+            // VB6 legacy: para moneda extranjera CBPieza/CNPieza guardan valores MN
+            var dto = new ActualizarCostoPiezaDto
+            {
+                CodigoBarras = GuardarCB.Trim(),
+                IdFactura = GuardarIdFactura.Value,
+                CBPieza = idMoneda == 1 ? cbPieza : cbFactura,
+                CNPieza = idMoneda == 1 ? cnPieza : cnFactura,
+                IdMoneda = idMoneda,
+                TCCosto = tc,
+                CBFactura = cbFactura,
+                CNFactura = cnFactura,
+                DescFactura = descFactura
+            };
+
+            await _svc.ActualizarCostosPiezaAsync(dto);
+            TempData["Success"] = $"Pieza {GuardarCB} actualizada.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error guardando costos {CB}", GuardarCB);
+            TempData["Error"] = $"Error: {ex.Message}";
         }
 
-        return RedirectToPage(new { CodigoBarras });
+        return RedirectToPage(new { CodigoBarras = GuardarCB });
     }
 }
