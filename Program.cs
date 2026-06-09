@@ -39,7 +39,7 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
-// Catalog Service
+// Catalog Service (DefaultsUtilidad, etc.)
 builder.Services.AddScoped<CatalogService>(sp => new CatalogService(
     diamondsConnStr,
     sp.GetRequiredService<ILogger<CatalogService>>()));
