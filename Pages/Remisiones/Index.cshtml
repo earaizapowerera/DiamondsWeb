@@ -1,0 +1,469 @@
+@page
+@model DiamondsWeb.Pages.Remisiones.IndexModel
+@{
+    ViewData["Title"] = "Actualizacion de Remisiones";
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-circle-exclamation me-2"></i>@Model.ErrorMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.SuccessMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Toolbar -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0"><i class="fa-solid fa-truck-ramp-box me-2"></i>Actualizacion de Remisiones</h5>
+    <div class="btn-group btn-group-sm">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalRemision"
+                onclick="prepararNueva()">
+            <i class="fa-solid fa-plus me-1"></i>Nueva
+        </button>
+        @if (Model.RemisionActual != null)
+        {
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalRemision"
+                    onclick="prepararEditar(@Model.RemisionActual.IdRemision, @Model.RemisionActual.Proveedor, '@Model.RemisionActual.Remision', '@Model.RemisionActual.FechaRemision?.ToString("yyyy-MM-dd")', @(Model.RemisionActual.Consignacion ? "true" : "false"))">
+                <i class="fa-solid fa-pen me-1"></i>Modificar
+            </button>
+            <form method="post" asp-page-handler="Eliminar" class="d-inline">
+                <input type="hidden" name="idRemision" value="@Model.RemisionActual.IdRemision" />
+                <button type="submit" class="btn btn-danger"
+                        onclick="return confirm('Eliminar remision #@Model.RemisionActual.IdRemision?')">
+                    <i class="fa-solid fa-trash me-1"></i>Eliminar
+                </button>
+            </form>
+        }
+    </div>
+</div>
+
+<!-- Filtros de busqueda -->
+<div class="filter-panel">
+    <form method="get">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label"><small>Buscar</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Id, proveedor, remision..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Proveedor</small></label>
+                <select class="form-select form-select-sm" name="FiltroProveedor" id="filtroProveedorSelect">
+                    <option value="">-- Todos --</option>
+                    @foreach (var p in Model.Proveedores)
+                    {
+                        <option value="@p.Proveedor" selected="@(Model.FiltroProveedor == p.Proveedor)">
+                            @p.NombreProveedor
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Consignacion</small></label>
+                <select class="form-select form-select-sm" name="SoloConsignacion">
+                    <option value="" selected="@(!Model.SoloConsignacion.HasValue)">Todas</option>
+                    <option value="true" selected="@(Model.SoloConsignacion == true)">Solo consignacion</option>
+                    <option value="false" selected="@(Model.SoloConsignacion == false)">Sin consignacion</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            @if (Model.SelId.HasValue)
+            {
+                <input type="hidden" name="SelId" value="@Model.SelId" />
+            }
+        </div>
+    </form>
+</div>
+
+<!-- Grid de remisiones -->
+<div class="card mb-3">
+    <div class="card-header bg-dark text-white py-2">
+        <i class="fa-solid fa-list me-1"></i>Remisiones (@Model.Remisiones.Count)
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+            <table class="table table-rem table-hover table-sm mb-0">
+                <thead class="sticky-top">
+                    <tr>
+                        <th>Id</th>
+                        <th>Proveedor</th>
+                        <th>Remision</th>
+                        <th>Fecha</th>
+                        <th class="text-center">Consig.</th>
+                        <th class="text-end">Piezas</th>
+                        <th class="text-end">Bruto</th>
+                        <th class="text-end">Neto</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Remisiones)
+                    {
+                        var isSelected = Model.SelId == r.IdRemision;
+                        <tr class="@(isSelected ? "table-active fw-bold" : "")">
+                            <td>@r.IdRemision</td>
+                            <td>@r.NombreProveedor</td>
+                            <td>@r.Remision</td>
+                            <td>@r.FechaRemision?.ToString("dd/MM/yyyy")</td>
+                            <td class="text-center">
+                                @if (r.Consignacion)
+                                {
+                                    <span class="badge bg-info"><i class="fa-solid fa-handshake"></i></span>
+                                }
+                            </td>
+                            <td class="text-end">@r.TotalPiezas</td>
+                            <td class="text-end">@r.TotalBruto.ToString("N2")</td>
+                            <td class="text-end">@r.TotalNeto.ToString("N2")</td>
+                            <td>
+                                <a href="?SelId=@r.IdRemision&Buscar=@Model.Buscar&FiltroProveedor=@Model.FiltroProveedor&SoloConsignacion=@Model.SoloConsignacion"
+                                   class="btn btn-sm @(isSelected ? "btn-primary" : "btn-outline-primary")"
+                                   title="Seleccionar">
+                                    <i class="fa-solid fa-arrow-pointer"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Remisiones.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-3">
+                                <i class="fa-solid fa-inbox me-1"></i>No se encontraron remisiones
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (Model.RemisionActual != null)
+{
+    var rem = Model.RemisionActual;
+
+    <!-- Info de remision seleccionada -->
+    <div class="info-panel-rem mb-3">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h6 class="mb-1">
+                    <i class="fa-solid fa-file-invoice me-1"></i>
+                    Remision #@rem.IdRemision — @rem.NombreProveedor
+                    @if (rem.Consignacion)
+                    {
+                        <span class="badge bg-info ms-2">Consignacion</span>
+                    }
+                </h6>
+                <small class="text-muted">
+                    Ref: @rem.Remision | Fecha: @rem.FechaRemision?.ToString("dd/MM/yyyy")
+                    | Captura: @rem.FechaCaptura.ToString("dd/MM/yyyy HH:mm")
+                </small>
+            </div>
+            <div class="col-md-4 text-end">
+                <div><small class="text-muted">Total Bruto:</small> <strong>@Model.Totales.Bruto.ToString("C2")</strong></div>
+                <div><small class="text-muted">Total Neto:</small> <strong>@Model.Totales.Neto.ToString("C2")</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dos grids: Disponibles | Vinculadas -->
+    <div class="row">
+        <!-- Grid izquierdo: Piezas disponibles -->
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header bg-secondary text-white py-2 d-flex justify-content-between align-items-center">
+                    <span><i class="fa-solid fa-cubes me-1"></i>Piezas disponibles (@Model.PiezasDisponibles.Count)</span>
+                    <form method="get" class="d-flex" style="max-width:250px;">
+                        <input type="hidden" name="SelId" value="@rem.IdRemision" />
+                        <input type="hidden" name="Buscar" value="@Model.Buscar" />
+                        <input type="hidden" name="FiltroProveedor" value="@Model.FiltroProveedor" />
+                        <input type="text" class="form-control form-control-sm me-1" name="BuscarPieza"
+                               value="@Model.BuscarPieza" placeholder="Codigo, desc..." />
+                        <button type="submit" class="btn btn-sm btn-light" title="Buscar piezas">
+                            <i class="fa-solid fa-search"></i>
+                        </button>
+                    </form>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                        <table class="table table-rem table-hover table-sm mb-0">
+                            <thead class="sticky-top">
+                                <tr>
+                                    <th>Codigo</th>
+                                    <th>Descripcion</th>
+                                    <th>Obs2</th>
+                                    <th class="text-end">CB Pieza</th>
+                                    <th class="text-end">CN Pieza</th>
+                                    <th class="text-end">TC Costo</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in Model.PiezasDisponibles)
+                                {
+                                    <tr>
+                                        <td><code>@p.CodigoBarras</code></td>
+                                        <td>@p.Descripcion</td>
+                                        <td>@p.Obs2</td>
+                                        <td class="text-end">@p.CBPieza?.ToString("N2")</td>
+                                        <td class="text-end">@p.CNPieza?.ToString("N2")</td>
+                                        <td class="text-end">@p.TCCosto?.ToString("N4")</td>
+                                        <td>
+                                            <form method="post" asp-page-handler="Vincular" class="d-inline">
+                                                <input type="hidden" name="idRemision" value="@rem.IdRemision" />
+                                                <input type="hidden" name="codigoBarras" value="@p.CodigoBarras" />
+                                                <button type="submit" class="btn btn-sm btn-success" title="Vincular a remision">
+                                                    <i class="fa-solid fa-arrow-right"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!Model.PiezasDisponibles.Any())
+                                {
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-3">
+                                            <i class="fa-solid fa-search me-1"></i>Buscar piezas para vincular
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vincular Remision Completa -->
+        <div class="col-12 mb-3">
+            <div class="card border-warning">
+                <div class="card-body py-2">
+                    <form method="post" asp-page-handler="VincularCompleta" class="d-flex align-items-center gap-2">
+                        <input type="hidden" name="idRemision" value="@rem.IdRemision" />
+                        <label class="form-label mb-0 text-nowrap"><small><i class="fa-solid fa-arrows-turn-right me-1"></i>Mover piezas de otra remision:</small></label>
+                        <input type="number" class="form-control form-control-sm" name="idRemisionOrigen"
+                               placeholder="Id remision origen" style="max-width:180px;" required />
+                        <button type="submit" class="btn btn-sm btn-warning text-nowrap"
+                                onclick="return confirm('Esto movera TODAS las piezas de esa remision a la #@rem.IdRemision. Continuar?')">
+                            <i class="fa-solid fa-truck-moving me-1"></i>Mover Todas
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid derecho: Piezas de la remision -->
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header bg-primary text-white py-2">
+                    <i class="fa-solid fa-link me-1"></i>Piezas en remision (@Model.PiezasRemision.Count)
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                        <table class="table table-rem table-hover table-sm mb-0">
+                            <thead class="sticky-top">
+                                <tr>
+                                    <th>Codigo</th>
+                                    <th>Obs2</th>
+                                    <th class="text-end">CB Total</th>
+                                    <th class="text-end">CN Total</th>
+                                    <th class="text-end">Bruto</th>
+                                    <th class="text-end">Neto</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in Model.PiezasRemision)
+                                {
+                                    <tr>
+                                        <td><code>@p.CodigoBarras</code></td>
+                                        <td>@p.Obs2</td>
+                                        <td class="text-end">@p.CBTotal.ToString("N2")</td>
+                                        <td class="text-end">@p.CNTotal.ToString("N2")</td>
+                                        <td class="text-end">@p.Bruto.ToString("N2")</td>
+                                        <td class="text-end">@p.Neto.ToString("N2")</td>
+                                        <td>
+                                            <form method="post" asp-page-handler="Desvincular" class="d-inline">
+                                                <input type="hidden" name="idRemision" value="@rem.IdRemision" />
+                                                <input type="hidden" name="codigoBarras" value="@p.CodigoBarras" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                        title="Desvincular pieza"
+                                                        onclick="return confirm('Desvincular pieza @p.CodigoBarras?')">
+                                                    <i class="fa-solid fa-xmark"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!Model.PiezasRemision.Any())
+                                {
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-3">
+                                            <i class="fa-solid fa-link-slash me-1"></i>Sin piezas vinculadas
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Totales -->
+                <div class="card-footer bg-light">
+                    <div class="row text-end">
+                        <div class="col-6">
+                            <small class="text-muted">Bruto:</small>
+                            <strong>@Model.Totales.Bruto.ToString("C2")</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Neto:</small>
+                            <strong>@Model.Totales.Neto.ToString("C2")</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (Model.Remisiones.Any())
+{
+    <div class="card">
+        <div class="card-body text-center text-muted py-4">
+            <i class="fa-solid fa-hand-pointer fa-2x mb-2 d-block"></i>
+            <p>Seleccione una remision de la lista para ver y gestionar sus piezas.</p>
+        </div>
+    </div>
+}
+
+<!-- Modal Crear/Editar Remision -->
+<div class="modal fade" id="modalRemision" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="formRemision">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitulo">
+                        <i class="fa-solid fa-plus me-1"></i>Nueva Remision
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editIdRemision" name="idRemision" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Proveedor <span class="text-danger">*</span></label>
+                        <select class="form-select" name="proveedor" id="proveedorSelect" required>
+                            <option value="">-- Seleccione --</option>
+                            @foreach (var p in Model.Proveedores)
+                            {
+                                <option value="@p.Proveedor">@p.NombreProveedor</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Remision <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="remision" id="inputRemision"
+                               maxlength="10" required placeholder="Numero de remision" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fecha Remision</label>
+                        <input type="date" class="form-control" name="fechaRemision" id="inputFecha" />
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="consignacion"
+                               id="inputConsignacion" value="true" />
+                        <label class="form-check-label" for="inputConsignacion">
+                            Consignacion
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btnGuardar">
+                        <i class="fa-solid fa-floppy-disk me-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // TomSelect para dropdowns searchable (>5 opciones)
+    document.addEventListener('DOMContentLoaded', function () {
+        var filtroSel = document.getElementById('filtroProveedorSelect');
+        if (filtroSel && typeof TomSelect !== 'undefined') {
+            new TomSelect(filtroSel, {
+                allowEmptyOption: true,
+                sortField: { field: 'text', direction: 'asc' }
+            });
+        }
+        var provSel = document.getElementById('proveedorSelect');
+        if (provSel && typeof TomSelect !== 'undefined') {
+            new TomSelect(provSel, {
+                allowEmptyOption: true,
+                sortField: { field: 'text', direction: 'asc' }
+            });
+        }
+    });
+
+    function prepararNueva() {
+        document.getElementById('modalTitulo').innerHTML =
+            '<i class="fa-solid fa-plus me-1"></i>Nueva Remision';
+        document.getElementById('formRemision').setAttribute('action', '?handler=Crear');
+        document.getElementById('editIdRemision').value = '';
+        document.getElementById('proveedorSelect').value = '';
+        // Reset TomSelect if present
+        var ts = document.getElementById('proveedorSelect');
+        if (ts && ts.tomselect) ts.tomselect.clear();
+        document.getElementById('inputRemision').value = '';
+        document.getElementById('inputFecha').value = new Date().toISOString().split('T')[0];
+        document.getElementById('inputConsignacion').checked = false;
+    }
+
+    function prepararEditar(id, proveedor, remision, fecha, consignacion) {
+        document.getElementById('modalTitulo').innerHTML =
+            '<i class="fa-solid fa-pen me-1"></i>Modificar Remision #' + id;
+        document.getElementById('formRemision').setAttribute('action', '?handler=Editar');
+        document.getElementById('editIdRemision').value = id;
+
+        var provSel = document.getElementById('proveedorSelect');
+        if (provSel.tomselect) {
+            provSel.tomselect.setValue(proveedor);
+        } else {
+            provSel.value = proveedor;
+        }
+
+        document.getElementById('inputRemision').value = remision;
+        document.getElementById('inputFecha').value = fecha || '';
+        document.getElementById('inputConsignacion').checked = consignacion;
+    }
+
+    // Atajos de teclado (mismo espiritu que VB6: F2=Nueva, F6=Buscar)
+    document.addEventListener('keydown', function (e) {
+        // No disparar atajos si el foco esta en un input/select/textarea
+        var tag = document.activeElement.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+        if (e.key === 'F2') {
+            e.preventDefault();
+            var btnNueva = document.querySelector('[onclick="prepararNueva()"]');
+            if (btnNueva) btnNueva.click();
+        }
+        if (e.key === 'F6') {
+            e.preventDefault();
+            var inputBuscar = document.querySelector('input[name="Buscar"]');
+            if (inputBuscar) inputBuscar.focus();
+        }
+    });
+</script>
+}

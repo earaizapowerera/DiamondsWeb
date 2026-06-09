@@ -45,6 +45,11 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
+// Remisiones Service
+builder.Services.AddScoped<RemisionService>(sp => new RemisionService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<RemisionService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware

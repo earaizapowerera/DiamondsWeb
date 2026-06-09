@@ -106,6 +106,47 @@
     font-weight: 700;
 }
 
+/* ===== Remisiones ===== */
+
+/* Table for remisiones */
+.table-rem thead th {
+    background-color: #343a40;
+    color: #fff;
+    border: none;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.table-rem tbody tr:hover {
+    background-color: #e8f4f8;
+}
+
+.table-rem td {
+    font-size: 0.85rem;
+    vertical-align: middle;
+}
+
+.table-rem code {
+    font-size: 0.8rem;
+    color: #6c5ce7;
+}
+
+/* Info panel for selected remision */
+.info-panel-rem {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+}
+
+.info-panel-rem h6 {
+    color: #2d3436;
+    font-weight: 700;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .stat-card {
@@ -113,5 +154,9 @@
     }
     .stat-card .stat-number {
         font-size: 1.5rem;
+    }
+    .table-rem td, .table-rem th {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.4rem;
     }
 }
