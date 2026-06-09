@@ -1,4 +1,5 @@
 @page
+@using System.Globalization
 @model DiamondsWeb.Pages.Catalogos.DefaultsUtilidad.IndexModel
 @{
     ViewData["Title"] = "Defaults Factor Utilidad";
@@ -47,13 +48,28 @@
                             <tr>
                                 <td>@d.IdDefaultUtilidad</td>
                                 <td class="text-end">
-                                    <span id="display-util-@d.IdDefaultUtilidad">@d.DefaultUtilidadGeneral.ToString("N4")</span>
+                                    <span class="display-val" id="display-util-@d.IdDefaultUtilidad">@d.DefaultUtilidadGeneral.ToString("N4")</span>
+                                    <input type="number" step="0.0001" min="0"
+                                           class="form-control form-control-sm text-end edit-input d-none"
+                                           id="input-util-@d.IdDefaultUtilidad"
+                                           data-hidden="edit-util-val-@d.IdDefaultUtilidad"
+                                           value="@d.DefaultUtilidadGeneral.ToString(CultureInfo.InvariantCulture)" />
                                 </td>
                                 <td class="text-end">
-                                    <span id="display-gemas-@d.IdDefaultUtilidad">@d.DefaultUtilidadGemas.ToString("N4")</span>
+                                    <span class="display-val" id="display-gemas-@d.IdDefaultUtilidad">@d.DefaultUtilidadGemas.ToString("N4")</span>
+                                    <input type="number" step="0.0001" min="0"
+                                           class="form-control form-control-sm text-end edit-input d-none"
+                                           id="input-gemas-@d.IdDefaultUtilidad"
+                                           data-hidden="edit-gemas-val-@d.IdDefaultUtilidad"
+                                           value="@d.DefaultUtilidadGemas.ToString(CultureInfo.InvariantCulture)" />
                                 </td>
                                 <td class="text-end">
-                                    <span id="display-reloj-@d.IdDefaultUtilidad">@d.DefaultUtilidadReloj.ToString("N4")</span>
+                                    <span class="display-val" id="display-reloj-@d.IdDefaultUtilidad">@d.DefaultUtilidadReloj.ToString("N4")</span>
+                                    <input type="number" step="0.0001" min="0"
+                                           class="form-control form-control-sm text-end edit-input d-none"
+                                           id="input-reloj-@d.IdDefaultUtilidad"
+                                           data-hidden="edit-reloj-val-@d.IdDefaultUtilidad"
+                                           value="@d.DefaultUtilidadReloj.ToString(CultureInfo.InvariantCulture)" />
                                 </td>
                                 <td>@d.NombreUsuario</td>
                                 <td>
@@ -82,11 +98,11 @@
                                     <form method="post" asp-page-handler="Edit" class="d-none" id="edit-form-@d.IdDefaultUtilidad">
                                         <input type="hidden" name="EditId" value="@d.IdDefaultUtilidad" />
                                         <input type="hidden" name="EditUtilidad" id="edit-util-val-@d.IdDefaultUtilidad"
-                                               value="@d.DefaultUtilidadGeneral" />
+                                               value="@d.DefaultUtilidadGeneral.ToString(CultureInfo.InvariantCulture)" />
                                         <input type="hidden" name="EditUtilidadGemas" id="edit-gemas-val-@d.IdDefaultUtilidad"
-                                               value="@d.DefaultUtilidadGemas" />
+                                               value="@d.DefaultUtilidadGemas.ToString(CultureInfo.InvariantCulture)" />
                                         <input type="hidden" name="EditUtilidadReloj" id="edit-reloj-val-@d.IdDefaultUtilidad"
-                                               value="@d.DefaultUtilidadReloj" />
+                                               value="@d.DefaultUtilidadReloj.ToString(CultureInfo.InvariantCulture)" />
                                         <div class="btn-group btn-group-sm">
                                             <button type="submit" class="btn btn-success" title="Guardar">
                                                 <i class="fa-solid fa-check"></i>
@@ -145,40 +161,46 @@
 @section Scripts {
 <script>
     function startEdit(id) {
-        // Ocultar display, mostrar inputs inline
+        // Ocultar botones display, mostrar botones edit
         document.getElementById('actions-' + id).classList.add('d-none');
         document.getElementById('edit-form-' + id).classList.remove('d-none');
 
-        // Convertir celdas de display a inputs editables
-        replaceWithInput('display-util-' + id, 'edit-util-val-' + id);
-        replaceWithInput('display-gemas-' + id, 'edit-gemas-val-' + id);
-        replaceWithInput('display-reloj-' + id, 'edit-reloj-val-' + id);
+        // Ocultar spans, mostrar inputs pre-existentes
+        toggleEditMode(id, true);
     }
 
     function cancelEdit(id) {
-        // Restaurar display
+        // Restaurar botones
         document.getElementById('actions-' + id).classList.remove('d-none');
         document.getElementById('edit-form-' + id).classList.add('d-none');
 
-        restoreFromInput('display-util-' + id);
-        restoreFromInput('display-gemas-' + id);
-        restoreFromInput('display-reloj-' + id);
+        // Ocultar inputs, mostrar spans
+        toggleEditMode(id, false);
     }
 
-    function replaceWithInput(spanId, hiddenId) {
-        var span = document.getElementById(spanId);
-        var hidden = document.getElementById(hiddenId);
-        var val = hidden.value;
-        span.dataset.original = span.textContent;
-        span.innerHTML = '<input type="number" step="0.0001" min="0" class="form-control form-control-sm text-end" ' +
-            'value="' + val + '" onchange="document.getElementById(\'' + hiddenId + '\').value=this.value" />';
-    }
-
-    function restoreFromInput(spanId) {
-        var span = document.getElementById(spanId);
-        if (span.dataset.original) {
-            span.textContent = span.dataset.original;
+    function toggleEditMode(id, editing) {
+        var prefixes = ['util', 'gemas', 'reloj'];
+        for (var i = 0; i < prefixes.length; i++) {
+            var span = document.getElementById('display-' + prefixes[i] + '-' + id);
+            var input = document.getElementById('input-' + prefixes[i] + '-' + id);
+            if (editing) {
+                span.classList.add('d-none');
+                input.classList.remove('d-none');
+            } else {
+                span.classList.remove('d-none');
+                input.classList.add('d-none');
+            }
         }
     }
+
+    // Sync visible inputs to hidden form fields on change
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('edit-input')) {
+            var hiddenId = e.target.dataset.hidden;
+            if (hiddenId) {
+                document.getElementById(hiddenId).value = e.target.value;
+            }
+        }
+    });
 </script>
 }
