@@ -228,18 +228,19 @@ public class InventoryService
     // ══════════════════════════════════════════════
     // REPORTE FALTANTES
     // ══════════════════════════════════════════════
-    public async Task<List<PiezaFaltante>> ObtenerFaltantesAsync()
+    public async Task<List<PiezaFaltante>> ObtenerFaltantesAsync(string? buscar = null)
     {
         using var conn = CreateConnection();
-        return (await conn.QueryAsync<PiezaFaltante>(@"
-            SELECT p.CodigoBarras, p.Descripcion, p.Precio, prov.NombreProveedor, g.Grupo,
-                   cf.Comentario
-            FROM Piezas p
-            LEFT JOIN Proveedores prov ON p.Proveedor = prov.Proveedor
-            LEFT JOIN Grupos g ON p.IdGrupo = g.IdGrupo
-            LEFT JOIN ComentariosFaltantes cf ON p.CodigoBarras = cf.CodigoBarras
-            WHERE p.Faltante = 1
-            ORDER BY p.CodigoBarras")).ToList();
+        var sql = @"SELECT p.CodigoBarras, p.Descripcion, p.Precio, g.Grupo,
+                       cf.Comentarios AS Comentario
+                    FROM Piezas p
+                    LEFT JOIN Grupos g ON p.IdGrupo = g.IdGrupo
+                    LEFT JOIN ComentariosFaltantes cf ON p.CodigoBarras = cf.CodigoBarras
+                    WHERE p.Faltante = 1";
+        if (!string.IsNullOrWhiteSpace(buscar))
+            sql += " AND (p.CodigoBarras LIKE @B OR p.Descripcion LIKE @B OR g.Grupo LIKE @B OR cf.Comentarios LIKE @B)";
+        sql += " ORDER BY p.CodigoBarras";
+        return (await conn.QueryAsync<PiezaFaltante>(sql, new { B = $"%{buscar}%" })).ToList();
     }
 
     public async Task GuardarComentarioFaltanteAsync(string codigoBarras, string comentario)
@@ -248,10 +249,10 @@ public class InventoryService
         var existe = await conn.ExecuteScalarAsync<int>(
             "SELECT COUNT(*) FROM ComentariosFaltantes WHERE CodigoBarras = @CB", new { CB = codigoBarras });
         if (existe > 0)
-            await conn.ExecuteAsync("UPDATE ComentariosFaltantes SET Comentario = @C WHERE CodigoBarras = @CB",
+            await conn.ExecuteAsync("UPDATE ComentariosFaltantes SET Comentarios = @C WHERE CodigoBarras = @CB",
                 new { CB = codigoBarras, C = comentario });
         else
-            await conn.ExecuteAsync("INSERT INTO ComentariosFaltantes (CodigoBarras, Comentario) VALUES (@CB, @C)",
+            await conn.ExecuteAsync("INSERT INTO ComentariosFaltantes (CodigoBarras, Comentarios) VALUES (@CB, @C)",
                 new { CB = codigoBarras, C = comentario });
     }
 
