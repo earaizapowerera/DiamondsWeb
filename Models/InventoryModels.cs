@@ -121,7 +121,6 @@ public class PiezaFaltante
     public string CodigoBarras { get; set; } = "";
     public string? Descripcion { get; set; }
     public decimal? Precio { get; set; }
-    public string? NombreProveedor { get; set; }
     public string? Grupo { get; set; }
     public string? Comentario { get; set; }
 }
