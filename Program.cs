@@ -45,6 +45,11 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
+// Cambio de Status de Piezas
+builder.Services.AddScoped<CambioStatusService>(sp => new CambioStatusService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<CambioStatusService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware

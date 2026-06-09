@@ -106,6 +106,29 @@
     font-weight: 700;
 }
 
+/* Cambio de Status */
+.nav-tabs .nav-link {
+    font-weight: 600;
+    color: #555;
+}
+
+.nav-tabs .nav-link.active {
+    color: #0d6efd;
+    border-bottom: 2px solid #0d6efd;
+}
+
+.tab-content {
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    background: #fff;
+}
+
+.btn-escanear {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.75rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .stat-card {

@@ -1,0 +1,328 @@
+@page
+@model DiamondsWeb.Pages.CambioStatus.IndexModel
+@{
+    ViewData["Title"] = "Cambio de Status de Piezas";
+}
+
+<!-- Alertas -->
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-circle-check me-2"></i>@Model.MensajeExito
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.MensajeError
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Panel Escaneo -->
+<div class="filter-panel mb-4">
+    <h5 class="mb-3"><i class="fa-solid fa-barcode me-2"></i>Escanear Pieza</h5>
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label"><small>Codigo de Barras</small></label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="fa-solid fa-barcode"></i></span>
+                <input type="text" id="txtCodigoBarras" class="form-control"
+                       placeholder="Escanee o escriba el codigo..." maxlength="8"
+                       value="@Model.CodigoBarras" autofocus autocomplete="off" />
+            </div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label"><small>Status Actual</small></label>
+            <input type="text" id="txtStatusActual" class="form-control" readonly
+                   value="@(Model.PiezaActual?.NombreStatus ?? "")"
+                   style="background-color: #e9ecef; font-weight: 600;" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label"><small>Ultimo Cambio</small></label>
+            <input type="text" id="txtFechaUltCambio" class="form-control" readonly
+                   value="@(Model.PiezaActual?.FechaUltimoCambio?.ToString("dd/MM/yyyy HH:mm") ?? "")"
+                   style="background-color: #e9ecef;" />
+        </div>
+        <div class="col-md-2">
+            <button type="button" id="btnBuscar" class="btn btn-primary w-100">
+                <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+            </button>
+        </div>
+    </div>
+
+    <!-- Descripción de la pieza -->
+    <div id="piezaDescripcion" class="mt-2" style="display: @(Model.PiezaActual != null ? "block" : "none");">
+        <small class="text-muted"><i class="fa-solid fa-gem me-1"></i>
+            <span id="spanDescripcion">@(Model.PiezaActual?.Descripcion ?? "")</span>
+        </small>
+    </div>
+</div>
+
+<!-- Panel Nuevo Status -->
+<div id="panelNuevoStatus" class="filter-panel mb-4"
+     style="display: @(Model.PiezaActual != null ? "block" : "none"); border-left: 4px solid #4facfe;">
+    <h5 class="mb-3"><i class="fa-solid fa-exchange-alt me-2"></i>Cambiar Status</h5>
+    <form method="post" asp-page-handler="CambiarStatus" id="formCambiarStatus">
+        <input type="hidden" name="codigoBarras" id="hiddenCB"
+               value="@(Model.PiezaActual?.CodigoBarras ?? "")" />
+        <div class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label class="form-label"><small>Nuevo Status</small></label>
+                <select name="nuevoStatusId" id="selectNuevoStatus"
+                        class="form-select" required>
+                    <option value="">-- Seleccione --</option>
+                    @foreach (var s in Model.StatusList)
+                    {
+                        <option value="@s.IdStatus">@s.NombreStatus</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-success w-100" id="btnCambiar">
+                    <i class="fa-solid fa-check me-1"></i>Cambiar Status
+                </button>
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn btn-outline-secondary w-100" id="btnLimpiar">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Tabs: Grid Piezas + Bitácora -->
+<ul class="nav nav-tabs mb-0" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#tabPiezas" role="tab">
+            <i class="fa-solid fa-list me-1"></i>Piezas por Status
+            <span class="badge bg-secondary ms-1">@Model.PiezasEnStatus.Count</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tabBitacora" role="tab">
+            <i class="fa-solid fa-clock-rotate-left me-1"></i>Bitacora Reciente
+            <span class="badge bg-secondary ms-1">@Model.Bitacora.Count</span>
+        </a>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <!-- Tab: Piezas por Status -->
+    <div class="tab-pane fade show active p-0" id="tabPiezas" role="tabpanel">
+        <!-- Filtro por status -->
+        <div class="bg-light p-2 border border-top-0 rounded-0">
+            <form method="get" class="d-flex align-items-center gap-2">
+                <label class="form-label mb-0 me-2"><small>Filtrar por status:</small></label>
+                <select name="FiltroStatus" class="form-select form-select-sm" style="max-width: 300px;"
+                        onchange="this.form.submit()">
+                    <option value="">-- Todos --</option>
+                    @foreach (var s in Model.StatusList.Where(s => s.IdStatus != 1))
+                    {
+                        <option value="@s.IdStatus" selected="@(Model.FiltroStatus == s.IdStatus)">
+                            @s.NombreStatus
+                        </option>
+                    }
+                </select>
+            </form>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-aml table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Codigo Barras</th>
+                        <th>Descripcion</th>
+                        <th>Status</th>
+                        <th>Ultimo Cambio</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.PiezasEnStatus.Count == 0)
+                    {
+                        <tr><td colspan="6" class="text-center text-muted py-4">No hay piezas fuera de Exhibicion.</td></tr>
+                    }
+                    @for (int i = 0; i < Model.PiezasEnStatus.Count; i++)
+                    {
+                        var p = Model.PiezasEnStatus[i];
+                        <tr>
+                            <td>@(i + 1)</td>
+                            <td><code>@p.CodigoBarras</code></td>
+                            <td>@p.Descripcion</td>
+                            <td><span class="badge bg-info text-dark">@p.NombreStatus</span></td>
+                            <td>
+                                @if (p.UltimoCambio.HasValue)
+                                {
+                                    <span class="utc-date" data-utc="@p.UltimoCambio.Value.ToString("o")">
+                                        @p.UltimoCambio.Value.ToString("dd/MM/yyyy HH:mm")
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-escanear"
+                                        data-cb="@p.CodigoBarras" title="Escanear esta pieza">
+                                    <i class="fa-solid fa-arrow-up"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab: Bitácora -->
+    <div class="tab-pane fade p-0" id="tabBitacora" role="tabpanel">
+        <div class="table-responsive">
+            <table class="table table-aml table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>Codigo Barras</th>
+                        <th>Status Anterior</th>
+                        <th><i class="fa-solid fa-arrow-right"></i></th>
+                        <th>Status Nuevo</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Bitacora.Count == 0)
+                    {
+                        <tr><td colspan="6" class="text-center text-muted py-4">No hay registros en la bitacora.</td></tr>
+                    }
+                    @foreach (var b in Model.Bitacora)
+                    {
+                        <tr>
+                            <td>@b.IdCambioStatus</td>
+                            <td><code>@b.CodigoBarras</code></td>
+                            <td>
+                                <span class="badge bg-secondary">@(b.NombreStatusAnterior ?? $"Id:{b.IdStatusAnterior}")</span>
+                            </td>
+                            <td class="text-center"><i class="fa-solid fa-arrow-right text-primary"></i></td>
+                            <td>
+                                <span class="badge bg-success">@(b.NombreStatusNuevo ?? $"Id:{b.IdStatusNuevo}")</span>
+                            </td>
+                            <td>
+                                <span class="utc-date" data-utc="@b.FechaCaptura.ToString("o")">
+                                    @b.FechaCaptura.ToString("dd/MM/yyyy HH:mm")
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    const txtCB = document.getElementById('txtCodigoBarras');
+    const txtStatus = document.getElementById('txtStatusActual');
+    const txtFecha = document.getElementById('txtFechaUltCambio');
+    const spanDesc = document.getElementById('spanDescripcion');
+    const divDesc = document.getElementById('piezaDescripcion');
+    const panelNuevo = document.getElementById('panelNuevoStatus');
+    const hiddenCB = document.getElementById('hiddenCB');
+    const selectStatus = document.getElementById('selectNuevoStatus');
+    const btnBuscar = document.getElementById('btnBuscar');
+    const btnLimpiar = document.getElementById('btnLimpiar');
+    const formCambiar = document.getElementById('formCambiarStatus');
+
+    // Buscar pieza via AJAX
+    async function buscarPieza(cb) {
+        if (!cb || cb.trim().length === 0) return;
+        cb = cb.trim();
+        try {
+            const resp = await fetch(`?handler=BuscarPieza&cb=${encodeURIComponent(cb)}`);
+            const data = await resp.json();
+            if (data.found) {
+                txtStatus.value = data.nombreStatus;
+                txtFecha.value = data.fechaUltimoCambio || '';
+                spanDesc.textContent = data.descripcion;
+                divDesc.style.display = 'block';
+                panelNuevo.style.display = 'block';
+                hiddenCB.value = data.codigoBarras;
+                selectStatus.focus();
+            } else {
+                txtStatus.value = '';
+                txtFecha.value = '';
+                spanDesc.textContent = '';
+                divDesc.style.display = 'none';
+                panelNuevo.style.display = 'none';
+                hiddenCB.value = '';
+                alert('La pieza no existe o no tiene status asignado.');
+                txtCB.select();
+            }
+        } catch (err) {
+            console.error('Error buscando pieza:', err);
+            alert('Error de conexion al buscar la pieza.');
+        }
+    }
+
+    // Enter en código de barras → buscar
+    txtCB.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            buscarPieza(txtCB.value);
+        }
+    });
+
+    btnBuscar.addEventListener('click', function () {
+        buscarPieza(txtCB.value);
+    });
+
+    // Limpiar
+    btnLimpiar.addEventListener('click', function () {
+        txtCB.value = '';
+        txtStatus.value = '';
+        txtFecha.value = '';
+        spanDesc.textContent = '';
+        divDesc.style.display = 'none';
+        panelNuevo.style.display = 'none';
+        hiddenCB.value = '';
+        selectStatus.value = '';
+        txtCB.focus();
+    });
+
+    // Confirmar cambio de status
+    formCambiar.addEventListener('submit', function (e) {
+        const nuevoId = selectStatus.value;
+        if (!nuevoId) {
+            e.preventDefault();
+            alert('Seleccione un nuevo status.');
+            selectStatus.focus();
+            return;
+        }
+        const nuevoNombre = selectStatus.options[selectStatus.selectedIndex].text;
+        const statusActual = txtStatus.value;
+        if (!confirm(`Cambiar status de "${statusActual}" a "${nuevoNombre}"?`)) {
+            e.preventDefault();
+        }
+    });
+
+    // Botones "escanear" del grid → carga código de barras y busca
+    document.querySelectorAll('.btn-escanear').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const cb = this.getAttribute('data-cb');
+            txtCB.value = cb;
+            buscarPieza(cb);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+
+    // Auto-focus después de cambio exitoso para siguiente escaneo
+    const alertSuccess = document.querySelector('.alert-success');
+    if (alertSuccess) {
+        setTimeout(function () {
+            txtCB.value = '';
+            txtCB.focus();
+        }, 1500);
+    }
+})();
+</script>
+}
