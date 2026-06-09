@@ -9,96 +9,136 @@ namespace DiamondsWeb.Pages.Catalogos.Grupos;
 [Authorize]
 public class IndexModel : PageModel
 {
-    private readonly CatalogService _catalogService;
+    private readonly GruposService _service;
     private readonly ILogger<IndexModel> _logger;
 
-    public IndexModel(CatalogService catalogService, ILogger<IndexModel> logger)
+    public IndexModel(GruposService service, ILogger<IndexModel> logger)
     {
-        _catalogService = catalogService;
+        _service = service;
         _logger = logger;
     }
 
-    public List<Grupo> Grupos { get; set; } = new();
+    public List<GrupoItem> Grupos { get; set; } = new();
+    public string? ErrorMessage { get; set; }
+    public string? SuccessMessage { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public string? Buscar { get; set; }
 
-    [BindProperty]
-    public string NuevoNombre { get; set; } = "";
-
+    // Campos del formulario de alta/edición
     [BindProperty]
     public int? EditId { get; set; }
 
     [BindProperty]
-    public string? EditNombre { get; set; }
+    public string NombreGrupo { get; set; } = string.Empty;
 
     public async Task OnGetAsync()
     {
-        try
-        {
-            Grupos = await _catalogService.ObtenerGruposAsync();
-            if (!string.IsNullOrWhiteSpace(Buscar))
-                Grupos = Grupos.Where(g => g.Grupo1.Contains(Buscar, StringComparison.OrdinalIgnoreCase)).ToList();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al cargar grupos");
-            TempData["Error"] = $"Error al cargar grupos: {ex.Message}";
-        }
+        await CargarGruposAsync();
+
+        if (TempData["Success"] is string msg)
+            SuccessMessage = msg;
+        if (TempData["Error"] is string err)
+            ErrorMessage = err;
     }
 
-    public async Task<IActionResult> OnPostCreateAsync()
+    /// <summary>
+    /// Crear nuevo grupo (botón Registrar sin EditId).
+    /// </summary>
+    public async Task<IActionResult> OnPostCrearAsync()
     {
+        if (string.IsNullOrWhiteSpace(NombreGrupo))
+        {
+            TempData["Error"] = "El nombre del grupo es obligatorio.";
+            return RedirectToPage(new { Buscar });
+        }
+
+        if (NombreGrupo.Trim().Length > 30)
+        {
+            TempData["Error"] = "El nombre del grupo no puede exceder 30 caracteres.";
+            return RedirectToPage(new { Buscar });
+        }
+
+        if (await _service.ExisteNombreAsync(NombreGrupo))
+        {
+            TempData["Error"] = $"Ya existe un grupo con el nombre \"{NombreGrupo.Trim()}\".";
+            return RedirectToPage(new { Buscar });
+        }
+
         try
         {
-            if (string.IsNullOrWhiteSpace(NuevoNombre))
-            {
-                TempData["Error"] = "El nombre del grupo es requerido.";
-                return RedirectToPage();
-            }
-
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
-            await _catalogService.CrearGrupoAsync(NuevoNombre.Trim(), idUsuario);
-            TempData["Success"] = "Grupo creado exitosamente.";
+            // IdUsuario=1 como default (admin). En producción se resolvería del claim del usuario.
+            var id = await _service.CrearAsync(NombreGrupo, 1);
+            TempData["Success"] = $"Grupo \"{NombreGrupo.Trim()}\" creado correctamente (Id: {id}).";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al crear grupo");
+            _logger.LogError(ex, "Error al crear grupo {Grupo}", NombreGrupo);
             TempData["Error"] = $"Error al crear grupo: {ex.Message}";
         }
 
-        return RedirectToPage();
+        return RedirectToPage(new { Buscar });
     }
 
-    public async Task<IActionResult> OnPostEditAsync()
+    /// <summary>
+    /// Actualizar grupo existente.
+    /// </summary>
+    public async Task<IActionResult> OnPostEditarAsync()
     {
+        if (!EditId.HasValue || EditId.Value <= 0)
+        {
+            TempData["Error"] = "Id de grupo inválido.";
+            return RedirectToPage(new { Buscar });
+        }
+
+        if (string.IsNullOrWhiteSpace(NombreGrupo))
+        {
+            TempData["Error"] = "El nombre del grupo es obligatorio.";
+            return RedirectToPage(new { Buscar });
+        }
+
+        if (NombreGrupo.Trim().Length > 30)
+        {
+            TempData["Error"] = "El nombre del grupo no puede exceder 30 caracteres.";
+            return RedirectToPage(new { Buscar });
+        }
+
+        if (await _service.ExisteNombreAsync(NombreGrupo, EditId.Value))
+        {
+            TempData["Error"] = $"Ya existe otro grupo con el nombre \"{NombreGrupo.Trim()}\".";
+            return RedirectToPage(new { Buscar });
+        }
+
         try
         {
-            if (EditId == null || string.IsNullOrWhiteSpace(EditNombre))
-            {
-                TempData["Error"] = "Datos incompletos para editar.";
-                return RedirectToPage();
-            }
-
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
-            await _catalogService.ActualizarGrupoAsync(EditId.Value, EditNombre.Trim(), idUsuario);
-            TempData["Success"] = "Grupo actualizado exitosamente.";
+            var ok = await _service.ActualizarAsync(EditId.Value, NombreGrupo, 1);
+            if (ok)
+                TempData["Success"] = $"Grupo \"{NombreGrupo.Trim()}\" actualizado correctamente.";
+            else
+                TempData["Error"] = "Grupo no encontrado.";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al actualizar grupo");
+            _logger.LogError(ex, "Error al actualizar grupo {Id}", EditId);
             TempData["Error"] = $"Error al actualizar grupo: {ex.Message}";
         }
 
-        return RedirectToPage();
+        return RedirectToPage(new { Buscar });
     }
 
-    public async Task<IActionResult> OnPostDeleteAsync(int id)
+    /// <summary>
+    /// Eliminar grupo.
+    /// </summary>
+    public async Task<IActionResult> OnPostEliminarAsync(int id)
     {
         try
         {
-            await _catalogService.EliminarGrupoAsync(id);
-            TempData["Success"] = "Grupo eliminado exitosamente.";
+            var grupo = await _service.ObtenerPorIdAsync(id);
+            var ok = await _service.EliminarAsync(id);
+            if (ok)
+                TempData["Success"] = $"Grupo \"{grupo?.Grupo}\" eliminado correctamente.";
+            else
+                TempData["Error"] = "Grupo no encontrado.";
         }
         catch (Exception ex)
         {
@@ -106,6 +146,19 @@ public class IndexModel : PageModel
             TempData["Error"] = $"Error al eliminar grupo: {ex.Message}";
         }
 
-        return RedirectToPage();
+        return RedirectToPage(new { Buscar });
+    }
+
+    private async Task CargarGruposAsync()
+    {
+        try
+        {
+            Grupos = await _service.ListarAsync(Buscar);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al cargar grupos");
+            ErrorMessage = $"Error al consultar datos: {ex.Message}";
+        }
     }
 }
