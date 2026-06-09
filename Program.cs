@@ -39,6 +39,11 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
+// Compuestas Service
+builder.Services.AddScoped<CompuestaService>(sp => new CompuestaService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<CompuestaService>>()));
+
 // SPPLD Config & Service
 var sppldConfig = new SppldConfig();
 builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);

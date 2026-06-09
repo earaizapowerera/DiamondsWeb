@@ -1,0 +1,332 @@
+@page
+@model DiamondsWeb.Pages.Compuestas.AltaModel
+@{
+    ViewData["Title"] = Model.EsEdicion ? "Editar Compuesta" : "Nueva Compuesta";
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Encabezado -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">
+        <i class="fa-solid fa-gem me-2"></i>
+        @(Model.EsEdicion ? "Editar" : "Nueva") Pieza Compuesta
+        @if (Model.EsEdicion)
+        {
+            <span class="badge bg-dark font-monospace ms-2">@Model.CodigoBarras</span>
+        }
+    </h4>
+    <a asp-page="Index" class="btn btn-outline-secondary">
+        <i class="fa-solid fa-arrow-left me-1"></i>Regresar
+    </a>
+</div>
+
+<form method="post" asp-page-handler="Guardar" id="formCompuesta">
+    <input type="hidden" asp-for="EditCB" />
+    <input type="hidden" asp-for="ComponentesJson" id="componentesJsonField" />
+
+    <!-- Datos Principales -->
+    <div class="card mb-3">
+        <div class="card-header bg-dark text-white">
+            <i class="fa-solid fa-info-circle me-1"></i>Datos de la Pieza Compuesta
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label">Descripcion <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" asp-for="Descripcion"
+                           maxlength="150" required placeholder="Ej: Solitario en oro blanco con diamante" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Grupo <span class="text-danger">*</span></label>
+                    <select class="form-select" asp-for="IdGrupo" id="selectGrupo">
+                        <option value="0">-- Seleccionar --</option>
+                        @foreach (var g in Model.Grupos)
+                        {
+                            <option value="@g.IdGrupo">@g.Grupo</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Componentes (Master-Detail) -->
+    <div class="card mb-3">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <span><i class="fa-solid fa-puzzle-piece me-1"></i>Componentes</span>
+            <span class="badge bg-light text-dark" id="badgeTotal">
+                Total: $<span id="precioTotal">0</span>
+                | <span id="cantidadComponentes">0</span> pieza(s)
+            </span>
+        </div>
+        <div class="card-body">
+            <!-- Agregar componente -->
+            <div class="row g-2 mb-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fa-solid fa-barcode"></i>
+                        </span>
+                        <input type="text" class="form-control" id="inputCBComponente"
+                               placeholder="Escanear o escribir codigo de barras..."
+                               autocomplete="off" />
+                        <button type="button" class="btn btn-success" id="btnAgregar"
+                                onclick="agregarComponente()">
+                            <i class="fa-solid fa-plus me-1"></i>Agregar
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div id="mensajeBusqueda" class="small mt-1"></div>
+                </div>
+            </div>
+
+            <!-- Tabla de componentes -->
+            <div class="table-responsive">
+                <table class="table table-sm table-hover table-comp" id="tablaComponentes">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Codigo</th>
+                            <th>Descripcion</th>
+                            <th>Kilates</th>
+                            <th>Modelo</th>
+                            <th>Color</th>
+                            <th>Pureza</th>
+                            <th>Corte</th>
+                            <th class="text-end">Precio</th>
+                            <th class="text-center">Quitar</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyComponentes">
+                        <!-- Se llena con JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="emptyComponentes" class="text-center text-muted py-3">
+                <i class="fa-solid fa-puzzle-piece fa-2x mb-2 d-block opacity-50"></i>
+                Agregue piezas escaneando o escribiendo su codigo de barras.
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuracion de Etiqueta -->
+    <div class="card mb-3">
+        <div class="card-header bg-secondary text-white">
+            <i class="fa-solid fa-tag me-1"></i>Configuracion de Etiqueta (opcional)
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Kilates en etiqueta</label>
+                    <select class="form-select" asp-for="EtiquetaK">
+                        <option value="0">Kilates 1</option>
+                        <option value="1">Kilates 2</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Linea 1</label>
+                    <select class="form-select" asp-for="Linea1">
+                        <option value="0">Diamante 1</option>
+                        <option value="1">Diamante 2</option>
+                        <option value="2">Modelo 1</option>
+                        <option value="3">Modelo 2</option>
+                        <option value="4">Obs1 1</option>
+                        <option value="5">Obs1 2</option>
+                        <option value="6">Obs2 1</option>
+                        <option value="7">Obs2 2</option>
+                        <option value="8">Serie 1</option>
+                        <option value="9">Serie 2</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Linea 2</label>
+                    <select class="form-select" asp-for="Linea2">
+                        <option value="0">Diamante 1</option>
+                        <option value="1">Diamante 2</option>
+                        <option value="2">Modelo 1</option>
+                        <option value="3">Modelo 2</option>
+                        <option value="4">Obs1 1</option>
+                        <option value="5">Obs1 2</option>
+                        <option value="6">Obs2 1</option>
+                        <option value="7">Obs2 2</option>
+                        <option value="8">Serie 1</option>
+                        <option value="9">Serie 2</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Linea 3</label>
+                    <select class="form-select" asp-for="Linea3">
+                        <option value="0">Diamante 1</option>
+                        <option value="1">Diamante 2</option>
+                        <option value="2">Modelo 1</option>
+                        <option value="3">Modelo 2</option>
+                        <option value="4">Obs1 1</option>
+                        <option value="5">Obs1 2</option>
+                        <option value="6">Obs2 1</option>
+                        <option value="7">Obs2 2</option>
+                        <option value="8">Serie 1</option>
+                        <option value="9">Serie 2</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botones -->
+    <div class="d-flex gap-2 mb-4">
+        <button type="submit" class="btn btn-primary btn-lg" id="btnGuardar">
+            <i class="fa-solid fa-floppy-disk me-1"></i>
+            @(Model.EsEdicion ? "Guardar Cambios" : "Crear Compuesta")
+        </button>
+        <a asp-page="Index" class="btn btn-outline-secondary btn-lg">
+            <i class="fa-solid fa-xmark me-1"></i>Cancelar
+        </a>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    // Estado de componentes en memoria
+    var componentes = [];
+    var antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+    // Inicializar con datos del servidor (edicion)
+    @if (Model.Componentes.Any())
+    {
+        @:componentes = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.Componentes.Select(c => new {
+                c.CodigoBarras, c.Descripcion, c.Kilates, c.Modelo,
+                c.Color, c.Pureza, c.Corte, Precio = c.Precio
+            })));
+    }
+
+    // Inicializar TomSelect en dropdown de grupo si esta disponible
+    document.addEventListener('DOMContentLoaded', function() {
+        var selectGrupo = document.getElementById('selectGrupo');
+        if (selectGrupo && typeof TomSelect !== 'undefined') {
+            new TomSelect(selectGrupo, {
+                allowEmptyOption: true,
+                sortField: { field: 'text', direction: 'asc' }
+            });
+        }
+        renderComponentes();
+
+        // Enter en input de CB = agregar
+        document.getElementById('inputCBComponente').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                agregarComponente();
+            }
+        });
+    });
+
+    async function agregarComponente() {
+        var input = document.getElementById('inputCBComponente');
+        var cb = input.value.trim();
+        if (!cb) return;
+
+        var msgDiv = document.getElementById('mensajeBusqueda');
+        msgDiv.innerHTML = '<span class="text-info"><i class="fa-solid fa-spinner fa-spin me-1"></i>Buscando...</span>';
+
+        // Verificar duplicado local
+        if (componentes.some(c => c.CodigoBarras === cb)) {
+            msgDiv.innerHTML = '<span class="text-warning"><i class="fa-solid fa-exclamation-triangle me-1"></i>El codigo ya esta incluido.</span>';
+            input.value = '';
+            input.focus();
+            return;
+        }
+
+        try {
+            var cbPadre = document.querySelector('[name="EditCB"]')?.value || '';
+            var resp = await fetch('?handler=BuscarPieza&cb=' + encodeURIComponent(cb) + '&CB=' + encodeURIComponent(cbPadre));
+            var data = await resp.json();
+
+            if (!data.ok) {
+                msgDiv.innerHTML = '<span class="text-danger"><i class="fa-solid fa-xmark me-1"></i>' + data.error + '</span>';
+                input.select();
+                return;
+            }
+
+            componentes.push(data.data);
+            renderComponentes();
+            msgDiv.innerHTML = '<span class="text-success"><i class="fa-solid fa-check me-1"></i>Pieza agregada: ' + data.data.Descripcion + '</span>';
+            input.value = '';
+            input.focus();
+        } catch (err) {
+            msgDiv.innerHTML = '<span class="text-danger"><i class="fa-solid fa-xmark me-1"></i>Error de conexion.</span>';
+        }
+    }
+
+    function quitarComponente(idx) {
+        componentes.splice(idx, 1);
+        renderComponentes();
+        document.getElementById('mensajeBusqueda').innerHTML = '';
+    }
+
+    function renderComponentes() {
+        var tbody = document.getElementById('tbodyComponentes');
+        var empty = document.getElementById('emptyComponentes');
+        var total = 0;
+
+        tbody.innerHTML = '';
+
+        if (componentes.length === 0) {
+            empty.style.display = 'block';
+        } else {
+            empty.style.display = 'none';
+            componentes.forEach(function(c, i) {
+                total += (c.Precio || 0);
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td>' + (i + 1) + '</td>' +
+                    '<td><span class="badge bg-dark font-monospace">' + esc(c.CodigoBarras) + '</span></td>' +
+                    '<td>' + esc(c.Descripcion || '') + '</td>' +
+                    '<td>' + esc(c.Kilates || '') + '</td>' +
+                    '<td>' + esc(c.Modelo || '') + '</td>' +
+                    '<td>' + esc(c.Color || '') + '</td>' +
+                    '<td>' + esc(c.Pureza || '') + '</td>' +
+                    '<td>' + esc(c.Corte || '') + '</td>' +
+                    '<td class="text-end fw-bold">$' + (c.Precio || 0).toLocaleString('es-MX') + '</td>' +
+                    '<td class="text-center">' +
+                        '<button type="button" class="btn btn-sm btn-outline-danger" onclick="quitarComponente(' + i + ')" title="Quitar">' +
+                            '<i class="fa-solid fa-xmark"></i>' +
+                        '</button>' +
+                    '</td>';
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('precioTotal').textContent = total.toLocaleString('es-MX');
+        document.getElementById('cantidadComponentes').textContent = componentes.length;
+
+        // Actualizar hidden field con CBs
+        var cbs = componentes.map(function(c) { return c.CodigoBarras; });
+        document.getElementById('componentesJsonField').value = JSON.stringify(cbs);
+    }
+
+    function esc(s) {
+        if (!s) return '';
+        var div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+    }
+
+    // Validar antes de submit
+    document.getElementById('formCompuesta').addEventListener('submit', function(e) {
+        if (componentes.length < 2) {
+            e.preventDefault();
+            alert('Una pieza compuesta necesita al menos 2 componentes.');
+            return false;
+        }
+    });
+</script>
+}
