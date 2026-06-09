@@ -39,6 +39,11 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
+// Proveedor Service
+builder.Services.AddScoped<ProveedorService>(sp => new ProveedorService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<ProveedorService>>()));
+
 // SPPLD Config & Service
 var sppldConfig = new SppldConfig();
 builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
