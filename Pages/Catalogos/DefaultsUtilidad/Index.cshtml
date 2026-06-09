@@ -1,0 +1,184 @@
+@page
+@model DiamondsWeb.Pages.Catalogos.DefaultsUtilidad.IndexModel
+@{
+    ViewData["Title"] = "Defaults Factor Utilidad";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-percent me-2"></i>Defaults Factor Utilidad
+    </div>
+    <div class="card-body">
+
+        <!-- Tabla -->
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th class="text-end">Utilidad General</th>
+                        <th class="text-end">Utilidad Gemas</th>
+                        <th class="text-end">Utilidad Reloj</th>
+                        <th>Usuario</th>
+                        <th>Fecha Captura</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Defaults.Any())
+                    {
+                        @foreach (var d in Model.Defaults)
+                        {
+                            <tr>
+                                <td>@d.IdDefaultUtilidad</td>
+                                <td class="text-end">
+                                    <span id="display-util-@d.IdDefaultUtilidad">@d.DefaultUtilidadGeneral.ToString("N4")</span>
+                                </td>
+                                <td class="text-end">
+                                    <span id="display-gemas-@d.IdDefaultUtilidad">@d.DefaultUtilidadGemas.ToString("N4")</span>
+                                </td>
+                                <td class="text-end">
+                                    <span id="display-reloj-@d.IdDefaultUtilidad">@d.DefaultUtilidadReloj.ToString("N4")</span>
+                                </td>
+                                <td>@d.NombreUsuario</td>
+                                <td>
+                                    <span class="utc-date" data-utc="@d.FechaCaptura.ToString("o")">
+                                        @d.FechaCaptura.ToString("dd/MM/yyyy HH:mm")
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <!-- Modo display -->
+                                    <div id="actions-@d.IdDefaultUtilidad">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-warning" title="Editar"
+                                                    onclick="startEdit(@d.IdDefaultUtilidad)">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                            <form method="post" asp-page-handler="Delete" class="d-inline">
+                                                <input type="hidden" name="id" value="@d.IdDefaultUtilidad" />
+                                                <button type="submit" class="btn btn-outline-danger" title="Eliminar"
+                                                        onclick="return confirm('Eliminar registro #@d.IdDefaultUtilidad?')">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <!-- Modo edicion (oculto) -->
+                                    <form method="post" asp-page-handler="Edit" class="d-none" id="edit-form-@d.IdDefaultUtilidad">
+                                        <input type="hidden" name="EditId" value="@d.IdDefaultUtilidad" />
+                                        <input type="hidden" name="EditUtilidad" id="edit-util-val-@d.IdDefaultUtilidad"
+                                               value="@d.DefaultUtilidadGeneral" />
+                                        <input type="hidden" name="EditUtilidadGemas" id="edit-gemas-val-@d.IdDefaultUtilidad"
+                                               value="@d.DefaultUtilidadGemas" />
+                                        <input type="hidden" name="EditUtilidadReloj" id="edit-reloj-val-@d.IdDefaultUtilidad"
+                                               value="@d.DefaultUtilidadReloj" />
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="submit" class="btn btn-success" title="Guardar">
+                                                <i class="fa-solid fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-secondary" title="Cancelar"
+                                                    onclick="cancelEdit(@d.IdDefaultUtilidad)">
+                                                <i class="fa-solid fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron registros.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Formulario Nuevo -->
+        <hr />
+        <h6><i class="fa-solid fa-plus me-2"></i>Agregar Factor de Utilidad</h6>
+        <form method="post" asp-page-handler="Create" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label"><small>Utilidad General</small></label>
+                <input type="number" step="0.0001" min="0" class="form-control form-control-sm"
+                       name="NuevaUtilidad" required placeholder="Ej: 1.7000" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Utilidad Gemas</small></label>
+                <input type="number" step="0.0001" min="0" class="form-control form-control-sm"
+                       name="NuevaUtilidadGemas" required placeholder="Ej: 1.8500" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Utilidad Reloj</small></label>
+                <input type="number" step="0.0001" min="0" class="form-control form-control-sm"
+                       name="NuevaUtilidadReloj" required placeholder="Ej: 1.8200" />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-success btn-sm w-100">
+                    <i class="fa-solid fa-plus me-1"></i>Crear
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function startEdit(id) {
+        // Ocultar display, mostrar inputs inline
+        document.getElementById('actions-' + id).classList.add('d-none');
+        document.getElementById('edit-form-' + id).classList.remove('d-none');
+
+        // Convertir celdas de display a inputs editables
+        replaceWithInput('display-util-' + id, 'edit-util-val-' + id);
+        replaceWithInput('display-gemas-' + id, 'edit-gemas-val-' + id);
+        replaceWithInput('display-reloj-' + id, 'edit-reloj-val-' + id);
+    }
+
+    function cancelEdit(id) {
+        // Restaurar display
+        document.getElementById('actions-' + id).classList.remove('d-none');
+        document.getElementById('edit-form-' + id).classList.add('d-none');
+
+        restoreFromInput('display-util-' + id);
+        restoreFromInput('display-gemas-' + id);
+        restoreFromInput('display-reloj-' + id);
+    }
+
+    function replaceWithInput(spanId, hiddenId) {
+        var span = document.getElementById(spanId);
+        var hidden = document.getElementById(hiddenId);
+        var val = hidden.value;
+        span.dataset.original = span.textContent;
+        span.innerHTML = '<input type="number" step="0.0001" min="0" class="form-control form-control-sm text-end" ' +
+            'value="' + val + '" onchange="document.getElementById(\'' + hiddenId + '\').value=this.value" />';
+    }
+
+    function restoreFromInput(spanId) {
+        var span = document.getElementById(spanId);
+        if (span.dataset.original) {
+            span.textContent = span.dataset.original;
+        }
+    }
+</script>
+}
