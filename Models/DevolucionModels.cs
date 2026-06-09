@@ -1,41 +1,42 @@
 namespace DiamondsWeb.Models;
 
 /// <summary>
-/// Registro de devolucion a proveedor (tabla devoluciones)
+/// Resultado de buscar una pieza vendida por codigo de barras.
+/// Contiene info de la compra original para mostrar antes de reestablecer.
 /// </summary>
-public class DevolucionItem
+public class PiezaDevolucion
 {
     public string CodigoBarras { get; set; } = string.Empty;
-    public string? MotivoDevolucion { get; set; }
     public string? Descripcion { get; set; }
-    public decimal? Peso { get; set; }
-    public decimal? CBTotal { get; set; }
-    public decimal? CNTotal { get; set; }
-    public string? Remision { get; set; }
-    public DateTime FechaDevolucion { get; set; }
-    public int? IdUsuario { get; set; }
-    public int? Proveedor { get; set; }
-    public string? NombreProveedor { get; set; }
+    public decimal Precio { get; set; }
+    public int IdNota { get; set; }
+    public decimal Descuento { get; set; }
+    public string? NombreCliente { get; set; }
+    public DateTime? FechaCompra { get; set; }
+    public string? Tienda { get; set; }
+    public string? FormaPago { get; set; }
+
+    /// <summary>True si la pieza esta en bajaspiezas (candidata a reestablecer)</summary>
+    public bool EnBajas { get; set; }
+
+    /// <summary>Precio pagado = Precio * (1 - Descuento/100)</summary>
+    public decimal PrecioPagado => Precio * (1m - (Descuento / 100m));
 }
 
 /// <summary>
-/// Info de pieza para validar antes de registrar devolucion
+/// Tienda disponible para seleccionar al reestablecer pieza
 /// </summary>
-public class PiezaInfo
+public class TiendaInfo
 {
-    public string CodigoBarras { get; set; } = string.Empty;
-    public DateTime FechaCaptura { get; set; }
-    public string? Descripcion { get; set; }
-    public int Precio { get; set; }
+    public int IdTienda { get; set; }
+    public string NombreTienda { get; set; } = string.Empty;
 }
 
 /// <summary>
-/// Estadisticas del dashboard de devoluciones
+/// Resultado de un intento de reestablecimiento
 /// </summary>
-public class DevolucionStats
+public class ResultadoReestablecimiento
 {
-    public int TotalDevoluciones { get; set; }
-    public int PendientesRemision { get; set; }
-    public int ConRemision { get; set; }
-    public int DevolucionesHoy { get; set; }
+    public bool Exito { get; set; }
+    public string Mensaje { get; set; } = string.Empty;
 }

@@ -9,141 +9,95 @@ namespace DiamondsWeb.Pages.Devoluciones;
 [Authorize]
 public class IndexModel : PageModel
 {
-    private readonly DevolucionService _devolucionService;
+    private readonly DevolucionesService _service;
     private readonly ILogger<IndexModel> _logger;
 
-    public IndexModel(DevolucionService devolucionService, ILogger<IndexModel> logger)
+    public IndexModel(DevolucionesService service, ILogger<IndexModel> logger)
     {
-        _devolucionService = devolucionService;
+        _service = service;
         _logger = logger;
     }
 
-    public List<DevolucionItem> Devoluciones { get; set; } = new();
-    public DevolucionStats Stats { get; set; } = new();
+    /// <summary>Resultado de la busqueda por codigo de barras</summary>
+    public PiezaDevolucion? Pieza { get; set; }
+
+    /// <summary>Tiendas disponibles para reestablecer</summary>
+    public List<TiendaInfo> Tiendas { get; set; } = new();
+
+    /// <summary>Mensaje de exito despues de reestablecer</summary>
     public string? MensajeExito { get; set; }
+
+    /// <summary>Mensaje de error</summary>
     public string? MensajeError { get; set; }
 
-    [BindProperty(SupportsGet = true)]
-    public string? BuscarTexto { get; set; }
+    /// <summary>Indica si la pieza no fue encontrada (vs nunca busco)</summary>
+    public bool BusquedaRealizada { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public string? FiltroRemision { get; set; }
+    public string? CodigoBarras { get; set; }
 
     public async Task OnGetAsync()
     {
-        await CargarDatosAsync();
+        Tiendas = await _service.ObtenerTiendasAsync();
+
+        if (!string.IsNullOrWhiteSpace(CodigoBarras))
+        {
+            BusquedaRealizada = true;
+            CodigoBarras = CodigoBarras.Trim();
+
+            try
+            {
+                Pieza = await _service.BuscarPiezaAsync(CodigoBarras);
+                if (Pieza == null)
+                {
+                    MensajeError = "El codigo tecleado no existe o la pieza esta en existencia. Vuelva a intentar.";
+                }
+                else if (!Pieza.EnBajas)
+                {
+                    // La pieza existe en piezasnotas pero ya no esta en bajaspiezas
+                    var fechaPrevia = await _service.VerificarReestablecimientoPrevioAsync(CodigoBarras);
+                    if (fechaPrevia.HasValue)
+                    {
+                        MensajeError = $"La pieza ya fue reestablecida el {fechaPrevia.Value:dd/MM/yyyy HH:mm}.";
+                    }
+                    else
+                    {
+                        MensajeError = "La pieza ya no esta en bajas. Puede que ya haya sido devuelta o este en existencia.";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error buscando pieza {CB}", CodigoBarras);
+                MensajeError = $"Error al buscar: {ex.Message}";
+            }
+        }
     }
 
-    /// <summary>
-    /// Registrar devolucion: valida pieza, backup etiquetas, inserta, ejecuta sp_devolucion
-    /// </summary>
-    public async Task<IActionResult> OnPostRegistrarAsync(
-        string codigoBarras, string motivo, string? remision)
+    public async Task<IActionResult> OnPostReestablecerAsync(
+        string codigoBarras, int idTienda)
     {
-        if (string.IsNullOrWhiteSpace(codigoBarras))
+        var usuario = User.Identity?.Name ?? "admin";
+
+        _logger.LogInformation(
+            "Solicitud de reestablecimiento: CB={CB}, Tienda={Tienda}, Usuario={Usuario}",
+            codigoBarras, idTienda, usuario);
+
+        var resultado = await _service.ReestablecerPiezaAsync(codigoBarras, idTienda, usuario);
+
+        if (resultado.Exito)
         {
-            MensajeError = "Debe ingresar un codigo de barras.";
-            await CargarDatosAsync();
-            return Page();
+            // Redirigir con mensaje de exito
+            TempData["MensajeExito"] = resultado.Mensaje;
+            return RedirectToPage(new { CodigoBarras = "" });
         }
 
-        if (string.IsNullOrWhiteSpace(motivo))
-        {
-            MensajeError = "Debe ingresar un motivo de devolucion.";
-            await CargarDatosAsync();
-            return Page();
-        }
-
-        // userId del usuario logueado (claim de UserPortal)
-        var userIdClaim = User.FindFirst("UserId")?.Value
-                          ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        var userId = int.TryParse(userIdClaim, out var uid) ? uid : 1;
-
-        if (string.IsNullOrWhiteSpace(remision))
-        {
-            // Advertencia silenciosa: queda pendiente de remision (igual que VB6)
-            remision = null;
-        }
-
-        var (exito, mensaje) = await _devolucionService.RegistrarDevolucionAsync(
-            codigoBarras.Trim(), motivo.Trim(), remision?.Trim(), userId);
-
-        if (exito)
-            MensajeExito = mensaje;
-        else
-            MensajeError = mensaje;
-
-        await CargarDatosAsync();
+        // Recargar la pagina con el error
+        Tiendas = await _service.ObtenerTiendasAsync();
+        CodigoBarras = codigoBarras;
+        BusquedaRealizada = true;
+        Pieza = await _service.BuscarPiezaAsync(codigoBarras);
+        MensajeError = resultado.Mensaje;
         return Page();
-    }
-
-    /// <summary>
-    /// Aplicar remision/nota de credito a devoluciones seleccionadas
-    /// </summary>
-    public async Task<IActionResult> OnPostAplicarRemisionAsync(
-        string remision, List<string> seleccionados)
-    {
-        var (exito, mensaje) = await _devolucionService.AplicarRemisionAsync(
-            remision?.Trim() ?? "", seleccionados);
-
-        if (exito)
-            MensajeExito = mensaje;
-        else
-            MensajeError = mensaje;
-
-        await CargarDatosAsync();
-        return Page();
-    }
-
-    /// <summary>
-    /// Eliminar devolucion y restaurar pieza al inventario
-    /// </summary>
-    public async Task<IActionResult> OnPostEliminarAsync(string codigoBarras)
-    {
-        var (exito, mensaje) = await _devolucionService.EliminarDevolucionAsync(codigoBarras);
-
-        if (exito)
-            MensajeExito = mensaje;
-        else
-            MensajeError = mensaje;
-
-        await CargarDatosAsync();
-        return Page();
-    }
-
-    /// <summary>
-    /// AJAX: Valida si una pieza existe en inventario
-    /// </summary>
-    public async Task<IActionResult> OnGetValidarPiezaAsync(string cb)
-    {
-        if (string.IsNullOrWhiteSpace(cb))
-            return new JsonResult(new { existe = false, mensaje = "Codigo vacio" });
-
-        var pieza = await _devolucionService.ValidarPiezaAsync(cb.Trim());
-
-        if (pieza == null)
-            return new JsonResult(new { existe = false, mensaje = "Pieza no encontrada en inventario" });
-
-        return new JsonResult(new
-        {
-            existe = true,
-            descripcion = pieza.Descripcion,
-            precio = pieza.Precio,
-            fechaCaptura = pieza.FechaCaptura.ToString("dd/MM/yyyy")
-        });
-    }
-
-    private async Task CargarDatosAsync()
-    {
-        try
-        {
-            Devoluciones = await _devolucionService.ObtenerDevolucionesAsync(BuscarTexto, FiltroRemision);
-            Stats = await _devolucionService.ObtenerEstadisticasAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error cargando datos de devoluciones");
-            MensajeError = $"Error al consultar datos: {ex.Message}";
-        }
     }
 }

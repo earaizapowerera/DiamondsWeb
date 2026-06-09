@@ -106,23 +106,35 @@
     font-weight: 700;
 }
 
-/* Devoluciones Table */
-.table-dev thead th {
-    background-color: #343a40;
+/* Devoluciones de Cliente */
+.dev-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
     color: #fff;
-    border: none;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
-.table-dev tbody tr:hover {
-    background-color: #e8f4f8;
+.dev-header h4 {
+    color: #fff;
+    margin: 0;
 }
 
-.table-dev code {
+.dev-header small {
+    color: rgba(255,255,255,0.8) !important;
+}
+
+.dev-detail-table th {
+    width: 45%;
+    color: #555;
+    font-weight: 600;
     font-size: 0.9rem;
-    color: #6f42c1;
+    padding: 0.6rem 0.5rem;
+    vertical-align: middle;
+}
+
+.dev-detail-table td {
+    padding: 0.6rem 0.5rem;
+    vertical-align: middle;
 }
 
 /* Responsive */
@@ -133,7 +145,8 @@
     .stat-card .stat-number {
         font-size: 1.5rem;
     }
-    .table-diamantes {
-        font-size: 0.75rem;
+    .dev-detail-table th {
+        width: 40%;
+        font-size: 0.8rem;
     }
 }
