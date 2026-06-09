@@ -106,6 +106,25 @@
     font-weight: 700;
 }
 
+/* Devoluciones Table */
+.table-dev thead th {
+    background-color: #343a40;
+    color: #fff;
+    border: none;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table-dev tbody tr:hover {
+    background-color: #e8f4f8;
+}
+
+.table-dev code {
+    font-size: 0.9rem;
+    color: #6f42c1;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .stat-card {

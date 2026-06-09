@@ -39,6 +39,11 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
+// Devolucion Service
+builder.Services.AddScoped<DevolucionService>(sp => new DevolucionService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<DevolucionService>>()));
+
 // SPPLD Config & Service
 var sppldConfig = new SppldConfig();
 builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
