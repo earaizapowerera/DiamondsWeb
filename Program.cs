@@ -45,6 +45,11 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
+// Divisores Service (catálogo de divisores para precio de venta)
+builder.Services.AddScoped<DivisoresService>(sp => new DivisoresService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<DivisoresService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware
