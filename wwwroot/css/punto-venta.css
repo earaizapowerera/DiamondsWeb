@@ -1,0 +1,181 @@
+/* ═══════════════════════════════════════════════════════════════
+   Punto de Venta Web — Estilos
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Toolbar Superior ──────────────────────────────────────── */
+.pos-toolbar {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    padding: 12px 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.pos-toolbar label {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* ─── Cards ─────────────────────────────────────────────────── */
+.pos-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.pos-card-header {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: white;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.pos-card-header.bg-success {
+    background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%) !important;
+}
+
+.pos-card-header.bg-info {
+    background: linear-gradient(135deg, #2980b9 0%, #3498db 100%) !important;
+}
+
+.pos-card-header.bg-secondary {
+    background: linear-gradient(135deg, #636e72 0%, #95a5a6 100%) !important;
+}
+
+.pos-card-body {
+    padding: 12px;
+    background: white;
+}
+
+/* ─── Código de barras input ─────────────────────────────── */
+#txtCodigoBarras {
+    font-size: 1.2rem;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2px;
+    border: 2px solid #3498db;
+    transition: border-color 0.3s;
+}
+
+#txtCodigoBarras:focus {
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.25);
+}
+
+#txtCodigoBarras:disabled {
+    border-color: #dee2e6;
+    background-color: #f8f9fa;
+}
+
+/* ─── Tablas de piezas y pagos ──────────────────────────────── */
+#tblPiezas, #tblPagos {
+    font-size: 0.82rem;
+}
+
+#tblPiezas tbody tr:hover,
+#tblPagos tbody tr:hover {
+    background-color: #fff3cd !important;
+    cursor: pointer;
+}
+
+.pieza-row:focus,
+.pago-row:focus {
+    outline: 2px solid #3498db;
+    background-color: #d4edda !important;
+}
+
+/* ─── Totales ───────────────────────────────────────────────── */
+#txtTotal {
+    font-size: 1.3rem !important;
+    color: #e74c3c;
+    border: 2px solid #e74c3c;
+}
+
+#txtCambio {
+    color: #27ae60;
+}
+
+/* ─── Botones de pago ───────────────────────────────────────── */
+.btn-pago-opcion {
+    min-width: 100px;
+    transition: all 0.2s;
+}
+
+.btn-pago-opcion:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-pago-opcion.active {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+}
+
+/* ─── Alertas POS ───────────────────────────────────────────── */
+.pos-alert {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    z-index: 1060;
+    min-width: 300px;
+    max-width: 500px;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ─── Atajos de teclado ─────────────────────────────────────── */
+kbd {
+    background-color: #2c3e50;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-family: monospace;
+}
+
+/* ─── Impresión ─────────────────────────────────────────────── */
+.print-nota {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* ─── Responsive ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .pos-toolbar .row {
+        gap: 8px;
+    }
+
+    #txtCodigoBarras {
+        font-size: 1rem;
+    }
+}
+
+/* ─── Sticky table headers ──────────────────────────────────── */
+.table-responsive .sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+/* ─── Animación de pieza agregada ───────────────────────────── */
+@keyframes piezaAgregada {
+    from {
+        background-color: #d4edda;
+    }
+    to {
+        background-color: transparent;
+    }
+}
+
+.pieza-row {
+    animation: piezaAgregada 1s ease-out;
+}

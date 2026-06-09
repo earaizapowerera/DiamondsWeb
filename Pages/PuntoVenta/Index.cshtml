@@ -1,0 +1,338 @@
+@page
+@model DiamondsWeb.Pages.PuntoVenta.IndexModel
+@{
+    ViewData["Title"] = "Punto de Venta";
+}
+
+<link rel="stylesheet" href="/css/punto-venta.css?v=20260609" />
+
+<!-- ═══════════════════════════════════════════════════════════════
+     BARRA SUPERIOR: Usuario, Sesión, Acciones
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="pos-toolbar mb-3">
+    <div class="row align-items-center g-2">
+        <div class="col-md-2">
+            <label class="form-label small text-muted mb-0">Usuario</label>
+            <div class="input-group input-group-sm">
+                <input type="number" id="txtUsuario" class="form-control" placeholder="ID" min="1" />
+                <span id="lblUsuario" class="input-group-text bg-white flex-grow-1" style="min-width:100px;"></span>
+            </div>
+        </div>
+        <div class="col-md-1">
+            <label class="form-label small text-muted mb-0">Vendedor</label>
+            <input type="number" id="txtVendedor" class="form-control form-control-sm" min="1" disabled />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small text-muted mb-0">Sesiones Abiertas (F8)</label>
+            <select id="cmbSesion" class="form-select form-select-sm">
+                <option value="">— Seleccionar sesión —</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small text-muted mb-0">Fecha Corte (Ctrl+F)</label>
+            <input type="date" id="dtFechaBaja" class="form-control form-control-sm" />
+        </div>
+        <div class="col-auto mt-auto d-flex gap-1">
+            <button id="btnNuevaSesion" class="btn btn-sm btn-primary" title="Nueva Sesión (F1)">
+                <i class="fa-solid fa-plus me-1"></i>F1 Nueva
+            </button>
+            <button id="btnCerrarNota" class="btn btn-sm btn-success" title="Cerrar e Imprimir (F2)" disabled>
+                <i class="fa-solid fa-print me-1"></i>F2 Cerrar
+            </button>
+            <button id="btnCancelar" class="btn btn-sm btn-outline-danger" title="Cancelar (ESC)" disabled>
+                <i class="fa-solid fa-xmark me-1"></i>Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- ═══════════════════════════════════════════════════════════
+         COLUMNA IZQUIERDA: Código de Barras + Totales + Descuento
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="col-md-3">
+        <!-- Código de Barras -->
+        <div class="pos-card mb-3">
+            <div class="pos-card-header">
+                <i class="fa-solid fa-barcode me-1"></i>Código de Barras (F4)
+            </div>
+            <div class="pos-card-body">
+                <input type="text" id="txtCodigoBarras" class="form-control form-control-lg text-center"
+                       placeholder="Escanear..." autofocus disabled />
+                <div id="lblRepetidaCantidad" class="mt-2" style="display:none;">
+                    <label class="form-label small">Cantidad de piezas repetidas:</label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" id="txtCantidadRepetida" class="form-control" value="1" min="1" />
+                        <button id="btnConfirmarRepetida" class="btn btn-primary btn-sm">Agregar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Catálogo Repetidas (Ctrl+R) -->
+        <div class="pos-card mb-3">
+            <div class="pos-card-header">
+                <i class="fa-solid fa-clone me-1"></i>Repetidas (Ctrl+R)
+            </div>
+            <div class="pos-card-body">
+                <select id="cmbRepetida" class="form-select form-select-sm">
+                    <option value="">— Seleccionar repetida —</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Totales y Descuento -->
+        <div class="pos-card mb-3">
+            <div class="pos-card-header">
+                <i class="fa-solid fa-calculator me-1"></i>Totales
+            </div>
+            <div class="pos-card-body">
+                <div class="mb-2">
+                    <label class="form-label small text-muted mb-0">SubTotal</label>
+                    <input type="text" id="txtSubTotal" class="form-control form-control-sm text-end" readonly />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small text-muted mb-0">Descuento % (Ctrl+D, max 20%)</label>
+                    <input type="number" id="txtDescuento" class="form-control form-control-sm text-end"
+                           value="0" min="0" max="20" step="0.01" disabled />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small text-muted mb-0">SobrePrecio</label>
+                    <input type="number" id="txtSobrePrecio" class="form-control form-control-sm text-end"
+                           value="0" step="0.01" disabled />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small text-muted mb-0">Total (Ctrl+T)</label>
+                    <input type="text" id="txtTotal" class="form-control form-control-sm text-end fw-bold fs-5 bg-light" readonly />
+                </div>
+                <div id="divFactura" style="display:none;">
+                    <div class="mb-2">
+                        <label class="form-label small text-muted mb-0">SubTotal Factura</label>
+                        <input type="text" id="txtSubTotalFactura" class="form-control form-control-sm text-end" readonly />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small text-muted mb-0">Total Factura (+IVA)</label>
+                        <input type="text" id="txtTotalFactura" class="form-control form-control-sm text-end fw-bold" readonly />
+                    </div>
+                </div>
+                <hr class="my-2" />
+                <div class="mb-2">
+                    <label class="form-label small text-muted mb-0">Total Pagado</label>
+                    <input type="text" id="txtTotalPagado" class="form-control form-control-sm text-end" readonly />
+                </div>
+                <div>
+                    <label class="form-label small text-muted mb-0">Cambio</label>
+                    <input type="text" id="txtCambio" class="form-control form-control-sm text-end fw-bold" readonly />
+                </div>
+            </div>
+        </div>
+
+        <!-- Factura checkbox -->
+        <div class="form-check mb-3 ms-1">
+            <input type="checkbox" id="chkFactura" class="form-check-input" disabled />
+            <label class="form-check-label" for="chkFactura">Factura (+IVA 15%)</label>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         COLUMNA CENTRAL: Grid de Piezas
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="col-md-6">
+        <div class="pos-card mb-3">
+            <div class="pos-card-header">
+                <i class="fa-solid fa-gem me-1"></i>Piezas por Vender
+                <span class="float-end small text-light">F6 para seleccionar | Enter/DblClick para cancelar pieza</span>
+            </div>
+            <div class="pos-card-body p-0">
+                <div class="table-responsive" style="max-height: 350px; overflow-y:auto;">
+                    <table class="table table-sm table-hover mb-0" id="tblPiezas">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th style="width:100px;">Código</th>
+                                <th>Descripción</th>
+                                <th style="width:60px;" class="text-center">Cant</th>
+                                <th style="width:100px;" class="text-end">SubTotal</th>
+                                <th style="width:100px;" class="text-end">Total</th>
+                                <th style="width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyPiezas">
+                            <tr id="trPiezasVacio">
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    <i class="fa-solid fa-barcode me-1"></i>Escanee un código de barras para comenzar
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid de Pagos -->
+        <div class="pos-card mb-3">
+            <div class="pos-card-header bg-success">
+                <i class="fa-solid fa-credit-card me-1"></i>Pagos
+                <span class="float-end small text-light">F5 para agregar | F9 para seleccionar | Enter/DblClick para cancelar pago</span>
+            </div>
+            <div class="pos-card-body p-0">
+                <div class="table-responsive" style="max-height: 200px; overflow-y:auto;">
+                    <table class="table table-sm table-hover mb-0" id="tblPagos">
+                        <thead class="table-success sticky-top">
+                            <tr>
+                                <th>Forma de Pago</th>
+                                <th class="text-end">Importe (MXN)</th>
+                                <th class="text-end">T. Cambio</th>
+                                <th class="text-end">Importe Original</th>
+                                <th style="width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyPagos">
+                            <tr id="trPagosVacio">
+                                <td colspan="5" class="text-center text-muted py-3">
+                                    Sin pagos registrados
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         COLUMNA DERECHA: Datos del Cliente
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="col-md-3">
+        <div class="pos-card mb-3">
+            <div class="pos-card-header bg-info">
+                <i class="fa-solid fa-user me-1"></i>Cliente (F7)
+            </div>
+            <div class="pos-card-body">
+                <div class="mb-2">
+                    <label class="form-label small text-muted mb-0">Nombre <span class="text-danger">*</span></label>
+                    <input type="text" id="txtNombre" class="form-control form-control-sm" maxlength="80" disabled />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small text-muted mb-0">Teléfonos</label>
+                    <input type="text" id="txtTelefonos" class="form-control form-control-sm" maxlength="15" disabled />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small text-muted mb-0">Comentarios</label>
+                    <textarea id="txtComentarios" class="form-control form-control-sm" rows="2" maxlength="150" disabled></textarea>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small text-muted mb-0">Forma de Pago</label>
+                    <input type="text" id="txtFormaPago" class="form-control form-control-sm" readonly />
+                </div>
+            </div>
+        </div>
+
+        <!-- Atajos de Teclado -->
+        <div class="pos-card">
+            <div class="pos-card-header bg-secondary">
+                <i class="fa-solid fa-keyboard me-1"></i>Atajos
+            </div>
+            <div class="pos-card-body small">
+                <div class="d-flex justify-content-between"><span><kbd>F1</kbd> Nueva Sesión</span></div>
+                <div class="d-flex justify-content-between"><span><kbd>F2</kbd> Cerrar e Imprimir</span></div>
+                <div class="d-flex justify-content-between"><span><kbd>F4</kbd> Código de Barras</span></div>
+                <div class="d-flex justify-content-between"><span><kbd>F5</kbd> Agregar Pago</span></div>
+                <div class="d-flex justify-content-between"><span><kbd>F6</kbd> Seleccionar Pieza</span></div>
+                <div class="d-flex justify-content-between"><span><kbd>F7</kbd> Nombre Cliente</span></div>
+                <div class="d-flex justify-content-between"><span><kbd>F8</kbd> Sesiones</span></div>
+                <div class="d-flex justify-content-between"><span><kbd>F9</kbd> Seleccionar Pago</span></div>
+                <div class="d-flex justify-content-between"><span><kbd>Ctrl+D</kbd> Descuento</span></div>
+                <div class="d-flex justify-content-between"><span><kbd>Ctrl+T</kbd> Total</span></div>
+                <div class="d-flex justify-content-between"><span><kbd>Ctrl+R</kbd> Repetidas</span></div>
+                <div class="d-flex justify-content-between"><span><kbd>Ctrl+F</kbd> Fecha Corte</span></div>
+                <div class="d-flex justify-content-between"><span><kbd>ESC</kbd> Cancelar</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL: Agregar Pago (F5)
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalPago" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-credit-card me-2"></i>Registrar Pago</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Forma de Pago</label>
+                    <div id="paymentGrid" class="d-flex flex-wrap gap-2">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                    <input type="hidden" id="pagoIdOpcionPago" />
+                    <input type="hidden" id="pagoIdMoneda" />
+                    <input type="hidden" id="pagoExtranjera" />
+                </div>
+                <div class="mb-3" id="divImporteNacional">
+                    <label class="form-label">Importe (MXN)</label>
+                    <input type="number" id="pagoImporte" class="form-control form-control-lg text-end" step="0.01" />
+                </div>
+                <div id="divMonedaExtranjera" style="display:none;">
+                    <div class="mb-3">
+                        <label class="form-label">Importe (moneda extranjera)</label>
+                        <input type="number" id="pagoImporteOriginal" class="form-control text-end" step="0.01" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Cambio</label>
+                        <input type="number" id="pagoTipoCambio" class="form-control text-end" step="0.0001" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Equivalente MXN</label>
+                        <input type="text" id="pagoEquivalenteMXN" class="form-control text-end bg-light" readonly />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="btnRegistrarPago" class="btn btn-success">
+                    <i class="fa-solid fa-check me-1"></i>Registrar Pago
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL: Confirmar Cerrar Nota
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalCerrarNota" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-print me-2"></i>Cerrar e Imprimir Nota</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Se cerrará la nota y las piezas serán dadas de baja del inventario.</p>
+                <div class="alert alert-info mb-0">
+                    <strong>Total:</strong> <span id="modalTotal">$0.00</span><br />
+                    <strong>Pagado:</strong> <span id="modalPagado">$0.00</span><br />
+                    <strong>Cambio:</strong> <span id="modalCambio">$0.00</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="btnConfirmarCerrar" class="btn btn-primary">
+                    <i class="fa-solid fa-print me-1"></i>Cerrar e Imprimir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ÁREA OCULTA: Impresión de Certificado/Factura
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="printArea" style="display:none;"></div>
+
+@section Scripts {
+    <script src="/js/punto-venta.js?v=20260609"></script>
+}
