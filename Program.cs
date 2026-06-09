@@ -45,6 +45,11 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
+// Actualización Pieza por Pieza Service
+builder.Services.AddScoped<ActualizacionService>(sp => new ActualizacionService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<ActualizacionService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware
