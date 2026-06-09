@@ -50,10 +50,10 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
-// Pieza Service (Alta de Piezas Sencillas)
-builder.Services.AddScoped<PiezaService>(sp => new PiezaService(
+// Lotes Repetidas Service (migración de frmLotesRepetidas.frm)
+builder.Services.AddScoped<LotesRepetidasService>(sp => new LotesRepetidasService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<PiezaService>>()));
+    sp.GetRequiredService<ILogger<LotesRepetidasService>>()));
 
 var app = builder.Build();
 

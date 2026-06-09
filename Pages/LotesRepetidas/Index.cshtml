@@ -1,0 +1,417 @@
+@page
+@model DiamondsWeb.Pages.LotesRepetidas.IndexModel
+@{
+    ViewData["Title"] = "Alta de Lotes de Piezas Repetidas";
+}
+
+<link rel="stylesheet" href="/css/lotes-repetidas.css?v=20260609" />
+
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.MensajeError
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.MensajeExito
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECCIÓN 1: Remisiones y Facturas
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="section-card mb-4">
+    <div class="section-header">
+        <i class="fa-solid fa-file-invoice me-2"></i>Remisiones y Facturas
+        <div class="float-end">
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaRemision">
+                <i class="fa-solid fa-plus me-1"></i>Nueva Remision
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalBuscarRemision">
+                <i class="fa-solid fa-search me-1"></i>Buscar
+            </button>
+        </div>
+    </div>
+    <div class="section-body">
+        @if (Model.RemisionActual != null)
+        {
+        <div class="row">
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Proveedor</label>
+                <div class="fw-bold">@Model.RemisionActual.NombreProveedor</div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small">Remision</label>
+                <div class="fw-bold">@Model.RemisionActual.NumRemision</div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small">Fecha</label>
+                <div>@Model.RemisionActual.FechaRemision?.ToString("dd/MM/yyyy")</div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small">Id Remision</label>
+                <div class="text-success fw-bold">@Model.RemisionActual.IdRemision</div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small">Consignacion</label>
+                <div>@(Model.RemisionActual.Consignacion ? "Si" : "No")</div>
+            </div>
+        </div>
+        }
+        else
+        {
+        <div class="text-muted text-center py-3">
+            <i class="fa-solid fa-info-circle me-1"></i>
+            Seleccione o cree una remision para comenzar a agregar piezas.
+        </div>
+        }
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECCIÓN 2: Grid de Piezas del Lote
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="section-card mb-4">
+    <div class="section-header">
+        <i class="fa-solid fa-gem me-2"></i>Piezas del Lote
+        <span class="badge bg-light text-dark ms-2">@Model.Piezas.Count piezas</span>
+        @if (Model.RemisionActual != null || Model.IdFactura.HasValue)
+        {
+        <div class="float-end">
+            <button type="button" class="btn btn-sm btn-success" id="btnNuevaPieza">
+                <i class="fa-solid fa-plus me-1"></i>Nueva Pieza (F1)
+            </button>
+        </div>
+        }
+    </div>
+    <div class="section-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover table-striped mb-0" id="tablaPiezas">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Descripcion</th>
+                        <th>Codigo</th>
+                        <th class="text-end">Cant.</th>
+                        <th class="text-end">Peso</th>
+                        <th class="text-end">$/Gramo</th>
+                        <th class="text-end">C.Bruto</th>
+                        <th class="text-end">Desc%</th>
+                        <th class="text-end">C.Neto</th>
+                        <th>Moneda</th>
+                        <th class="text-end">TC Cot.</th>
+                        <th class="text-end">Precio</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Piezas.Any())
+                    {
+                        @foreach (var p in Model.Piezas)
+                        {
+                        <tr>
+                            <td>@p.Descripcion</td>
+                            <td><code>@p.CodigoBarras</code></td>
+                            <td class="text-end">@p.Cantidad</td>
+                            <td class="text-end">@p.Peso.ToString("N2")</td>
+                            <td class="text-end">@p.PrecioGramo.ToString("N2")</td>
+                            <td class="text-end">@p.CostoBruto.ToString("N2")</td>
+                            <td class="text-end">@(p.Descuento?.ToString("N1") ?? "0")</td>
+                            <td class="text-end fw-bold">@p.CostoNeto.ToString("N2")</td>
+                            <td>@(Model.Monedas.FirstOrDefault(m => m.IdMoneda == p.IdMoneda)?.NombreMoneda ?? p.IdMoneda?.ToString())</td>
+                            <td class="text-end">@(p.TCCotizacion?.ToString("N4") ?? "-")</td>
+                            <td class="text-end text-primary fw-bold">@(p.Precio?.ToString("N0") ?? "-")</td>
+                            <td class="text-center">
+                                <form method="post" asp-page-handler="EliminarPieza"
+                                      onsubmit="return confirm('¿Eliminar esta pieza del lote?');" class="d-inline">
+                                    <input type="hidden" name="codigoBarras" value="@p.CodigoBarras" />
+                                    <input type="hidden" name="fechaCaptura" value="@p.FechaCaptura.ToString("o")" />
+                                    <input type="hidden" name="idRemision" value="@Model.IdRemision" />
+                                    <input type="hidden" name="idFactura" value="@Model.IdFactura" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        }
+                    }
+                    else
+                    {
+                    <tr>
+                        <td colspan="12" class="text-center text-muted py-4">
+                            <i class="fa-solid fa-box-open me-1"></i>No hay piezas en este lote.
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECCIÓN 3: Alta de Pieza (colapsable)
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="section-card mb-4 collapse" id="seccionAltaPieza">
+    <div class="section-header bg-success text-white">
+        <i class="fa-solid fa-plus-circle me-2"></i>Agregar Pieza al Lote
+        <button type="button" class="btn btn-sm btn-outline-light float-end" id="btnCancelarPieza">
+            Cancelar (Esc)
+        </button>
+    </div>
+    <div class="section-body">
+        <form method="post" asp-page-handler="AgregarPieza" id="formAgregarPieza">
+            <input type="hidden" name="pieza.IdRemision" value="@Model.IdRemision" />
+            <input type="hidden" name="pieza.IdFactura" value="@Model.IdFactura" />
+
+            <!-- Fila de factores de precio -->
+            <div class="factor-bar mb-3">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label small">Utilidad Extra</label>
+                        <input type="number" step="0.001" class="form-control form-control-sm factor-input"
+                               id="txtUtilidadExtra" value="1" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Utilidad</label>
+                        <input type="number" step="0.0001" class="form-control form-control-sm factor-input"
+                               id="txtUtilidad" value="1" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Impuesto</label>
+                        <input type="number" step="0.001" class="form-control form-control-sm factor-input"
+                               id="txtImpuesto" value="@(Model.Defaults?.DefaultImpuesto.ToString("0.000") ?? "1.160")" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Divisor</label>
+                        <input type="number" step="0.001" class="form-control form-control-sm factor-input"
+                               id="txtDivisor" value="@(Model.Defaults?.DefaultDivisor.ToString("0.000") ?? "1.000")" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">TC Cotizacion</label>
+                        <input type="number" step="0.0001" class="form-control form-control-sm factor-input"
+                               id="txtTCCotizacion" value="1" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold">Precio Calculado</label>
+                        <input type="text" class="form-control form-control-sm fw-bold text-primary"
+                               id="txtPrecioCalculado" readonly />
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <!-- Columna izquierda: datos de pieza -->
+                <div class="col-md-4">
+                    <div class="mb-2">
+                        <label class="form-label small">Codigo de Barras</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control" name="pieza.CodigoBarras"
+                                   id="txtCodigoBarras" maxlength="8" required autofocus />
+                            <button type="button" class="btn btn-outline-secondary" id="btnBuscarCodigo"
+                                    title="Buscar en catalogo">
+                                <i class="fa-solid fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Pieza</label>
+                        <input type="text" class="form-control form-control-sm bg-light"
+                               id="txtDescripcionPieza" readonly />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Precio Actual (Catalogo)</label>
+                        <input type="text" class="form-control form-control-sm bg-light"
+                               id="txtPrecioActual" readonly />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Cantidad</label>
+                        <input type="number" class="form-control form-control-sm"
+                               name="pieza.Cantidad" id="txtCantidad" value="0" min="0" />
+                    </div>
+                </div>
+
+                <!-- Columna central: costos -->
+                <div class="col-md-4">
+                    <div class="mb-2">
+                        <label class="form-label small">Peso (gramos)</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm"
+                               name="pieza.Peso" id="txtPeso" value="0.00" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Precio x Gramo</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm"
+                               name="pieza.PrecioGramo" id="txtPrecioGramo" value="0.00" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Costo Bruto</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm"
+                               name="pieza.CostoBruto" id="txtCostoBruto" value="0.00" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Descuento (%)</label>
+                        <input type="number" step="0.1" class="form-control form-control-sm"
+                               name="pieza.Descuento" id="txtDescuento" value="0" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Costo Neto</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm fw-bold"
+                               name="pieza.CostoNeto" id="txtCostoNeto" value="0.00" />
+                    </div>
+                </div>
+
+                <!-- Columna derecha: moneda y TC -->
+                <div class="col-md-4">
+                    <div class="mb-2">
+                        <label class="form-label small">Moneda</label>
+                        <select class="form-select form-select-sm" name="pieza.IdMoneda" id="selMoneda" required>
+                            <option value="">-- Seleccione --</option>
+                            @foreach (var m in Model.Monedas)
+                            {
+                            <option value="@m.IdMoneda">@m.NombreMoneda</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">TC Costo</label>
+                        <input type="number" step="0.0001" class="form-control form-control-sm"
+                               name="pieza.TCCosto" id="txtTCCosto" value="0" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">TC Cotizacion (hidden)</label>
+                        <input type="number" step="0.0001" class="form-control form-control-sm bg-light"
+                               name="pieza.TCCotizacion" id="txtTCCotizacionHidden" value="1" readonly />
+                    </div>
+
+                    <div class="alert alert-info small py-2 mt-3" id="infoFormula">
+                        <strong>Formula:</strong> CostoNeto &times; Utilidad &times; UtilidadExtra &times; Impuesto / Divisor &times; TC
+                        <br/>
+                        <span id="formulaDetalle"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-end mt-3">
+                <button type="submit" class="btn btn-success" id="btnAceptar">
+                    <i class="fa-solid fa-check me-1"></i>Aceptar (F12)
+                </button>
+                <button type="button" class="btn btn-secondary ms-2" id="btnCancelarPieza2">
+                    <i class="fa-solid fa-times me-1"></i>Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL: Nueva Remisión
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalNuevaRemision" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="CrearRemision">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa-solid fa-file-circle-plus me-2"></i>Nueva Remision</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Proveedor</label>
+                        <select class="form-select" name="proveedor" id="selProveedorRemision" required>
+                            <option value="">-- Escriba para buscar --</option>
+                            @foreach (var p in Model.Proveedores)
+                            {
+                            <option value="@p.Proveedor">@p.NombreProveedor</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Numero de Remision</label>
+                        <input type="text" class="form-control" name="numRemision" maxlength="10" />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Fecha Remision</label>
+                            <input type="date" class="form-control" name="fechaRemision"
+                                   value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check mt-4">
+                                <input type="checkbox" class="form-check-input" name="consignacion" value="true" id="chkConsignacion" />
+                                <label class="form-check-label" for="chkConsignacion">Consignacion</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-save me-1"></i>Registrar Remision
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL: Buscar Remisión
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalBuscarRemision" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fa-solid fa-search me-2"></i>Buscar Remision</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="txtBuscarRemision"
+                           placeholder="Buscar por proveedor o ID de remision..." />
+                    <button class="btn btn-primary" type="button" id="btnEjecutarBusqueda">
+                        <i class="fa-solid fa-search"></i>
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover" id="tablaRemisiones">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Proveedor</th>
+                                <th>Remision</th>
+                                <th>Fecha</th>
+                                <th>Consign.</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="bodyRemisiones">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    Escriba para buscar remisiones...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Datos del servidor para JS
+        window.LotesConfig = {
+            pageUrl: '@Url.Page("/LotesRepetidas/Index")',
+            idRemision: @(Model.IdRemision?.ToString() ?? "null"),
+            idFactura: @(Model.IdFactura?.ToString() ?? "null"),
+            defaultImpuesto: @(Model.Defaults?.DefaultImpuesto.ToString("0.000") ?? "1.160"),
+            defaultDivisor: @(Model.Defaults?.DefaultDivisor.ToString("0.000") ?? "1.000")
+        };
+    </script>
+    <script src="/js/lotes-repetidas.js?v=20260609"></script>
+}
