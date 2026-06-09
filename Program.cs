@@ -39,6 +39,11 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
+// Faltantes Service (migrado de frmReporteInventarioFisico.frm)
+builder.Services.AddScoped<FaltantesService>(sp => new FaltantesService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<FaltantesService>>()));
+
 // SPPLD Config & Service
 var sppldConfig = new SppldConfig();
 builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);

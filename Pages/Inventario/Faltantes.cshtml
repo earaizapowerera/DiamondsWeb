@@ -1,0 +1,231 @@
+@page
+@model DiamondsWeb.Pages.Inventario.FaltantesModel
+@{
+    ViewData["Title"] = "Reporte de Faltantes";
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+</div>
+}
+
+<!-- Dashboard Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-primary-custom">
+            <div class="stat-number">@Model.Stats.TotalFaltantes</div>
+            <div class="stat-label"><i class="fa-solid fa-box-open me-1"></i>Piezas Faltantes</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-danger-custom">
+            <div class="stat-number">@Model.Stats.SinComentarios</div>
+            <div class="stat-label"><i class="fa-solid fa-comment-slash me-1"></i>Sin Observaciones</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-success-custom">
+            <div class="stat-number">@Model.Stats.ConComentarios</div>
+            <div class="stat-label"><i class="fa-solid fa-comment-dots me-1"></i>Con Observaciones</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-warning-custom">
+            <div class="stat-number">@Model.Stats.ValorTotal.ToString("C0")</div>
+            <div class="stat-label"><i class="fa-solid fa-coins me-1"></i>Valor Total</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros + Exportar -->
+<div class="filter-panel">
+    <form method="get">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label"><small>Buscar</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Codigo, descripcion, modelo..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Status</small></label>
+                <select class="form-select form-select-sm" name="FiltroStatus" id="selectStatus">
+                    <option value="">Todos</option>
+                    @foreach (var s in Model.StatusDisponibles)
+                    {
+                        if (Model.FiltroStatus == s)
+                        {
+                            <option value="@s" selected="selected">@s</option>
+                        }
+                        else
+                        {
+                            <option value="@s">@s</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Consultar
+                </button>
+            </div>
+            <div class="col-md-3 text-end">
+                <a href="/Inventario/Faltantes?handler=ExportarExcel&Buscar=@Model.Buscar&FiltroStatus=@Model.FiltroStatus"
+                   class="btn btn-success btn-sm">
+                    <i class="fa-solid fa-file-excel me-1"></i>Exportar Excel
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Hidden form para antiforgery token (usado por AJAX) -->
+<form id="frmAntiForgery" method="post" style="display:none;"></form>
+
+<!-- Tabla de Faltantes -->
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-box-open me-2"></i>Piezas Faltantes (@Model.Faltantes.Count)</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0" id="tblFaltantes">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Codigo</th>
+                        <th>Descripcion</th>
+                        <th>Modelo</th>
+                        <th>Linea</th>
+                        <th>Kilates</th>
+                        <th class="text-end">Peso</th>
+                        <th class="text-end">Costo Total</th>
+                        <th>Status</th>
+                        <th>Observaciones</th>
+                        <th class="text-center" style="width:80px;">Guardar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < Model.Faltantes.Count; i++)
+                    {
+                        var f = Model.Faltantes[i];
+                        var hasComment = !string.IsNullOrWhiteSpace(f.Comentarios);
+                        <tr>
+                            <td class="text-muted">@(i + 1)</td>
+                            <td><code>@f.CodigoBarras</code></td>
+                            <td>@f.Descripcion</td>
+                            <td>@f.Modelo</td>
+                            <td>@f.Linea</td>
+                            <td>@f.Kilates</td>
+                            <td class="text-end">@f.Peso.ToString("N3")</td>
+                            <td class="text-end">@f.CBTotal.ToString("C2")</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(f.Status))
+                                {
+                                    <span class="badge bg-secondary">@f.Status</span>
+                                }
+                            </td>
+                            <td>
+                                <input type="text" class="form-control form-control-sm input-comentario"
+                                       data-codigo="@f.CodigoBarras"
+                                       value="@f.Comentarios"
+                                       placeholder="Agregar observacion..."
+                                       maxlength="250" />
+                            </td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-guardar-comentario"
+                                        data-codigo="@f.CodigoBarras" title="Guardar observacion">
+                                    <i class="fa-solid fa-floppy-disk"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (!Model.Faltantes.Any() && string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="card mt-3">
+    <div class="card-body text-center text-muted py-5">
+        <i class="fa-solid fa-check-circle fa-3x mb-3 d-block text-success"></i>
+        <h5>No hay piezas faltantes</h5>
+        <p>No se encontraron piezas que coincidan con los filtros.</p>
+    </div>
+</div>
+}
+
+@section Scripts {
+<script>
+    // Guardar comentario via AJAX
+    document.querySelectorAll('.btn-guardar-comentario').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var codigo = this.getAttribute('data-codigo');
+            var input = document.querySelector('.input-comentario[data-codigo="' + codigo + '"]');
+            var comentarios = input.value;
+            var btnEl = this;
+
+            btnEl.disabled = true;
+            btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            var formData = new FormData();
+            formData.append('codigoBarras', codigo);
+            formData.append('comentarios', comentarios);
+
+            var token = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (token) formData.append('__RequestVerificationToken', token.value);
+
+            fetch('/Inventario/Faltantes?handler=GuardarComentario', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    btnEl.classList.remove('btn-outline-primary');
+                    btnEl.classList.add('btn-success');
+                    btnEl.innerHTML = '<i class="fa-solid fa-check"></i>';
+                    setTimeout(function () {
+                        btnEl.classList.remove('btn-success');
+                        btnEl.classList.add('btn-outline-primary');
+                        btnEl.innerHTML = '<i class="fa-solid fa-floppy-disk"></i>';
+                        btnEl.disabled = false;
+                    }, 1500);
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo guardar'));
+                    btnEl.innerHTML = '<i class="fa-solid fa-floppy-disk"></i>';
+                    btnEl.disabled = false;
+                }
+            })
+            .catch(function (err) {
+                alert('Error de red: ' + err);
+                btnEl.innerHTML = '<i class="fa-solid fa-floppy-disk"></i>';
+                btnEl.disabled = false;
+            });
+        });
+    });
+
+    // Guardar con Enter en el input
+    document.querySelectorAll('.input-comentario').forEach(function (input) {
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                var codigo = this.getAttribute('data-codigo');
+                var btn = document.querySelector('.btn-guardar-comentario[data-codigo="' + codigo + '"]');
+                if (btn) btn.click();
+            }
+        });
+    });
+
+    // TomSelect para dropdown de Status si disponible
+    (function () {
+        var sel = document.getElementById('selectStatus');
+        if (sel && typeof TomSelect !== 'undefined') {
+            new TomSelect(sel, { allowEmptyOption: true });
+        }
+    })();
+</script>
+}

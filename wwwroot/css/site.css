@@ -106,6 +106,18 @@
     font-weight: 700;
 }
 
+/* Faltantes - Input comentario inline */
+.input-comentario {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    transition: border-color 0.2s;
+}
+
+.input-comentario:focus {
+    border-color: #4facfe;
+    box-shadow: 0 0 0 0.15rem rgba(79, 172, 254, 0.25);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .stat-card {
