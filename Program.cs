@@ -45,6 +45,11 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
+// Lotes Repetidas Service (migración de frmLotesRepetidas.frm)
+builder.Services.AddScoped<LotesRepetidasService>(sp => new LotesRepetidasService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<LotesRepetidasService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware
