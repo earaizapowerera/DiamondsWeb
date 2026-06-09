@@ -39,10 +39,10 @@ builder.Services.AddScoped<AmlService>(sp => new AmlService(
     sp.GetRequiredService<AmlConfig>(),
     sp.GetRequiredService<ILogger<AmlService>>()));
 
-// OpcionPago Service (Catalogo de Opciones de Pago)
-builder.Services.AddScoped<OpcionPagoService>(sp => new OpcionPagoService(
+// Catalogo Repetidas Service
+builder.Services.AddScoped<CatalogoRepetidasService>(sp => new CatalogoRepetidasService(
     diamondsConnStr,
-    sp.GetRequiredService<ILogger<OpcionPagoService>>()));
+    sp.GetRequiredService<ILogger<CatalogoRepetidasService>>()));
 
 // SPPLD Config & Service
 var sppldConfig = new SppldConfig();

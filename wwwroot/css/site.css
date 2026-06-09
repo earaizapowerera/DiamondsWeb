@@ -106,8 +106,8 @@
     font-weight: 700;
 }
 
-/* Tipos de Cambio Table */
-.table-tc thead th {
+/* Catalogo Table */
+.table-catalogo thead th {
     background-color: #343a40;
     color: #fff;
     border: none;
@@ -116,8 +116,12 @@
     letter-spacing: 0.5px;
 }
 
-.table-tc tbody tr:hover {
+.table-catalogo tbody tr:hover {
     background-color: #e8f4f8;
+}
+
+.table-catalogo code {
+    font-size: 0.95rem;
 }
 
 /* Responsive */

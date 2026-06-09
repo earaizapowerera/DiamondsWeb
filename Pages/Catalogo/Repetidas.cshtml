@@ -1,0 +1,351 @@
+@page
+@model DiamondsWeb.Pages.Catalogo.RepetidasModel
+@{
+    ViewData["Title"] = "Catalogo de Repetidas";
+    var abrirModal = Model.Nuevo || Model.ItemEditar != null;
+    var modoEditar = Model.ItemEditar != null;
+}
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-circle-check me-2"></i>@Model.MensajeExito
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.MensajeError
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0"><i class="fa-solid fa-gem me-2"></i>Catalogo de Repetidas</h4>
+        <small class="text-muted">Piezas estandar reutilizables con codigo de barras auto-generado</small>
+    </div>
+    <button type="button" class="btn btn-primary" id="btnNuevo"
+            onclick="abrirModalNuevo()">
+        <i class="fa-solid fa-plus me-1"></i>Nueva Pieza
+    </button>
+</div>
+
+<!-- Busqueda -->
+<div class="filter-panel">
+    <form method="get">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label"><small>Buscar por descripcion, proveedor, grupo o codigo</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Escriba para filtrar..." />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="/Catalogo/Repetidas" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-rotate-right me-1"></i>Limpiar
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Stats -->
+<div class="row mb-3">
+    <div class="col-md-4 col-sm-6 mb-2">
+        <div class="stat-card bg-primary-custom">
+            <div class="stat-number">@Model.Items.Count</div>
+            <div class="stat-label"><i class="fa-solid fa-gem me-1"></i>Piezas registradas</div>
+        </div>
+    </div>
+    <div class="col-md-4 col-sm-6 mb-2">
+        <div class="stat-card bg-warning-custom">
+            <div class="stat-number">@Model.Items.Select(i => i.NombreProveedor).Distinct().Count()</div>
+            <div class="stat-label"><i class="fa-solid fa-truck me-1"></i>Proveedores</div>
+        </div>
+    </div>
+    <div class="col-md-4 col-sm-6 mb-2">
+        <div class="stat-card bg-success-custom">
+            <div class="stat-number">@Model.Items.Select(i => i.Grupo).Distinct().Count()</div>
+            <div class="stat-label"><i class="fa-solid fa-layer-group me-1"></i>Grupos</div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de piezas -->
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-barcode me-2"></i>Piezas Repetidas</span>
+        <span class="badge bg-light text-dark">@Model.Items.Count registros</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-catalogo table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Codigo</th>
+                        <th>Descripcion</th>
+                        <th>Proveedor</th>
+                        <th>Grupo</th>
+                        <th class="text-center">Kilates</th>
+                        <th class="text-end">Precio</th>
+                        <th>Divisor</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron piezas
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td><code class="text-primary">@item.CodigoBarras</code></td>
+                            <td><strong>@item.Descripcion</strong></td>
+                            <td>@item.NombreProveedor</td>
+                            <td><span class="badge bg-info text-dark">@item.Grupo</span></td>
+                            <td class="text-center">@(item.Kilates.HasValue ? $"{item.Kilates}k" : "-")</td>
+                            <td class="text-end">@(item.Precio.HasValue ? item.Precio.Value.ToString("C0") : "-")</td>
+                            <td><small>@item.Divisor.ToString("N4") (@item.DescDivisor)</small></td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary"
+                                            title="Editar"
+                                            onclick="abrirModalEditar('@item.CodigoBarras', '@item.Descripcion.Replace("'", "\\'")', @item.Proveedor, @item.IdGrupo, @(item.Kilates.HasValue ? item.Kilates.Value.ToString() : "''"), @(item.Precio ?? 0), @item.IdDivisor)">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <form method="post" asp-page-handler="Eliminar" class="d-inline">
+                                        <input type="hidden" name="codigoBarras" value="@item.CodigoBarras" />
+                                        <button type="submit" class="btn btn-outline-danger"
+                                                title="Eliminar"
+                                                onclick="return confirm('Eliminar pieza @item.CodigoBarras - @item.Descripcion?')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear/Editar -->
+<div class="modal fade" id="modalPieza" tabindex="-1" aria-labelledby="modalPiezaLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="formPieza">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalPiezaLabel">
+                        <i class="fa-solid fa-gem me-2"></i><span id="modalTitulo">Nueva Pieza</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Codigo de barras (solo lectura en edicion, oculto en nuevo) -->
+                    <div class="mb-3" id="divCodigo" style="display:none;">
+                        <label class="form-label"><i class="fa-solid fa-barcode me-1"></i>Codigo de Barras</label>
+                        <input type="text" class="form-control" name="codigoBarras" id="inputCodigo"
+                               readonly style="background-color: #e9ecef; font-family: monospace; font-weight: bold;" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Descripcion <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="descripcion" id="inputDescripcion"
+                               maxlength="50" required placeholder="Ej: Anillo oro 14k" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Proveedor <span class="text-danger">*</span></label>
+                        <select class="form-select" name="proveedor" id="selectProveedor" required>
+                            <option value="">-- Seleccionar --</option>
+                            @foreach (var p in Model.Proveedores)
+                            {
+                                <option value="@p.Id">@p.Nombre</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Grupo <span class="text-danger">*</span></label>
+                        <select class="form-select" name="idGrupo" id="selectGrupo" required>
+                            <option value="">-- Seleccionar --</option>
+                            @foreach (var g in Model.Grupos)
+                            {
+                                <option value="@g.Id">@g.Nombre</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Kilates</label>
+                            <select class="form-select" name="kilates" id="selectKilates">
+                                <option value="">-- Sin kilates --</option>
+                                <option value="10">10k</option>
+                                <option value="14">14k</option>
+                                <option value="18">18k</option>
+                                <option value="24">24k</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Precio</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" name="precio" id="inputPrecio"
+                                       min="0" placeholder="0" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Divisor de Venta <span class="text-danger">*</span></label>
+                        <select class="form-select" name="idDivisor" id="selectDivisor" required>
+                            <option value="">-- Seleccionar --</option>
+                            @foreach (var d in Model.Divisores)
+                            {
+                                <option value="@d.IdDivisor">@d.DisplayText</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fa-solid fa-xmark me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="btnGuardar">
+                        <i class="fa-solid fa-floppy-disk me-1"></i><span id="btnGuardarTexto">Registrar</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Inicializar TomSelect en los dropdowns del modal
+    var tsProveedor, tsGrupo, tsDivisor, tsKilates;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var provSelect = document.getElementById('selectProveedor');
+        var grupoSelect = document.getElementById('selectGrupo');
+        var divisorSelect = document.getElementById('selectDivisor');
+        var kilatesSelect = document.getElementById('selectKilates');
+
+        if (typeof TomSelect !== 'undefined') {
+            tsProveedor = new TomSelect(provSelect, {
+                allowEmptyOption: true,
+                sortField: { field: 'text', direction: 'asc' },
+                placeholder: 'Buscar proveedor...'
+            });
+            tsGrupo = new TomSelect(grupoSelect, {
+                allowEmptyOption: true,
+                sortField: { field: 'text', direction: 'asc' },
+                placeholder: 'Buscar grupo...'
+            });
+            tsDivisor = new TomSelect(divisorSelect, {
+                allowEmptyOption: true,
+                placeholder: 'Buscar divisor...'
+            });
+            tsKilates = new TomSelect(kilatesSelect, {
+                allowEmptyOption: true,
+                placeholder: 'Seleccionar...'
+            });
+        }
+
+        // Si debe abrir modal al cargar
+        @if (abrirModal)
+        {
+            if (modoEditar)
+            {
+                var e = Model.ItemEditar!;
+                <text>
+                abrirModalEditar('@e.CodigoBarras', '@e.Descripcion.Replace("'", "\\'"))',
+                    @e.Proveedor, @e.IdGrupo,
+                    @(e.Kilates.HasValue ? e.Kilates.Value.ToString() : "''"),
+                    @(e.Precio ?? 0), @e.IdDivisor);
+                </text>
+            }
+            else
+            {
+                <text>abrirModalNuevo();</text>
+            }
+        }
+    });
+
+    function abrirModalNuevo() {
+        document.getElementById('modalTitulo').textContent = 'Nueva Pieza';
+        document.getElementById('btnGuardarTexto').textContent = 'Registrar';
+        document.getElementById('divCodigo').style.display = 'none';
+        document.getElementById('inputCodigo').value = '';
+        document.getElementById('formPieza').setAttribute('asp-page-handler', 'Crear');
+
+        // Reset form action para Crear
+        var form = document.getElementById('formPieza');
+        form.action = '?handler=Crear';
+
+        // Limpiar campos
+        document.getElementById('inputDescripcion').value = '';
+        document.getElementById('inputPrecio').value = '';
+
+        if (tsProveedor) tsProveedor.setValue('');
+        if (tsGrupo) tsGrupo.setValue('');
+        if (tsDivisor) tsDivisor.setValue('');
+        if (tsKilates) tsKilates.setValue('');
+
+        var modal = new bootstrap.Modal(document.getElementById('modalPieza'));
+        modal.show();
+
+        // Focus en descripcion
+        setTimeout(function() {
+            document.getElementById('inputDescripcion').focus();
+        }, 500);
+    }
+
+    function abrirModalEditar(codigo, descripcion, proveedor, idGrupo, kilates, precio, idDivisor) {
+        document.getElementById('modalTitulo').textContent = 'Editar Pieza ' + codigo;
+        document.getElementById('btnGuardarTexto').textContent = 'Guardar Cambios';
+        document.getElementById('divCodigo').style.display = 'block';
+        document.getElementById('inputCodigo').value = codigo;
+
+        // Form action para Editar
+        var form = document.getElementById('formPieza');
+        form.action = '?handler=Editar';
+
+        // Llenar campos
+        document.getElementById('inputDescripcion').value = descripcion;
+        document.getElementById('inputPrecio').value = precio > 0 ? precio : '';
+
+        if (tsProveedor) tsProveedor.setValue(String(proveedor));
+        else document.getElementById('selectProveedor').value = proveedor;
+
+        if (tsGrupo) tsGrupo.setValue(String(idGrupo));
+        else document.getElementById('selectGrupo').value = idGrupo;
+
+        if (tsDivisor) tsDivisor.setValue(String(idDivisor));
+        else document.getElementById('selectDivisor').value = idDivisor;
+
+        if (tsKilates) tsKilates.setValue(kilates !== '' ? String(kilates) : '');
+        else document.getElementById('selectKilates').value = kilates;
+
+        var modal = new bootstrap.Modal(document.getElementById('modalPieza'));
+        modal.show();
+    }
+</script>
+}
