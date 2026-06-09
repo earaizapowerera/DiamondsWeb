@@ -1,0 +1,213 @@
+@page
+@model DiamondsWeb.Pages.Devoluciones.IndexModel
+@{
+    ViewData["Title"] = "Devoluciones de Cliente";
+    var mensajeExitoTemp = TempData["MensajeExito"] as string;
+}
+
+<!-- Header -->
+<div class="dev-header mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h4 class="mb-1"><i class="fa-solid fa-rotate-left me-2"></i>Devoluciones de Cliente</h4>
+            <small class="text-muted">Buscar pieza vendida por codigo de barras y reestablecerla al inventario</small>
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge bg-info"><i class="fa-solid fa-barcode me-1"></i>Escanee o teclee el codigo</span>
+        </div>
+    </div>
+</div>
+
+<!-- Mensaje de exito -->
+@if (!string.IsNullOrEmpty(mensajeExitoTemp))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-check-circle me-2"></i>@mensajeExitoTemp
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Mensaje de error -->
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Busqueda por codigo de barras -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-body">
+        <form method="get" id="formBusqueda">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label fw-bold">
+                        <i class="fa-solid fa-barcode me-1 text-primary"></i>Codigo de Barras
+                    </label>
+                    <input type="text" class="form-control form-control-lg" name="CodigoBarras"
+                           id="txtCodigoBarras" value="@Model.CodigoBarras"
+                           placeholder="Ingrese el codigo de barras..."
+                           maxlength="8" autofocus autocomplete="off" />
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                    </button>
+                </div>
+                @if (Model.Pieza != null || Model.BusquedaRealizada)
+                {
+                    <div class="col-md-2">
+                        <a href="/Devoluciones" class="btn btn-outline-secondary btn-lg w-100">
+                            <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                        </a>
+                    </div>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Resultado de la busqueda -->
+@if (Model.Pieza != null)
+{
+    var pieza = Model.Pieza;
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <span><i class="fa-solid fa-gem me-2"></i>Informacion de la Pieza</span>
+            @if (pieza.EnBajas)
+            {
+                <span class="badge bg-warning text-dark"><i class="fa-solid fa-box-archive me-1"></i>En Bajas</span>
+            }
+            else
+            {
+                <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i>En Existencia</span>
+            }
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <!-- Datos de la pieza -->
+                <div class="col-md-6">
+                    <table class="table table-borderless dev-detail-table">
+                        <tbody>
+                            <tr>
+                                <th><i class="fa-solid fa-user me-1 text-primary"></i>Nombre del Cliente:</th>
+                                <td class="fw-bold fs-5">@pieza.NombreCliente</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fa-solid fa-calendar me-1 text-primary"></i>Fecha de Compra:</th>
+                                <td>@(pieza.FechaCompra?.ToString("dd/MM/yyyy") ?? "N/A")</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fa-solid fa-tag me-1 text-primary"></i>Descripcion:</th>
+                                <td>@pieza.Descripcion</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fa-solid fa-store me-1 text-primary"></i>Tienda donde Compro:</th>
+                                <td>@pieza.Tienda</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Datos financieros -->
+                <div class="col-md-6">
+                    <table class="table table-borderless dev-detail-table">
+                        <tbody>
+                            <tr>
+                                <th><i class="fa-solid fa-dollar-sign me-1 text-success"></i>Precio:</th>
+                                <td class="fs-5">@pieza.Precio.ToString("C2")</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fa-solid fa-percent me-1 text-warning"></i>Descuento:</th>
+                                <td>@pieza.Descuento.ToString("N2")%</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fa-solid fa-receipt me-1 text-danger"></i>Precio Pagado:</th>
+                                <td class="fw-bold fs-5 text-success">@pieza.PrecioPagado.ToString("C2")</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fa-solid fa-credit-card me-1 text-info"></i>Forma de Pago:</th>
+                                <td>@pieza.FormaPago</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Boton de reestablecer -->
+            @if (pieza.EnBajas)
+            {
+                <hr />
+                <form method="post" asp-page-handler="Reestablecer" id="formReestablecer">
+                    <input type="hidden" name="codigoBarras" value="@pieza.CodigoBarras" />
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">
+                                <i class="fa-solid fa-shop me-1"></i>Tienda destino
+                            </label>
+                            <select class="form-select" name="idTienda" id="selTienda" required>
+                                <option value="">-- Seleccione tienda --</option>
+                                @foreach (var t in Model.Tiendas)
+                                {
+                                    <option value="@t.IdTienda">@t.NombreTienda</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-success btn-lg w-100"
+                                    onclick="return confirm('Confirmar: Reestablecer pieza @pieza.CodigoBarras al inventario?')">
+                                <i class="fa-solid fa-rotate-left me-2"></i>Reestablecer (Dev. Cliente)
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+}
+else if (Model.BusquedaRealizada && string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="card">
+        <div class="card-body text-center text-muted py-5">
+            <i class="fa-solid fa-magnifying-glass fa-3x mb-3 d-block"></i>
+            <h5>No se encontro la pieza</h5>
+            <p>El codigo "@Model.CodigoBarras" no corresponde a ninguna pieza vendida.</p>
+        </div>
+    </div>
+}
+else if (!Model.BusquedaRealizada)
+{
+    <div class="card">
+        <div class="card-body text-center text-muted py-5">
+            <i class="fa-solid fa-barcode fa-3x mb-3 d-block"></i>
+            <h5>Escanee o ingrese un codigo de barras</h5>
+            <p>Busque una pieza vendida para ver su informacion de compra y reestablecerla al inventario.</p>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+    // Auto-submit cuando se escanea un codigo de barras (6 caracteres)
+    var txtCB = document.getElementById('txtCodigoBarras');
+    if (txtCB) {
+        txtCB.addEventListener('input', function () {
+            var val = this.value.trim();
+            if (val.length === 6) {
+                // Pequeno delay para capturar el ultimo caracter del scanner
+                setTimeout(function () {
+                    document.getElementById('formBusqueda').submit();
+                }, 200);
+            }
+        });
+        // Tambien submit con Enter
+        txtCB.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('formBusqueda').submit();
+            }
+        });
+    }
+</script>
+}
