@@ -1,0 +1,74 @@
+/* Registro de Existencias - Inventario Fisico */
+
+.barcode-input {
+    font-family: 'Courier New', monospace;
+    font-size: 1.4rem;
+    letter-spacing: 2px;
+    text-align: center;
+    background-color: #fffff0;
+    border: 2px solid #0d6efd;
+}
+
+.barcode-input:focus {
+    background-color: #ffffcc;
+    border-color: #0a58ca;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.pieza-info-panel {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-left: 4px solid #198754;
+    padding: 0.75rem 1rem;
+    border-radius: 0.375rem;
+}
+
+/* Stats cards */
+.stat-card {
+    border-radius: 0.5rem;
+    padding: 1rem;
+    text-align: center;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stat-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
+.bg-primary-custom { background: linear-gradient(135deg, #0d6efd, #0a58ca); }
+.bg-info-custom { background: linear-gradient(135deg, #0dcaf0, #0aa2c0); }
+.bg-warning-custom { background: linear-gradient(135deg, #ffc107, #e0a800); color: #333 !important; }
+.bg-danger-custom { background: linear-gradient(135deg, #dc3545, #b02a37); }
+
+/* Table */
+#tablaRegistros th {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    border-bottom: 2px solid #dee2e6;
+}
+
+#tablaRegistros td {
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+
+#tablaRegistros tbody tr:hover {
+    background-color: #f0f7ff;
+}
+
+/* Keyboard shortcut hints */
+kbd {
+    background-color: #eee;
+    border-radius: 3px;
+    border: 1px solid #b4b4b4;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.2);
+    color: #333;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+}

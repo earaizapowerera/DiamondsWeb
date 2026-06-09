@@ -45,6 +45,11 @@ builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 builder.Services.AddScoped<SppldXmlService>();
 
+// Inventario Fisico Service
+builder.Services.AddScoped<InventarioFisicoService>(sp => new InventarioFisicoService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<InventarioFisicoService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware

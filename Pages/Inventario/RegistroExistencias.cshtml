@@ -1,0 +1,305 @@
+@page
+@model DiamondsWeb.Pages.Inventario.RegistroExistenciasModel
+@{
+    ViewData["Title"] = "Registro de Existencias";
+}
+
+<link rel="stylesheet" href="/css/inventario.css" asp-append-version="true" />
+
+<!-- Mensajes -->
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert" id="alertExito">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.MensajeExito
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.MensajeError
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Dashboard Stats -->
+<div class="row mb-3">
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-primary-custom">
+            <div class="stat-number">@Model.Stats.TotalRegistrosHoy</div>
+            <div class="stat-label"><i class="fa-solid fa-calendar-day me-1"></i>Registros hoy</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-info-custom">
+            <div class="stat-number">@Model.Stats.TotalRegistros</div>
+            <div class="stat-label"><i class="fa-solid fa-boxes-stacked me-1"></i>Total registros</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-warning-custom">
+            <div class="stat-number">@Model.Stats.TotalSobrantes</div>
+            <div class="stat-label"><i class="fa-solid fa-question-circle me-1"></i>Sobrantes</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-danger-custom">
+            <div class="stat-number">@Model.Stats.TotalCancelados</div>
+            <div class="stat-label"><i class="fa-solid fa-ban me-1"></i>Cancelados</div>
+        </div>
+    </div>
+</div>
+
+<!-- Panel de Registro -->
+<div class="card mb-3 border-primary">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-barcode me-2"></i>Registrar Existencia
+        <small class="float-end"><kbd>F2</kbd> para enfocar</small>
+    </div>
+    <div class="card-body">
+        <form method="post" asp-page-handler="Registrar" id="formRegistrar">
+            <div class="row align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Codigo de Barras</label>
+                    <input type="text" name="codigoBarras" id="txtCodigoBarras"
+                           class="form-control form-control-lg barcode-input"
+                           maxlength="8" placeholder="Escanear o escribir..."
+                           autofocus autocomplete="off" />
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="fa-solid fa-plus me-1"></i>Registrar
+                    </button>
+                </div>
+                <div class="col-md-6" id="infoPieza">
+                    @if (Model.UltimoRegistro != null && Model.UltimoRegistro.Exito)
+                    {
+                        var tipoClass = Model.UltimoRegistro.Tipo switch
+                        {
+                            "Pieza" => "text-success",
+                            "Compuesta" => "text-info",
+                            "Sobrante" => "text-warning",
+                            _ => ""
+                        };
+                        <div class="pieza-info-panel">
+                            <div class="row">
+                                <div class="col">
+                                    <strong class="@tipoClass">
+                                        <i class="fa-solid fa-tag me-1"></i>@Model.UltimoRegistro.CodigoBarras
+                                        <span class="badge bg-secondary ms-1">@Model.UltimoRegistro.Tipo</span>
+                                    </strong>
+                                    <p class="mb-0 mt-1">@(Model.UltimoRegistro.Descripcion ?? "Sin descripcion")</p>
+                                </div>
+                                @if (Model.UltimoRegistro.Precio.HasValue)
+                                {
+                                    <div class="col-auto">
+                                        <span class="fs-4 fw-bold text-success">@Model.UltimoRegistro.Precio.Value.ToString("C2")</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </form>
+
+        <!-- Modal inline para sobrante (se muestra si el último registro requiere descripción) -->
+        @if (Model.UltimoRegistro is { RequiereDescripcion: true, CodigoBarras: not null })
+        {
+            <div class="mt-3 p-3 bg-warning bg-opacity-10 border border-warning rounded" id="panelSobrante">
+                <h6><i class="fa-solid fa-question-circle text-warning me-2"></i>Pieza sobrante: @Model.UltimoRegistro.CodigoBarras</h6>
+                <p class="text-muted mb-2">No se encontro en el catalogo. Ingrese descripcion y precio:</p>
+                <form method="post" asp-page-handler="CompletarSobrante">
+                    <input type="hidden" name="codigoBarras" value="@Model.UltimoRegistro.CodigoBarras" />
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label">Descripcion <span class="text-danger">*</span></label>
+                            <input type="text" name="descripcion" class="form-control" required
+                                   placeholder="Ej: Anillo de oro..." id="txtDescSobrante" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Precio</label>
+                            <input type="number" name="precio" class="form-control"
+                                   step="0.01" min="0" placeholder="0.00" />
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-warning w-100">
+                                <i class="fa-solid fa-save me-1"></i>Guardar
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Filtros y acciones -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label"><small>Periodo</small></label>
+                <select class="form-select form-select-sm" name="Filtro" onchange="this.form.submit()">
+                    <option value="hoy" selected="@(Model.Filtro == "hoy")">Hoy</option>
+                    <option value="semana" selected="@(Model.Filtro == "semana")">Ultima semana</option>
+                    <option value="todos" selected="@(Model.Filtro == "todos")">Todos</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label"><small>Buscar</small></label>
+                <input type="text" class="form-control form-control-sm" name="Busqueda"
+                       value="@Model.Busqueda" placeholder="Codigo de barras o descripcion..." />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-4 text-end">
+                <form method="post" asp-page-handler="ExportarExcel" class="d-inline">
+                    <input type="hidden" name="Filtro" value="@Model.Filtro" />
+                    <button type="submit" class="btn btn-outline-success btn-sm">
+                        <i class="fa-solid fa-file-excel me-1"></i>Exportar Excel
+                    </button>
+                </form>
+                <button type="button" class="btn btn-outline-secondary btn-sm ms-1" onclick="location.reload()">
+                    <i class="fa-solid fa-rotate me-1"></i>Refrescar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de registros -->
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between">
+        <span><i class="fa-solid fa-list me-2"></i>Registros (@Model.Registros.Count)</span>
+        <small>@(Model.Filtro == "hoy" ? "Solo hoy" : Model.Filtro == "semana" ? "Ultima semana" : "Todos")</small>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.Registros.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0" id="tablaRegistros">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:60px">#</th>
+                            <th>Codigo Barras</th>
+                            <th>Descripcion</th>
+                            <th class="text-end">Precio</th>
+                            <th class="text-center">Tipo</th>
+                            <th>Fecha Captura</th>
+                            <th class="text-center" style="width:80px">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.Registros.Count; i++)
+                        {
+                            var r = Model.Registros[i];
+                            var horas = (DateTime.UtcNow - r.FechaCaptura).TotalHours;
+                            var puedeCanc = horas <= 24;
+                            var origenBadge = r.Origen switch
+                            {
+                                "Pieza" => "bg-success",
+                                "Compuesta" => "bg-info",
+                                "Sobrante" => "bg-warning text-dark",
+                                _ => "bg-secondary"
+                            };
+                            <tr>
+                                <td class="text-muted">@r.Id</td>
+                                <td><strong>@r.CodigoBarras</strong></td>
+                                <td>@(r.Descripcion ?? "<span class='text-muted fst-italic'>Sin descripcion</span>")</td>
+                                <td class="text-end">@(r.Precio.HasValue ? r.Precio.Value.ToString("C2") : "-")</td>
+                                <td class="text-center"><span class="badge @origenBadge">@r.Origen</span></td>
+                                <td>
+                                    <span class="utc-date" data-utc="@r.FechaCaptura.ToString("o")Z">
+                                        @r.FechaCaptura.ToString("dd/MM/yyyy HH:mm")
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    @if (puedeCanc)
+                                    {
+                                        <form method="post" asp-page-handler="Cancelar" class="d-inline">
+                                            <input type="hidden" name="registroId" value="@r.Id" />
+                                            <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                    title="Cancelar registro"
+                                                    onclick="return confirm('¿Cancelar registro @r.CodigoBarras?')">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted" title="Han pasado mas de 24 horas">
+                                            <i class="fa-solid fa-lock"></i>
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center text-muted py-5">
+                <i class="fa-solid fa-inbox fa-3x mb-3 d-block"></i>
+                <h5>No hay registros para el periodo seleccionado</h5>
+                <p>Escanee un codigo de barras para comenzar.</p>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // F2 para enfocar el input de codigo de barras
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F2') {
+            e.preventDefault();
+            var input = document.getElementById('txtCodigoBarras');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }
+    });
+
+    // Auto-focus en el input después de registrar
+    document.addEventListener('DOMContentLoaded', function() {
+        var input = document.getElementById('txtCodigoBarras');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+
+        // Si hay panel de sobrante, focus en la descripción
+        var descInput = document.getElementById('txtDescSobrante');
+        if (descInput) {
+            descInput.focus();
+        }
+
+        // Auto-dismiss success alert after 3 seconds
+        var alertExito = document.getElementById('alertExito');
+        if (alertExito) {
+            setTimeout(function() {
+                var bsAlert = bootstrap.Alert.getOrCreateInstance(alertExito);
+                bsAlert.close();
+            }, 3000);
+        }
+
+        // Convertir fechas UTC a local
+        convertUtcDatesToLocal();
+    });
+
+    // Submit form on Enter in barcode input
+    document.getElementById('txtCodigoBarras')?.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('formRegistrar').submit();
+        }
+    });
+</script>
+}
