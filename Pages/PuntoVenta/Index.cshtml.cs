@@ -198,6 +198,13 @@ public class IndexModel : PageModel
         return new JsonResult(new { ok = true, usuarios = result });
     }
 
+    /// <summary>GET /PuntoVenta?handler=CatalogoRepetidas — catálogo para dropdown</summary>
+    public async Task<IActionResult> OnGetCatalogoRepetidasAsync()
+    {
+        var catalogo = await _pos.ObtenerCatalogoRepetidasAsync();
+        return new JsonResult(new { ok = true, catalogo });
+    }
+
     // ─── Request DTOs internos ─────────────────────────────────
     public record CancelarSesionReq(int IdNota);
     public record EliminarPiezaReq(int IdNota, string CodigoBarras, decimal DescuentoPct = 0, decimal SobrePrecio = 0, bool EsFactura = false);

@@ -156,6 +156,18 @@ public class CerrarNotaRequest
     public int IdVendedor { get; set; }
 }
 
+/// <summary>
+/// Item del catálogo de piezas repetidas (para el dropdown del POS)
+/// </summary>
+public class RepetidaCatalogo
+{
+    public string CodigoBarras { get; set; } = "";
+    public string Descripcion { get; set; } = "";
+    public decimal Precio { get; set; }
+    public decimal Divisor { get; set; }
+    public string Kilates { get; set; } = "";
+}
+
 public class CrearSesionRequest
 {
     public int IdUsuario { get; set; }

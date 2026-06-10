@@ -881,11 +881,12 @@
         });
     });
 
-    // Catálogo repetidas → setear código de barras
+    // Catálogo repetidas → setear código de barras y agregar pieza
     el.cmbRepetida.addEventListener('change', function () {
         if (this.value && state.sesionActiva) {
             el.txtCodigoBarras.value = this.value;
-            el.txtCodigoBarras.focus();
+            agregarPieza(this.value);
+            this.value = '';
         }
     });
 
@@ -920,13 +921,26 @@
     //  INICIALIZACIÓN
     // ═══════════════════════════════════════════════════════════════
 
+    async function cargarCatalogoRepetidas() {
+        const r = await apiGet('CatalogoRepetidas');
+        if (!r.ok) return;
+        el.cmbRepetida.innerHTML = '<option value="">— Seleccionar repetida —</option>';
+        r.catalogo.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.codigoBarras;
+            opt.textContent = `${item.descripcion} ${item.kilates ? '(' + item.kilates + ')' : ''} - $${fmt(item.precio / item.divisor)}`;
+            el.cmbRepetida.appendChild(opt);
+        });
+    }
+
     async function init() {
         // Fecha de hoy por default
         el.dtFechaBaja.value = new Date().toISOString().substring(0, 10);
 
         await Promise.all([
             cargarSesiones(),
-            cargarOpcionesPago()
+            cargarOpcionesPago(),
+            cargarCatalogoRepetidas()
         ]);
     }
 

@@ -99,8 +99,10 @@ public class PuntoVentaService
             var fechaBaja = req.FechaBaja ?? DateTime.UtcNow;
 
             await db.ExecuteAsync(
-                @"INSERT INTO Notas (IdNota, IdTienda, IdUsuario, IdVendedor, FechaBaja)
-                  VALUES (@IdNota, @IdTienda, @IdUsuario, @IdVendedor, @FechaBaja)",
+                @"INSERT INTO Notas (IdNota, IdTienda, IdUsuario, IdVendedor, FechaBaja,
+                         FechaCaptura, FechaUltEdicion, Factura)
+                  VALUES (@IdNota, @IdTienda, @IdUsuario, @IdVendedor, @FechaBaja,
+                         GETUTCDATE(), GETUTCDATE(), 0)",
                 new
                 {
                     IdNota = idNota,
@@ -659,5 +661,20 @@ public class PuntoVentaService
         var result = await db.QueryAsync<dynamic>(
             "SELECT TOP 50 IdUsuario, Nombre FROM Usuarios ORDER BY Nombre");
         return result.Select(u => ((int)u.IdUsuario, (string)u.Nombre)).ToList();
+    }
+
+    /// <summary>
+    /// Lista catálogo de piezas repetidas para el dropdown del POS.
+    /// Equivale a: ComboBusqueda → ComboRepetida en el VB6.
+    /// </summary>
+    public async Task<List<RepetidaCatalogo>> ObtenerCatalogoRepetidasAsync()
+    {
+        using var db = CreateConnection();
+        return (await db.QueryAsync<RepetidaCatalogo>(
+            @"SELECT TOP 200 CR.CodigoBarras, CR.Descripcion, CR.Precio,
+                     D.Divisor, ISNULL(CR.Kilates,'') AS Kilates
+              FROM CatalogoRepetidas CR
+              INNER JOIN Divisores D ON CR.IdDivisor = D.IdDivisor
+              ORDER BY CR.Descripcion")).ToList();
     }
 }

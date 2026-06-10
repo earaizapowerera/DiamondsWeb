@@ -14,8 +14,8 @@ import time
 import sys
 import os
 
-BASE_URL = "http://localhost:5287"
-SCREENSHOT_DIR = "/home/earaiza/DiamondsWeb-worktrees/bot-286812/screenshots"
+BASE_URL = "http://localhost:5200"
+SCREENSHOT_DIR = "/home/earaiza/DiamondsWeb/screenshots"
 TEST_USER = "admin"
 TEST_PASS = "u38a8fk3j0!"
 TEST_GRUPO_NAME = "SeleniumTest_Grupo"
