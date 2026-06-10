@@ -41,18 +41,25 @@ public class AmlService
     /// Acumula los 6 meses anteriores al mes seleccionado.
     /// Excluye clientes ya reportados en el mismo mes/año.
     /// </summary>
+    /// <summary>
+    /// Obtiene el config con UMA ajustado al mes/año seleccionado
+    /// </summary>
+    private AmlConfig ConfigParaMes(int mes, int anio) => _config.ParaMesAnio(mes, anio);
+
     public async Task<List<ClienteAmlResumen>> ObtenerClientesParaReporteAsync(
         int mes, int anio, string? buscarCliente, string? nivelAlerta)
     {
         var (fechaDesde, fechaHasta) = CalcularPeriodo(mes, anio);
+        var cfg = ConfigParaMes(mes, anio);
 
         _logger.LogInformation(
-            "ObtenerClientes: mes={Mes}, anio={Anio}, periodo={Desde} a {Hasta}, umbral={Umbral}",
+            "ObtenerClientes: mes={Mes}, anio={Anio}, periodo={Desde} a {Hasta}, UMA={Uma}, umbral={Umbral}",
             mes, anio, fechaDesde.ToString("yyyy-MM-dd"), fechaHasta.ToString("yyyy-MM-dd"),
-            _config.MontoIdentificacion);
+            cfg.ValorUMA, cfg.MontoIdentificacion);
 
-        // Usar homologación aprobada para consolidar nombres de clientes.
-        // COALESCE(h.NombreCanonical, bn.NombreCliente) agrupa variantes bajo el nombre canónico.
+        // Excluir notas pagadas 100% en Pesos.
+        // Para notas mixtas (Pesos + otra forma), incluir solo si Pesos <= 50% del total.
+        // IdOpcionPago=6 es "Pesos" en OPCIONESPAGO.
         var sql = @"
             SELECT TOP 100 ca.NombreCliente, ca.RFC, ca.Telefonos,
                    ca.TotalAcumulado, ca.NumeroOperaciones,
@@ -75,6 +82,13 @@ public class AmlService
                   AND bn.FechaBaja <= @FechaHasta
                   AND bn.NombreCliente IS NOT NULL
                   AND LTRIM(RTRIM(bn.NombreCliente)) <> ''
+                  AND bn.IdNota NOT IN (
+                      SELECT pn.IdNota
+                      FROM BAJASPAGOSNOTAS pn
+                      GROUP BY pn.IdNota
+                      HAVING ISNULL(SUM(CASE WHEN pn.IdOpcionPago = 6 THEN pn.Importe ELSE 0 END), 0)
+                             > SUM(pn.Importe) * 0.5
+                  )
                   AND (@BuscarCliente IS NULL OR
                        COALESCE(h.NombreCanonical, bn.NombreCliente) LIKE '%' + @BuscarCliente + '%' OR
                        bn.RFC LIKE '%' + @BuscarCliente + '%' OR
@@ -98,7 +112,7 @@ public class AmlService
                 FechaDesde = fechaDesde,
                 FechaHasta = fechaHasta,
                 BuscarCliente = string.IsNullOrWhiteSpace(buscarCliente) ? null : buscarCliente,
-                MontoIdentificacion = _config.MontoIdentificacion,
+                MontoIdentificacion = cfg.MontoIdentificacion,
                 Mes = mes,
                 Anio = anio
             })).ToList();
@@ -108,7 +122,7 @@ public class AmlService
             // Clasificar nivel de alerta
             foreach (var cliente in resultados)
             {
-                if (cliente.TotalAcumulado >= _config.MontoAvisoSAT)
+                if (cliente.TotalAcumulado >= cfg.MontoAvisoSAT)
                 {
                     cliente.NivelAlerta = "AvisoSAT";
                     cliente.RequiereIdentificacion = true;
@@ -187,6 +201,7 @@ public class AmlService
     public async Task<AmlDashboardStats> ObtenerEstadisticasAsync(int mes, int anio)
     {
         var (fechaDesde, fechaHasta) = CalcularPeriodo(mes, anio);
+        var cfg = ConfigParaMes(mes, anio);
 
         var sql = @"
             SELECT TOP 1
@@ -207,6 +222,13 @@ public class AmlService
                   AND bn.FechaBaja <= @FechaHasta
                   AND bn.NombreCliente IS NOT NULL
                   AND LTRIM(RTRIM(bn.NombreCliente)) <> ''
+                  AND bn.IdNota NOT IN (
+                      SELECT pn.IdNota
+                      FROM BAJASPAGOSNOTAS pn
+                      GROUP BY pn.IdNota
+                      HAVING ISNULL(SUM(CASE WHEN pn.IdOpcionPago = 6 THEN pn.Importe ELSE 0 END), 0)
+                             > SUM(pn.Importe) * 0.5
+                  )
                 GROUP BY COALESCE(h.NombreCanonical, bn.NombreCliente)
             ) sub";
 
@@ -217,8 +239,8 @@ public class AmlService
             {
                 FechaDesde = fechaDesde,
                 FechaHasta = fechaHasta,
-                MontoIdentificacion = _config.MontoIdentificacion,
-                MontoAvisoSAT = _config.MontoAvisoSAT
+                MontoIdentificacion = cfg.MontoIdentificacion,
+                MontoAvisoSAT = cfg.MontoAvisoSAT
             }) ?? new AmlDashboardStats();
 
             _logger.LogInformation(

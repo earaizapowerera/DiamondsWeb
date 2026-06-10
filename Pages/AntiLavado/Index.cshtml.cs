@@ -28,7 +28,7 @@ public class IndexModel : PageModel
 
     public List<ClienteAmlResumen> Clientes { get; set; } = new();
     public AmlDashboardStats Stats { get; set; } = new();
-    public AmlConfig Config => _config;
+    public AmlConfig Config { get; set; } = null!;
     public DateTime PeriodoDesde { get; set; }
     public DateTime PeriodoHasta { get; set; }
     public string? ErrorMessage { get; set; }
@@ -49,6 +49,9 @@ public class IndexModel : PageModel
     {
         Mes ??= DateTime.UtcNow.Month;
         Anio ??= DateTime.UtcNow.Year;
+
+        // Calcular UMA vigente según mes/año seleccionado
+        Config = _config.ParaMesAnio(Mes.Value, Anio.Value);
 
         PeriodoHasta = new DateTime(Anio.Value, Mes.Value, DateTime.DaysInMonth(Anio.Value, Mes.Value));
         PeriodoDesde = PeriodoHasta.AddMonths(-5);
