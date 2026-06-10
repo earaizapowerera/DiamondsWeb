@@ -270,13 +270,14 @@ public class ProveedorService
     public async Task<int> CrearAsync(ProveedorDetalle prov)
     {
         var sql = @"
-            INSERT INTO PROVEEDORES (NombreProveedor, Direccion, Telefono, Telefono2, Atiende,
+            DECLARE @NewId INT = (SELECT ISNULL(MAX(Proveedor), 0) + 1 FROM PROVEEDORES);
+            INSERT INTO PROVEEDORES (Proveedor, NombreProveedor, Direccion, Telefono, Telefono2, Atiende,
                 CaracteristicaDefault, CostoDefault, IdDefaultUtilidad, IdDefaultUtilidadExtra,
                 IdMoneda, UtilizarMoneda, UtilidadExtra, IdDivisor, IdTabla, FechaCaptura)
-            VALUES (@NombreProveedor, @Direccion, @Telefono, @Telefono2, @Atiende,
+            VALUES (@NewId, @NombreProveedor, @Direccion, @Telefono, @Telefono2, @Atiende,
                 @CaracteristicaDefault, @CostoDefault, @IdDefaultUtilidad, @IdDefaultUtilidadExtra,
                 @IdMoneda, @UtilizarMoneda, @UtilidadExtra, @IdDivisor, @IdTabla, GETUTCDATE());
-            SELECT CAST(SCOPE_IDENTITY() AS INT);";
+            SELECT @NewId;";
 
         using var conn = CreateConnection();
         return await conn.QuerySingleAsync<int>(sql, prov);
