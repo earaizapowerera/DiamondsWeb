@@ -22,7 +22,7 @@ builder.Services.AddUserPortalComponent(options =>
     options.SessionExpirationMinutes = 60;
     options.SlidingExpiration = true;
     options.AutoInitializeDatabase = true;
-    options.DefaultAdminPassword = "u38a8fk3j0!";
+    options.DefaultAdminPassword = "Waykee2026!";
     options.SystemName = "Diamonds Web";
     options.LogoUrl = "";
 });

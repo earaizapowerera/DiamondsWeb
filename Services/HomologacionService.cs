@@ -207,6 +207,23 @@ public class HomologacionService
         return digits.Length >= 7 ? digits : string.Empty;
     }
 
+    /// <summary>
+    /// Elige el mejor nombre canónico de un cluster:
+    /// 1. Prefiere nombres sin notas/comentarios (no contienen "/")
+    /// 2. Entre los que califican, elige el más largo (más completo)
+    /// </summary>
+    private static string ElegirNombreCanonical(List<string> nombres)
+    {
+        // Nombres "limpios" = sin "/" que indica notas/comentarios
+        var limpios = nombres.Where(n => !n.Contains('/')).ToList();
+
+        if (limpios.Any())
+            return limpios.OrderByDescending(n => n.Length).First();
+
+        // Si todos tienen notas, elegir el más corto (menos basura)
+        return nombres.OrderBy(n => n.Length).First();
+    }
+
     #endregion
 
     #region Detección de duplicados
@@ -256,8 +273,9 @@ public class HomologacionService
 
             foreach (var cluster in clusters.Where(c => c.Count >= 2))
             {
-                // El nombre canónico es el más largo (usualmente el más completo)
-                var canonical = cluster.OrderByDescending(n => n.Length).First();
+                // El nombre canónico: preferir nombres sin notas/comentarios ("/ descuento", etc.)
+                // entre los que no tienen notas, elegir el más largo
+                var canonical = ElegirNombreCanonical(cluster);
 
                 var variantes = cluster
                     .Where(n => !n.Equals(canonical, StringComparison.OrdinalIgnoreCase))
@@ -276,29 +294,26 @@ public class HomologacionService
             }
         }
 
-        // Fase 2: Levenshtein puro (sin coincidencia de teléfono)
-        var nombresParaLev = nombresRaw
+        // Fase 2: Normalización exacta (O(n) — groupby normalizado)
+        var yaEnGrupos = new HashSet<string>(
+            gruposNuevos.SelectMany(g => g.variantes.Select(v => v.nombre)),
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var g in gruposNuevos) yaEnGrupos.Add(g.canonical);
+
+        var nombresParaFase2 = nombresRaw
             .Select(n => n.NombreCliente.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Where(n => !nombresYaHomologados.Contains(n))
-            .Where(n => !gruposNuevos.SelectMany(g => g.variantes.Select(v => v.nombre))
-                .Contains(n, StringComparer.OrdinalIgnoreCase))
-            .ToList();
-
-        // Para Levenshtein, solo comparar nombres con al menos 2 palabras y normalización cercana
-        var nombresNormalizados = nombresParaLev
-            .Where(n => NormalizarNombre(n).Split(' ').Length >= 2)
+            .Where(n => !nombresYaHomologados.Contains(n) && !yaEnGrupos.Contains(n))
+            .Where(n => NormalizarNombre(n).Length >= 5)
             .Select(n => (original: n, normalizado: NormalizarNombre(n)))
-            .Where(x => x.normalizado.Length >= 5)
-            .OrderBy(x => x.normalizado)
             .ToList();
 
-        _logger.LogInformation("Nombres para Levenshtein: {Count}", nombresNormalizados.Count);
+        _logger.LogInformation("Nombres para fase 2 (normalización): {Count}", nombresParaFase2.Count);
 
-        var usadosEnLev = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var usadosEnFase2 = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // Agrupar por nombres normalizados idénticos primero
-        var porNormalizado = nombresNormalizados
+        // Agrupar por nombres normalizados idénticos
+        var porNormalizado = nombresParaFase2
             .GroupBy(x => x.normalizado)
             .Where(g => g.Count() >= 2)
             .ToList();
@@ -309,61 +324,88 @@ public class HomologacionService
             var canonical = items.OrderByDescending(x => x.original.Length).First().original;
             var variantes = items
                 .Where(x => !x.original.Equals(canonical, StringComparison.OrdinalIgnoreCase))
-                .Where(x => !usadosEnLev.Contains(x.original))
+                .Where(x => !usadosEnFase2.Contains(x.original))
                 .Select(x => (nombre: x.original, metodo: "normalizacion", confianza: 0.95m))
                 .ToList();
 
             if (variantes.Any())
             {
                 gruposNuevos.Add((canonical, variantes));
-                foreach (var v in variantes) usadosEnLev.Add(v.nombre);
-                usadosEnLev.Add(canonical);
+                foreach (var v in variantes) usadosEnFase2.Add(v.nombre);
+                usadosEnFase2.Add(canonical);
             }
         }
 
-        // Levenshtein para nombres cercanos (distancia <= 2 sobre normalizado)
-        for (int i = 0; i < nombresNormalizados.Count; i++)
+        // Fase 3: Levenshtein con BLOCKING por primeras 3 letras del normalizado
+        // En vez de O(n²), comparamos solo dentro de cada bloque (mismas 3 primeras letras,
+        // largo similar ±3 chars). Esto reduce de ~280M comparaciones a ~50K.
+        var nombresParaLev = nombresParaFase2
+            .Where(x => x.normalizado.Split(' ').Length >= 2)
+            .Where(x => !usadosEnFase2.Contains(x.original))
+            .ToList();
+
+        _logger.LogInformation("Nombres para fase 3 (Levenshtein con blocking): {Count}", nombresParaLev.Count);
+
+        // Crear bloques por las primeras 3 letras del nombre normalizado
+        var bloques = nombresParaLev
+            .GroupBy(x => x.normalizado.Length >= 3 ? x.normalizado[..3] : x.normalizado)
+            .Where(g => g.Count() >= 2)
+            .ToList();
+
+        _logger.LogInformation("Bloques Levenshtein: {Count}", bloques.Count);
+
+        foreach (var bloque in bloques)
         {
-            if (usadosEnLev.Contains(nombresNormalizados[i].original)) continue;
+            var items = bloque.ToList();
+            var usadosEnBloque = new HashSet<int>();
 
-            var cluster = new List<(string original, string normalizado)> { nombresNormalizados[i] };
-
-            for (int j = i + 1; j < nombresNormalizados.Count; j++)
+            for (int i = 0; i < items.Count; i++)
             {
-                if (usadosEnLev.Contains(nombresNormalizados[j].original)) continue;
+                if (usadosEnBloque.Contains(i) || usadosEnFase2.Contains(items[i].original))
+                    continue;
 
-                var dist = DistanciaLevenshtein(
-                    nombresNormalizados[i].normalizado,
-                    nombresNormalizados[j].normalizado);
+                var cluster = new List<(string original, string normalizado)> { items[i] };
 
-                if (dist <= 2 && dist > 0)
+                for (int j = i + 1; j < items.Count; j++)
                 {
-                    var sim = CalcularSimilitud(
-                        nombresNormalizados[i].normalizado,
-                        nombresNormalizados[j].normalizado);
-                    if (sim >= 0.85m)
-                        cluster.Add(nombresNormalizados[j]);
-                }
-            }
+                    if (usadosEnBloque.Contains(j) || usadosEnFase2.Contains(items[j].original))
+                        continue;
 
-            if (cluster.Count >= 2)
-            {
-                var canonical = cluster.OrderByDescending(x => x.original.Length).First().original;
-                var variantes = cluster
-                    .Where(x => !x.original.Equals(canonical, StringComparison.OrdinalIgnoreCase))
-                    .Select(x =>
+                    // Solo comparar si largo es similar (±5 chars)
+                    if (Math.Abs(items[i].normalizado.Length - items[j].normalizado.Length) > 5)
+                        continue;
+
+                    var dist = DistanciaLevenshtein(items[i].normalizado, items[j].normalizado);
+                    if (dist <= 2 && dist > 0)
                     {
-                        var sim = CalcularSimilitud(x.normalizado,
-                            NormalizarNombre(canonical));
-                        return (nombre: x.original, metodo: "levenshtein", confianza: sim);
-                    })
-                    .ToList();
+                        var sim = CalcularSimilitud(items[i].normalizado, items[j].normalizado);
+                        if (sim >= 0.85m)
+                        {
+                            cluster.Add(items[j]);
+                            usadosEnBloque.Add(j);
+                        }
+                    }
+                }
 
-                if (variantes.Any())
+                if (cluster.Count >= 2)
                 {
-                    gruposNuevos.Add((canonical, variantes));
-                    foreach (var v in variantes) usadosEnLev.Add(v.nombre);
-                    usadosEnLev.Add(canonical);
+                    usadosEnBloque.Add(i);
+                    var canonical = cluster.OrderByDescending(x => x.original.Length).First().original;
+                    var variantes = cluster
+                        .Where(x => !x.original.Equals(canonical, StringComparison.OrdinalIgnoreCase))
+                        .Select(x =>
+                        {
+                            var sim = CalcularSimilitud(x.normalizado, NormalizarNombre(canonical));
+                            return (nombre: x.original, metodo: "levenshtein", confianza: sim);
+                        })
+                        .ToList();
+
+                    if (variantes.Any())
+                    {
+                        gruposNuevos.Add((canonical, variantes));
+                        foreach (var v in variantes) usadosEnFase2.Add(v.nombre);
+                        usadosEnFase2.Add(canonical);
+                    }
                 }
             }
         }
