@@ -7,6 +7,7 @@ using DiamondsWeb.Services;
 namespace DiamondsWeb.Pages.PuntoVenta;
 
 [Authorize]
+[IgnoreAntiforgeryToken]
 public class IndexModel : PageModel
 {
     private readonly PuntoVentaService _pos;

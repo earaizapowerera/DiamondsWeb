@@ -1,17 +1,51 @@
 namespace DiamondsWeb.Models;
 
 /// <summary>
+/// Lote de piezas repetidas — origen: tabla LotesRepetidas / vista vLotesRepetidas
+/// </summary>
+public class LoteRepetida
+{
+    public int IdLote { get; set; }
+    public string CodigoBarras { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
+    public int Cantidad { get; set; }
+    public decimal? CostoBruto { get; set; }
+    public decimal? Descuento { get; set; }
+    public decimal? CostoNeto { get; set; }
+    public decimal? Utilidad { get; set; }
+    public decimal? UtilidadExtra { get; set; }
+    public decimal? Impuesto { get; set; }
+    public decimal? Divisor { get; set; }
+    public int? IdMoneda { get; set; }
+    public string? Moneda { get; set; }
+    public decimal? TCCosto { get; set; }
+    public decimal? TCCotizacion { get; set; }
+    public int? Precio { get; set; }
+    public int? IdRemision { get; set; }
+    public int? IdFactura { get; set; }
+    public DateTime? FechaCaptura { get; set; }
+    public DateTime? FechaUltEdicion { get; set; }
+    public int IdUsuario { get; set; }
+    public string? NombreProveedor { get; set; }
+}
+
+/// <summary>
 /// Pieza del catálogo de repetidas — origen: tabla catalogorepetidas
 /// </summary>
 public class CatalogoRepetida
 {
     public string CodigoBarras { get; set; } = "";
-    public string Descripcion { get; set; } = "";
-    public int Proveedor { get; set; }
+    public string? Descripcion { get; set; }
+    public int? Proveedor { get; set; }
     public int? IdGrupo { get; set; }
-    public short? Kilates { get; set; }
-    public int Precio { get; set; }
+    public string? Kilates { get; set; }
+    public decimal? Precio { get; set; }
     public int? IdDivisor { get; set; }
+    public int? IdUsuario { get; set; }
+    // Vista fields (JOINs)
+    public string? NombreProveedor { get; set; }
+    public string? Grupo { get; set; }
+    public DateTime? FechaCaptura { get; set; }
 }
 
 /// <summary>
@@ -43,27 +77,6 @@ public class LoteRepetidaItem
 }
 
 /// <summary>
-/// Moneda — origen: tabla Monedas
-/// </summary>
-public class Moneda
-{
-    public int IdMoneda { get; set; }
-    public string NombreMoneda { get; set; } = "";
-    public bool Extranjera { get; set; }
-}
-
-/// <summary>
-/// Tipo de cambio — origen: tabla tiposcambio
-/// </summary>
-public class TipoCambio
-{
-    public int IdTipoCambio { get; set; }
-    public int IdMoneda { get; set; }
-    public decimal TipoCambioCotizacion { get; set; }
-    public decimal? TipoCambioVenta { get; set; }
-}
-
-/// <summary>
 /// Proveedor con defaults — origen: vista vProveedores
 /// </summary>
 public class ProveedorConDefaults
@@ -84,32 +97,6 @@ public class ProveedorConDefaults
 }
 
 /// <summary>
-/// Remisión — origen: tabla Remisiones
-/// </summary>
-public class Remision
-{
-    public int IdRemision { get; set; }
-    public int Proveedor { get; set; }
-    public string? NumRemision { get; set; }
-    public DateTime? FechaRemision { get; set; }
-    public bool Consignacion { get; set; }
-    public string? NombreProveedor { get; set; }
-}
-
-/// <summary>
-/// Factura — origen: tabla Facturas
-/// </summary>
-public class Factura
-{
-    public int IdFactura { get; set; }
-    public string? FolioFactura { get; set; }
-    public int Proveedor { get; set; }
-    public int? IdRazonSocialProveedor { get; set; }
-    public DateTime? FechaFactura { get; set; }
-    public string? NombreProveedor { get; set; }
-}
-
-/// <summary>
 /// Defaults de impuesto/divisor — origen: tabla defaultsfactorcomunes
 /// </summary>
 public class DefaultsFactorComunes
@@ -127,6 +114,18 @@ public class UtilidadExtraPrecioGramo
     public decimal PrecioGramoDesde { get; set; }
     public decimal PrecioGramoHasta { get; set; }
     public decimal DefaultUtilidadExtra { get; set; }
+
+    /// <summary>Alias for Id — used by views expecting IdUtilidadExtra</summary>
+    public int IdUtilidadExtra { get; set; }
+
+    /// <summary>Alias for DefaultUtilidadExtra — used by views expecting UtilidadExtra</summary>
+    public decimal UtilidadExtra { get; set; }
+
+    /// <summary>Alias for IdUsuario</summary>
+    public int? IdUsuario { get; set; }
+
+    /// <summary>Alias for FechaCaptura</summary>
+    public DateTime? FechaCaptura { get; set; }
 }
 
 /// <summary>

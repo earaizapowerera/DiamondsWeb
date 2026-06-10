@@ -202,7 +202,7 @@ public class OpcionPagoService
         const string sql = @"
             SELECT TOP 50
                 IdMoneda,
-                Moneda AS Nombre,
+                Moneda,
                 Extranjera
             FROM Monedas
             ORDER BY Moneda";

@@ -1,4 +1,5 @@
 using System.Data;
+using ClosedXML.Excel;
 using Dapper;
 using DiamondsWeb.Models;
 using Microsoft.Data.SqlClient;
@@ -382,5 +383,193 @@ public class InventarioFisicoService
 
         using var conn = CreateConnection();
         return (await conn.QueryAsync<InventarioFisicoItem>(sql)).ToList();
+    }
+
+    // ══════════════════════════════════════════════
+    // METODOS PARA INVENTARIO FISICO (PAGINA INDEX)
+    // ══════════════════════════════════════════════
+
+    /// <summary>
+    /// Obtiene registros de inventario con busqueda opcional (un parametro).
+    /// </summary>
+    public async Task<List<RegistroInventario>> ObtenerRegistrosAsync(string? buscar)
+    {
+        using var conn = CreateConnection();
+        var searchWhere = string.IsNullOrWhiteSpace(buscar) ? "" :
+            @"AND (inv.CodigoBarras LIKE @Buscar
+              OR p.Descripcion LIKE @Buscar
+              OR vc.Descripcion LIKE @Buscar)";
+        var sql = $@"SELECT TOP 500
+                inv.Id, inv.CodigoBarras, inv.FechaCaptura, inv.FechaUltEdicion, inv.IdUsuario,
+                COALESCE(p.Descripcion, vc.Descripcion, s.Descripcion) AS Descripcion,
+                COALESCE(p.CBTotal, vc.Precio, s.Precio) AS Precio,
+                CASE WHEN p.CodigoBarras IS NOT NULL THEN 'Pieza'
+                     WHEN vc.CodigoBarras IS NOT NULL THEN 'Compuesta'
+                     WHEN s.CodigoBarras IS NOT NULL THEN 'Sobrante'
+                     ELSE 'Desconocido' END AS Origen
+            FROM InventarioFisico inv
+            LEFT JOIN piezas p ON p.CodigoBarras = inv.CodigoBarras
+            LEFT JOIN vCompuestas vc ON vc.CodigoBarras = inv.CodigoBarras
+            LEFT JOIN sobrantes s ON s.CodigoBarras = inv.CodigoBarras
+            WHERE 1=1 {searchWhere}
+            ORDER BY inv.FechaCaptura DESC";
+        return (await conn.QueryAsync<RegistroInventario>(sql,
+            new { Buscar = $"%{buscar}%" })).ToList();
+    }
+
+    /// <summary>
+    /// Obtiene sobrantes del inventario.
+    /// </summary>
+    public async Task<List<PiezaSobrante>> ObtenerSobrantesAsync()
+    {
+        using var conn = CreateConnection();
+        var sql = @"SELECT TOP 500
+                CodigoBarras, Descripcion, Precio, FechaCaptura, FechaUltEdicion, IdUsuario
+            FROM sobrantes
+            ORDER BY FechaCaptura DESC";
+        return (await conn.QueryAsync<PiezaSobrante>(sql)).ToList();
+    }
+
+    /// <summary>
+    /// Obtiene piezas faltantes con busqueda opcional.
+    /// </summary>
+    public async Task<List<PiezaFaltante>> ObtenerFaltantesAsync(string? buscar)
+    {
+        using var conn = CreateConnection();
+        var searchWhere = string.IsNullOrWhiteSpace(buscar) ? "" :
+            "AND (p.CodigoBarras LIKE @Buscar OR p.Descripcion LIKE @Buscar)";
+        var sql = $@"SELECT TOP 1000
+                p.CodigoBarras, p.Descripcion, p.CBTotal AS Precio,
+                g.Grupo, pf.Comentario
+            FROM piezas p
+            LEFT JOIN grupos g ON g.IdGrupo = p.IdGrupo
+            LEFT JOIN piezasfaltantes pf ON pf.CodigoBarras = p.CodigoBarras
+            WHERE p.faltante = 1 {searchWhere}
+            ORDER BY p.CodigoBarras";
+        return (await conn.QueryAsync<PiezaFaltante>(sql,
+            new { Buscar = $"%{buscar}%" })).ToList();
+    }
+
+    /// <summary>
+    /// Registra el escaneo de un codigo de barras y devuelve resultado AJAX.
+    /// </summary>
+    public async Task<EscaneoResult> RegistrarEscaneoAsync(string codigoBarras, int idUsuario)
+    {
+        var resultado = await RegistrarExistenciaAsync(codigoBarras, idUsuario);
+        return new EscaneoResult
+        {
+            Success = resultado.Exito,
+            Message = resultado.Mensaje,
+            CodigoBarras = resultado.CodigoBarras,
+            Descripcion = resultado.Descripcion,
+            Precio = resultado.Precio,
+            Tipo = resultado.Tipo,
+            RequiereDescripcion = resultado.RequiereDescripcion
+        };
+    }
+
+    /// <summary>
+    /// Registra una pieza sobrante con descripcion y precio.
+    /// </summary>
+    public async Task<bool> RegistrarSobranteAsync(
+        string codigoBarras, string? descripcion, int? precio, int idUsuario)
+    {
+        try
+        {
+            using var conn = CreateConnection();
+            await conn.ExecuteAsync(
+                @"IF NOT EXISTS (SELECT 1 FROM sobrantes WHERE CodigoBarras = @CB)
+                    INSERT INTO sobrantes (CodigoBarras, Descripcion, Precio, IdUsuario, FechaCaptura, FechaUltEdicion)
+                    VALUES (@CB, @Desc, @Precio, @Usr, GETUTCDATE(), GETUTCDATE())
+                  ELSE
+                    UPDATE sobrantes SET Descripcion = @Desc, Precio = @Precio, FechaUltEdicion = GETUTCDATE()
+                    WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras, Desc = descripcion, Precio = precio, Usr = idUsuario });
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al registrar sobrante CB={CB}", codigoBarras);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Inicia un nuevo inventario fisico (limpia registros anteriores).
+    /// </summary>
+    public async Task<string> IniciarInventarioAsync(int idUsuario)
+    {
+        using var conn = CreateConnection();
+        await conn.ExecuteAsync(
+            @"INSERT INTO inventariofisicocancelado
+                (CodigoBarras, FechaCaptura, FechaUltEdicion, IdUsuario, FechaCancelacion, CanceladoPor)
+              SELECT CodigoBarras, FechaCaptura, FechaUltEdicion, IdUsuario, GETUTCDATE(), @Usr
+              FROM InventarioFisico",
+            new { Usr = idUsuario });
+        var count = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM InventarioFisico");
+        await conn.ExecuteAsync("DELETE FROM InventarioFisico");
+        _logger.LogInformation("Inventario iniciado por usuario {Usr}. {Count} registros archivados.", idUsuario, count);
+        return $"Inventario iniciado. {count} registros anteriores archivados.";
+    }
+
+    /// <summary>
+    /// Elimina un registro de inventario por Id.
+    /// </summary>
+    public async Task<bool> EliminarRegistroAsync(int id)
+    {
+        try
+        {
+            using var conn = CreateConnection();
+            await conn.ExecuteAsync("DELETE FROM InventarioFisico WHERE Id = @Id", new { Id = id });
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al eliminar registro {Id}", id);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Exporta los registros de inventario como archivo Excel (.xlsx).
+    /// </summary>
+    public async Task<byte[]> ExportarExcelAsync()
+    {
+        var registros = await ObtenerRegistrosParaExportarAsync(null);
+
+        using var workbook = new XLWorkbook();
+        var ws = workbook.Worksheets.Add("Inventario Fisico");
+
+        ws.Cell(1, 1).Value = "Codigo";
+        ws.Cell(1, 2).Value = "Descripcion";
+        ws.Cell(1, 3).Value = "Tipo";
+        ws.Cell(1, 4).Value = "Precio";
+        ws.Cell(1, 5).Value = "Fecha";
+        ws.Cell(1, 6).Value = "Usuario";
+
+        var hdr = ws.Range(1, 1, 1, 6);
+        hdr.Style.Font.Bold = true;
+        hdr.Style.Fill.BackgroundColor = XLColor.FromHtml("#2d3436");
+        hdr.Style.Font.FontColor = XLColor.White;
+
+        for (int i = 0; i < registros.Count; i++)
+        {
+            var r = registros[i];
+            var row = i + 2;
+            ws.Cell(row, 1).Value = r.CodigoBarras;
+            ws.Cell(row, 2).Value = r.Descripcion ?? "";
+            ws.Cell(row, 3).Value = r.Origen ?? "";
+            ws.Cell(row, 4).Value = r.Precio ?? 0m;
+            ws.Cell(row, 4).Style.NumberFormat.Format = "$#,##0";
+            ws.Cell(row, 5).Value = r.FechaCaptura;
+            ws.Cell(row, 5).Style.NumberFormat.Format = "dd/MM/yyyy HH:mm";
+            ws.Cell(row, 6).Value = r.IdUsuario;
+        }
+
+        ws.Columns().AdjustToContents();
+
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return ms.ToArray();
     }
 }

@@ -155,13 +155,13 @@ public class AltaModel : PageModel
         }
 
         // Precio final
-        var utilidad = Pieza.Utilidad > 0 ? Pieza.Utilidad : 1m;
-        var utilidadExtra = Pieza.UtilidadExtra > 0 ? Pieza.UtilidadExtra : 1m;
-        var impuesto = Pieza.Impuesto > 0 ? Pieza.Impuesto : 1m;
-        var divisor = Pieza.Divisor > 0 ? Pieza.Divisor : 1m;
-        var tcCot = Pieza.TCCotizacion > 0 ? Pieza.TCCotizacion : 1m;
+        var utilidad = (Pieza.Utilidad ?? 0m) > 0 ? (Pieza.Utilidad ?? 1m) : 1m;
+        var utilidadExtra = (Pieza.UtilidadExtra ?? 0m) > 0 ? (Pieza.UtilidadExtra ?? 1m) : 1m;
+        var impuesto = (Pieza.Impuesto ?? 0m) > 0 ? (Pieza.Impuesto ?? 1m) : 1m;
+        var divisor = (Pieza.Divisor ?? 0m) > 0 ? (Pieza.Divisor ?? 1m) : 1m;
+        var tcCot = (Pieza.TCCotizacion ?? 0m) > 0 ? (Pieza.TCCotizacion ?? 1m) : 1m;
 
-        var precioDecimal = Pieza.CNTotal * utilidad * utilidadExtra * impuesto / divisor * tcCot;
+        var precioDecimal = (Pieza.CNTotal ?? 0m) * utilidad * utilidadExtra * impuesto / divisor * tcCot;
         Pieza.Precio = (int)Math.Round(precioDecimal, 0);
     }
 

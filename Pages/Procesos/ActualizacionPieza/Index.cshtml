@@ -77,7 +77,7 @@
                     <strong>Status:</strong> @p.StatusNombre
                 </div>
                 <div class="col-md-3">
-                    <strong>Moneda:</strong> @(p.IdMoneda?.ToString() ?? "N/A")
+                    <strong>Moneda:</strong> @(p.IdMoneda > 0 ? p.IdMoneda.ToString() : "N/A")
                 </div>
             </div>
 
@@ -144,7 +144,7 @@
                             <option value="">-- Sin cambio --</option>
                             @foreach (var f in Model.Facturas)
                             {
-                                <option value="@f.IdFactura" selected="@(f.IdFactura == p.IdFactura?.ToString() ? "selected" : null)">
+                                <option value="@f.IdFactura" selected="@(f.IdFactura.ToString() == p.IdFactura?.ToString() ? "selected" : null)">
                                     @f.FolioFactura - @f.NombreProveedor
                                 </option>
                             }

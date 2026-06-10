@@ -1,6 +1,38 @@
 namespace DiamondsWeb.Models;
 
 /// <summary>
+/// Pieza compuesta para la pagina de administracion de piezas compuestas
+/// </summary>
+public class PiezaCompuesta
+{
+    public string CodigoBarras { get; set; } = string.Empty;
+    public string Descripcion { get; set; } = string.Empty;
+    public string? EtiquetaK { get; set; }
+    public string? Linea1 { get; set; }
+    public string? Linea2 { get; set; }
+    public string? Linea3 { get; set; }
+    public int? Componentes { get; set; }
+    public int IdUsuario { get; set; }
+    public decimal? Precio { get; set; }
+    public decimal? PrecioTotal { get; set; }
+    public DateTime? FechaCaptura { get; set; }
+    public DateTime? FechaUltEdicion { get; set; }
+}
+
+/// <summary>
+/// Componente de una pieza compuesta
+/// </summary>
+public class ComponenteCompuesta
+{
+    public string CodigoBarras { get; set; } = string.Empty;
+    public string CBPadre { get; set; } = string.Empty;
+    public int Indice { get; set; }
+    public string? Descripcion { get; set; }
+    public decimal? Precio { get; set; }
+    public string? NombreProveedor { get; set; }
+}
+
+/// <summary>
 /// Resumen de pieza compuesta para listado principal
 /// </summary>
 public class CompuestaResumen

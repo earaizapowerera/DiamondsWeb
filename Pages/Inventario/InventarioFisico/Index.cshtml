@@ -1,9 +1,21 @@
 @page
 @model DiamondsWeb.Pages.Inventario.InventarioFisico.IndexModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     ViewData["Title"] = "Inventario Fisico";
+    var activeTab = Model.Tab ?? "registros";
 }
 
+<meta name="RequestVerificationToken"
+      content="@Antiforgery.GetAndStoreTokens(ViewContext.HttpContext).RequestToken" />
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
 @if (TempData["Error"] != null)
 {
 <div class="alert alert-danger alert-dismissible fade show">
@@ -19,97 +31,438 @@
 </div>
 }
 
-<!-- Registro -->
-<div class="card mb-4">
-    <div class="card-header bg-primary text-white">
-        <i class="fa-solid fa-clipboard-check me-2"></i>Inventario Fisico
-    </div>
-    <div class="card-body">
-        <form method="post" asp-page-handler="Registrar" class="row g-3 align-items-end mb-4">
-            <div class="col-md-8">
-                <label class="form-label"><small>Codigo de Barras</small></label>
-                <input type="text" class="form-control form-control-sm" name="CodigoBarras"
-                       id="inputCodigoBarras" placeholder="Escanear o escribir codigo de barras..." autofocus />
-            </div>
-            <div class="col-md-4">
-                <button type="submit" class="btn btn-success btn-sm w-100">
+<!-- Panel de Escaneo -->
+<div class="scan-panel mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <h5 class="mb-0"><i class="fa-solid fa-barcode me-2"></i>Inventario Fisico</h5>
+            <small>Escanee el codigo de barras y presione Enter</small>
+        </div>
+        <div class="col-md-6">
+            <div class="input-group input-group-lg">
+                <span class="input-group-text"><i class="fa-solid fa-barcode"></i></span>
+                <input type="text" id="txtCB" class="form-control form-control-lg"
+                       placeholder="Codigo de barras..." maxlength="8" autofocus autocomplete="off" />
+                <button type="button" id="btnEscanear" class="btn btn-primary btn-lg">
                     <i class="fa-solid fa-plus me-1"></i>Registrar
                 </button>
             </div>
-        </form>
+        </div>
+    </div>
+    <div id="scanFeedback" class="mt-2" style="display:none;"></div>
+</div>
 
-        <!-- Toggle Hoy/Todos -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <span class="badge bg-info fs-6">
-                <i class="fa-solid fa-hashtag me-1"></i>Total: @Model.TotalRegistros
-            </span>
-            <div class="btn-group btn-group-sm">
-                <a href="?SoloHoy=true" class="btn @(Model.SoloHoy ? "btn-primary" : "btn-outline-primary")">
-                    <i class="fa-solid fa-calendar-day me-1"></i>Hoy
-                </a>
-                <a href="?SoloHoy=false" class="btn @(!Model.SoloHoy ? "btn-primary" : "btn-outline-primary")">
-                    <i class="fa-solid fa-calendar me-1"></i>Todos
+<!-- Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 col-6 mb-2">
+        <div class="stat-card bg-primary-custom">
+            <div class="stat-number" id="statHoy">@Model.Stats.TotalRegistrosHoy</div>
+            <div class="stat-label"><i class="fa-solid fa-calendar-day me-1"></i>Hoy</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-2">
+        <div class="stat-card bg-success-custom">
+            <div class="stat-number" id="statTotal">@Model.Stats.TotalRegistros</div>
+            <div class="stat-label"><i class="fa-solid fa-barcode me-1"></i>Total</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-2">
+        <div class="stat-card bg-warning-custom">
+            <div class="stat-number" id="statSobrantes">@Model.Stats.TotalSobrantes</div>
+            <div class="stat-label"><i class="fa-solid fa-question me-1"></i>Sobrantes</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-2">
+        <div class="stat-card bg-danger-custom">
+            <div class="stat-number" id="statCancelados">@Model.Stats.TotalCancelados</div>
+            <div class="stat-label"><i class="fa-solid fa-ban me-1"></i>Cancelados</div>
+        </div>
+    </div>
+</div>
+
+<!-- Toolbar -->
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <ul class="nav nav-pills nav-sm">
+        <li class="nav-item">
+            <a class="nav-link @(activeTab == "registros" ? "active" : "")"
+               href="/Inventario/InventarioFisico?Tab=registros">
+                <i class="fa-solid fa-list me-1"></i>Registros
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(activeTab == "sobrantes" ? "active" : "")"
+               href="/Inventario/InventarioFisico?Tab=sobrantes">
+                <i class="fa-solid fa-question-circle me-1"></i>Sobrantes
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(activeTab == "faltantes" ? "active" : "")"
+               href="/Inventario/InventarioFisico?Tab=faltantes">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i>Faltantes
+            </a>
+        </li>
+    </ul>
+    <div class="btn-group">
+        <a href="/Inventario/InventarioFisico?handler=Exportar" class="btn btn-outline-success btn-sm">
+            <i class="fa-solid fa-file-excel me-1"></i>Exportar Excel
+        </a>
+        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalIniciar">
+            <i class="fa-solid fa-rotate me-1"></i>Iniciar Inventario
+        </button>
+    </div>
+</div>
+
+<!-- Busqueda -->
+@if (activeTab != "sobrantes")
+{
+<div class="filter-panel mb-3">
+    <form method="get">
+        <input type="hidden" name="Tab" value="@activeTab" />
+        <div class="row g-2 align-items-end">
+            <div class="col-md-8">
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Buscar por codigo o descripcion..." />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-search me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="/Inventario/InventarioFisico?Tab=@activeTab" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-times me-1"></i>Limpiar
                 </a>
             </div>
         </div>
+    </form>
+</div>
+}
 
-        <!-- Tabla -->
+<!-- Tab: Registros -->
+@if (activeTab == "registros")
+{
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-clipboard-check me-2"></i>Piezas Registradas (@Model.Registros.Count)</span>
+        <button type="button" class="btn btn-sm btn-outline-light" onclick="location.reload()">
+            <i class="fa-solid fa-refresh"></i>
+        </button>
+    </div>
+    <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover table-striped mb-0">
+            <table class="table table-hover table-striped table-sm mb-0">
                 <thead class="table-dark">
                     <tr>
-                        <th>Codigo Barras</th>
+                        <th style="width:50px">#</th>
+                        <th style="width:100px">Codigo</th>
                         <th>Descripcion</th>
-                        <th class="text-end">Precio</th>
-                        <th>Usuario</th>
-                        <th>Fecha</th>
-                        <th class="text-center">Acciones</th>
+                        <th style="width:100px" class="text-center">Tipo</th>
+                        <th style="width:100px" class="text-end">Precio</th>
+                        <th style="width:150px">Fecha</th>
+                        <th style="width:60px" class="text-center">Acc.</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model.Registros.Any())
+                    @for (int i = 0; i < Model.Registros.Count; i++)
                     {
-                        @foreach (var r in Model.Registros)
-                        {
-                            <tr>
-                                <td><code>@r.CodigoBarras</code></td>
-                                <td>@r.Descripcion</td>
-                                <td class="text-end">@(r.Precio?.ToString("C2"))</td>
-                                <td>@r.IdUsuario</td>
-                                <td>@r.FechaCaptura?.ToString("dd/MM/yyyy HH:mm")</td>
-                                <td class="text-center">
-                                    <form method="post" asp-page-handler="Eliminar" class="d-inline">
-                                        <input type="hidden" name="codigoBarras" value="@r.CodigoBarras" />
-                                        <input type="hidden" name="fechaCaptura" value="@r.FechaCaptura?.ToString("o")" />
-                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Eliminar"
-                                                onclick="return confirm('Eliminar registro @r.CodigoBarras?')">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
+                        var r = Model.Registros[i];
+                        var badge = r.Origen switch {
+                            "Compuesta" => "bg-info",
+                            "Sobrante" => "bg-warning text-dark",
+                            _ => "bg-success"
+                        };
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
-                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
-                                No se encontraron registros.
+                            <td>@(i + 1)</td>
+                            <td><code>@r.CodigoBarras</code></td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(r.Descripcion))
+                                { @r.Descripcion }
+                                else
+                                { <em class="text-muted">Sin descripcion</em> }
+                            </td>
+                            <td class="text-center"><span class="badge @badge">@r.Origen</span></td>
+                            <td class="text-end">@(r.Precio?.ToString("C0") ?? "-")</td>
+                            <td class="utc-date" data-utc="@r.FechaCaptura.ToString("o")">
+                                @r.FechaCaptura.ToString("dd/MM/yyyy HH:mm")
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-danger"
+                                        onclick="eliminarRegistro(@r.Id, '@r.CodigoBarras')" title="Eliminar">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
                             </td>
                         </tr>
+                    }
+                    @if (!Model.Registros.Any())
+                    {
+                        <tr><td colspan="7" class="text-center text-muted py-4">
+                            <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                            No hay registros. Escanee un codigo para comenzar.
+                        </td></tr>
                     }
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+}
+
+<!-- Tab: Sobrantes -->
+@if (activeTab == "sobrantes")
+{
+<div class="card">
+    <div class="card-header bg-warning text-dark">
+        <i class="fa-solid fa-question-circle me-2"></i>Piezas Sobrantes (@Model.Sobrantes.Count)
+        <small class="ms-2">Piezas escaneadas que no existen en catalogo</small>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped table-sm mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th><th>Codigo</th><th>Descripcion</th>
+                        <th class="text-end">Precio</th><th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < Model.Sobrantes.Count; i++)
+                    {
+                        var s = Model.Sobrantes[i];
+                        <tr>
+                            <td>@(i + 1)</td>
+                            <td><code>@s.CodigoBarras</code></td>
+                            <td>@(s.Descripcion ?? "-")</td>
+                            <td class="text-end">@(s.Precio?.ToString("C0") ?? "-")</td>
+                            <td class="utc-date" data-utc="@s.FechaCaptura.ToString("o")">
+                                @s.FechaCaptura.ToString("dd/MM/yyyy HH:mm")
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Sobrantes.Any())
+                    {
+                        <tr><td colspan="5" class="text-center text-muted py-4">No hay sobrantes.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Tab: Faltantes -->
+@if (activeTab == "faltantes")
+{
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>Piezas Faltantes (@Model.Faltantes.Count)
+        <small class="ms-2">Piezas en catalogo que NO han sido contadas</small>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped table-sm mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th><th>Codigo</th><th>Descripcion</th>
+                        <th class="text-end">Precio</th><th>Grupo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < Model.Faltantes.Count; i++)
+                    {
+                        var f = Model.Faltantes[i];
+                        <tr>
+                            <td>@(i + 1)</td>
+                            <td><code>@f.CodigoBarras</code></td>
+                            <td>@(f.Descripcion ?? "-")</td>
+                            <td class="text-end">@(f.Precio?.ToString("C0") ?? "-")</td>
+                            <td>@(f.Grupo ?? "-")</td>
+                        </tr>
+                    }
+                    @if (!Model.Faltantes.Any())
+                    {
+                        <tr><td colspan="5" class="text-center text-muted py-4">
+                            <i class="fa-solid fa-check-circle fa-2x mb-2 d-block text-success"></i>
+                            No hay piezas faltantes (o no se ha iniciado inventario)
+                        </td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Modal: Iniciar Inventario -->
+<div class="modal fade" id="modalIniciar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-rotate me-2"></i>Iniciar Inventario Fisico</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fa-solid fa-exclamation-triangle me-2"></i>
+                    <strong>Atencion:</strong> Esta accion archivara todos los registros actuales y reiniciara el conteo.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="post" asp-page-handler="Iniciar">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa-solid fa-rotate me-1"></i>Si, Iniciar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Sobrante -->
+<div class="modal fade" id="modalSobrante" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="fa-solid fa-question-circle me-2"></i>Pieza No Encontrada</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>La pieza <strong id="sobranteCB"></strong> no existe en catalogo. Registre los datos:</p>
+                <div class="mb-3">
+                    <label class="form-label">Descripcion</label>
+                    <input type="text" id="sobranteDesc" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Precio</label>
+                    <input type="number" id="sobrantePrecio" class="form-control" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Omitir</button>
+                <button type="button" class="btn btn-warning" onclick="guardarSobrante()">
+                    <i class="fa-solid fa-save me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var input = document.getElementById('inputCodigoBarras');
-        if (input) input.focus();
+    var token = document.querySelector('meta[name="RequestVerificationToken"]')?.content || '';
+    var input = document.getElementById('txtCB');
+    var btn = document.getElementById('btnEscanear');
+    var feedback = document.getElementById('scanFeedback');
+    var pendingCB = null;
+    var basePath = '/Inventario/InventarioFisico';
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); escanear(); }
+    });
+    btn.addEventListener('click', escanear);
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F2') { e.preventDefault(); input.value = ''; input.focus(); }
+    });
+
+    function escanear() {
+        var cb = input.value.trim();
+        if (!cb) return;
+        btn.disabled = true; input.disabled = true;
+
+        fetch(basePath + '?handler=Escanear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token },
+            body: JSON.stringify({ codigoBarras: cb })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            mostrarFeedback(data);
+            refrescarStats();
+
+            if (data.requiereDescripcion) {
+                pendingCB = cb;
+                document.getElementById('sobranteCB').textContent = cb;
+                document.getElementById('sobranteDesc').value = '';
+                document.getElementById('sobrantePrecio').value = '';
+                new bootstrap.Modal(document.getElementById('modalSobrante')).show();
+                setTimeout(function() { document.getElementById('sobranteDesc').focus(); }, 500);
+            } else {
+                input.value = ''; input.focus();
+            }
+        })
+        .catch(function(err) {
+            mostrarFeedback({ success: false, message: 'Error: ' + err.message });
+        })
+        .finally(function() { btn.disabled = false; input.disabled = false; });
+    }
+
+    function mostrarFeedback(data) {
+        feedback.style.display = 'block';
+        var cls = 'alert-success', icon = 'fa-circle-check';
+        if (!data.success) { cls = 'alert-danger'; icon = 'fa-circle-xmark'; }
+        else if (data.tipo === 'Sobrante') { cls = 'alert-warning'; icon = 'fa-circle-question'; }
+        else if (data.tipo === 'Compuesta') { cls = 'alert-info'; icon = 'fa-layer-group'; }
+
+        feedback.innerHTML = '<div class="alert ' + cls + ' py-2 mb-0 d-flex align-items-center">' +
+            '<i class="fa-solid ' + icon + ' me-2"></i><span>' + esc(data.message || data.mensaje || '') + '</span></div>';
+        setTimeout(function() { feedback.style.display = 'none'; }, 5000);
+    }
+
+    function esc(t) { var d = document.createElement('div'); d.textContent = t || ''; return d.innerHTML; }
+
+    function refrescarStats() {
+        fetch(basePath + '?handler=Stats')
+            .then(function(r) { return r.json(); })
+            .then(function(s) {
+                document.getElementById('statHoy').textContent = s.totalRegistrosHoy;
+                document.getElementById('statTotal').textContent = s.totalRegistros;
+                document.getElementById('statSobrantes').textContent = s.totalSobrantes;
+                document.getElementById('statCancelados').textContent = s.totalCancelados;
+            });
+    }
+
+    function guardarSobrante() {
+        if (!pendingCB) return;
+        var desc = document.getElementById('sobranteDesc').value;
+        var precio = document.getElementById('sobrantePrecio').value;
+        var cbGuardado = pendingCB;
+
+        fetch(basePath + '?handler=Sobrante', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token },
+            body: JSON.stringify({ codigoBarras: cbGuardado, descripcion: desc || null, precio: precio ? parseInt(precio) : null })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function() {
+            bootstrap.Modal.getInstance(document.getElementById('modalSobrante')).hide();
+            pendingCB = null; input.value = ''; input.focus();
+            mostrarFeedback({ success: true, message: 'Sobrante registrada: ' + (desc || cbGuardado) });
+            refrescarStats();
+        });
+    }
+
+    document.getElementById('modalSobrante').addEventListener('hidden.bs.modal', function() {
+        pendingCB = null; input.value = ''; input.focus();
+    });
+
+    function eliminarRegistro(id, cb) {
+        if (!confirm('Eliminar registro ' + cb + '?')) return;
+        fetch(basePath + '?handler=Eliminar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token },
+            body: JSON.stringify({ id: id })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) location.reload();
+            else alert('Error al eliminar');
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        input.focus();
+        if (typeof convertUtcDatesToLocal === 'function') convertUtcDatesToLocal();
     });
 </script>
 }

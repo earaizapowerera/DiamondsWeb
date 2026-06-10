@@ -27,6 +27,24 @@ public class Diamante
 }
 
 /// <summary>
+/// Diamante para listado en catálogo (vista vdiamantes, subset de columnas).
+/// Usado por CatalogService.ObtenerDiamantesAsync.
+/// </summary>
+public class DiamanteLista
+{
+    public string CodigoBarras { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
+    public decimal? Quilates { get; set; }
+    public string? Color { get; set; }
+    public string? Pureza { get; set; }
+    public string? Corte { get; set; }
+    public string? Obs1 { get; set; }
+    public string? Obs2 { get; set; }
+    public int? Precio { get; set; }
+    public string? NombreProveedor { get; set; }
+}
+
+/// <summary>
 /// Filtros para la búsqueda de diamantes
 /// </summary>
 public class DiamanteFiltros

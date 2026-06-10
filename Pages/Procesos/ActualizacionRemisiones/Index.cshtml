@@ -4,219 +4,653 @@
     ViewData["Title"] = "Actualización de Remisiones";
 }
 
-@if (TempData["Error"] != null)
-{
-<div class="alert alert-danger alert-dismissible fade show">
-    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-}
-@if (TempData["Success"] != null)
-{
-<div class="alert alert-success alert-dismissible fade show">
-    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-}
-
-<!-- Selector de Remisión -->
-<div class="card mb-4">
-    <div class="card-header bg-primary text-white">
-        <i class="fa-solid fa-truck-ramp-box me-2"></i>Actualización de Remisiones
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="fa-solid fa-truck-ramp-box me-2"></i>Actualización de Remisiones</h4>
+    <div>
+        <button class="btn btn-primary btn-sm" id="btnNueva" onclick="nuevaRemision()">
+            <i class="fa-solid fa-plus me-1"></i>Nueva Remisión
+        </button>
+        <button class="btn btn-outline-secondary btn-sm ms-1" onclick="cargarRemisiones()">
+            <i class="fa-solid fa-arrows-rotate me-1"></i>Refrescar
+        </button>
     </div>
-    <div class="card-body">
-        <form method="get" class="row g-3 align-items-end mb-3">
+</div>
+
+<!-- Búsqueda y filtros -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="row g-2 align-items-end">
             <div class="col-md-5">
-                <label class="form-label"><small>Remisión</small></label>
-                <select name="RemisionSeleccionada" class="form-select form-select-sm">
-                    <option value="">-- Seleccione una remisión --</option>
-                    @foreach (var r in Model.Remisiones)
-                    {
-                        <option value="@r.IdRemision" selected="@(r.IdRemision == Model.RemisionSeleccionada ? "selected" : null)">
-                            @r.NumRemision - @r.NombreProveedor (@r.FechaRemision?.ToString("dd/MM/yyyy"))
-                            @(r.Consignacion ? " [Consignación]" : "")
-                        </option>
-                    }
-                </select>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" class="form-control" id="txtBuscar"
+                           placeholder="Buscar por ID, remisión o proveedor..." onkeyup="buscarConDelay()">
+                </div>
             </div>
             <div class="col-md-3">
-                <label class="form-label"><small>Proveedor (filtro)</small></label>
-                <input type="number" class="form-control form-control-sm" name="ProveedorFiltro"
-                       value="@Model.ProveedorFiltro" placeholder="ID Proveedor" />
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">Proveedor</span>
+                    <input type="number" class="form-control" id="txtFiltroProveedor"
+                           placeholder="ID" onchange="cargarRemisiones()">
+                </div>
             </div>
             <div class="col-md-2">
-                <button type="submit" class="btn btn-primary btn-sm w-100">
-                    <i class="fa-solid fa-magnifying-glass me-1"></i>Filtrar
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="chkFiltroConsignacion"
+                           onchange="cargarRemisiones()">
+                    <label class="form-check-label small" for="chkFiltroConsignacion">Solo consignación</label>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-sm btn-outline-secondary w-100" onclick="limpiarFiltros()">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
                 </button>
             </div>
-            <div class="col-md-2">
-                <a href="/Procesos/ActualizacionRemisiones" class="btn btn-outline-secondary btn-sm w-100">
-                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
-                </a>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 
-<!-- Info de Remisión Seleccionada -->
-@if (!string.IsNullOrEmpty(Model.RemisionSeleccionada))
-{
-    var remSel = Model.Remisiones.FirstOrDefault(r => r.IdRemision == Model.RemisionSeleccionada);
-    if (remSel != null)
-    {
-    <div class="card mb-4">
-        <div class="card-header bg-info text-white">
-            <i class="fa-solid fa-circle-info me-2"></i>Detalle de Remisión Seleccionada
+<!-- Grid de remisiones -->
+<div class="card mb-3">
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+            <table class="table table-hover table-striped table-sm mb-0" id="tablaRemisiones">
+                <thead class="table-dark sticky-top">
+                    <tr>
+                        <th>ID</th>
+                        <th>No. Remisión</th>
+                        <th>Proveedor</th>
+                        <th>Fecha</th>
+                        <th class="text-center">Consig.</th>
+                        <th class="text-center">Piezas</th>
+                        <th class="text-end">Bruto</th>
+                        <th class="text-end">Neto</th>
+                        <th class="text-center" style="width:100px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="remisionesBody">
+                    <tr><td colspan="9" class="text-center text-muted py-4">
+                        <div class="spinner-border spinner-border-sm text-primary"></div> Cargando...
+                    </td></tr>
+                </tbody>
+            </table>
         </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-3">
-                    <strong>No. Remisión:</strong> @remSel.NumRemision
+    </div>
+</div>
+
+<!-- Panel de detalle (oculto hasta seleccionar o crear) -->
+<div id="panelDetalle" style="display:none;">
+    <!-- Formulario de remisión -->
+    <div class="card mb-3">
+        <div class="card-header bg-primary text-white py-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fa-solid fa-pen-to-square me-2"></i>Datos de la Remisión</h6>
+                <span class="badge bg-light text-primary" id="lblIdRemision"></span>
+            </div>
+        </div>
+        <div class="card-body py-2">
+            <form id="formRemision" onsubmit="guardarRemision(event)">
+                <input type="hidden" id="hdnIdRemision">
+                <input type="hidden" id="hdnModo" value="nuevo">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label small mb-0">Proveedor *</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" class="form-control" id="txtProveedor" required
+                                   placeholder="ID" onblur="buscarProveedor()">
+                            <button class="btn btn-outline-secondary" type="button" onclick="mostrarBuscadorProveedores()">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small mb-0">Nombre Proveedor</label>
+                        <input type="text" class="form-control form-control-sm" id="txtNombreProveedor" readonly
+                               style="background-color:#f8f9fa;">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small mb-0">No. Remisión *</label>
+                        <input type="text" class="form-control form-control-sm" id="txtNumRemision" required
+                               maxlength="10" placeholder="Número">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small mb-0">Fecha</label>
+                        <input type="date" class="form-control form-control-sm" id="txtFechaRemision">
+                    </div>
+                    <div class="col-md-1">
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="chkConsignacion">
+                            <label class="form-check-label small" for="chkConsignacion">Consig.</label>
+                        </div>
+                    </div>
+                    <div class="col-md-2 d-flex gap-1">
+                        <button type="submit" class="btn btn-success btn-sm flex-fill" id="btnGuardar">
+                            <i class="fa-solid fa-floppy-disk me-1"></i>Guardar
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="cancelarEdicion()">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <strong>Proveedor:</strong> @remSel.NombreProveedor
+            </form>
+        </div>
+    </div>
+
+    <!-- Dos grids: Piezas disponibles / Piezas de la remisión -->
+    <div class="row" id="panelPiezas" style="display:none;">
+        <!-- Grid izquierdo: Piezas disponibles -->
+        <div class="col-lg-6">
+            <div class="card mb-3">
+                <div class="card-header bg-secondary text-white py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fa-solid fa-box-open me-2"></i>Piezas Disponibles</h6>
+                        <span class="badge bg-light text-dark" id="lblCountDisponibles">0</span>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <strong>Fecha:</strong> @remSel.FechaRemision?.ToString("dd/MM/yyyy")
+                <div class="card-body p-2">
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" class="form-control" id="txtBuscarPieza"
+                               placeholder="Buscar pieza..." onkeyup="buscarPiezaConDelay()">
+                        <button class="btn btn-outline-secondary" type="button" onclick="cargarPiezasDisponibles()">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </button>
+                    </div>
+                    <div class="table-responsive" style="max-height:350px; overflow-y:auto;">
+                        <table class="table table-hover table-striped table-sm mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Descripción</th>
+                                    <th class="text-end">Costo MN</th>
+                                    <th style="width:40px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="piezasDisponiblesBody">
+                                <tr><td colspan="4" class="text-center text-muted py-3">
+                                    <i class="fa-solid fa-inbox fa-2x mb-1 d-block"></i>Seleccione una remisión
+                                </td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <strong>Consignación:</strong>
-                    @if (remSel.Consignacion)
-                    {
-                        <span class="badge bg-warning text-dark">Sí</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-secondary">No</span>
-                    }
+            </div>
+        </div>
+
+        <!-- Grid derecho: Piezas en la remisión -->
+        <div class="col-lg-6">
+            <div class="card mb-3">
+                <div class="card-header bg-success text-white py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fa-solid fa-truck-loading me-2"></i>Piezas en la Remisión</h6>
+                        <span class="badge bg-light text-dark" id="lblCountRemision">0</span>
+                    </div>
+                </div>
+                <div class="card-body p-2">
+                    <div class="table-responsive" style="max-height:385px; overflow-y:auto;">
+                        <table class="table table-hover table-striped table-sm mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th style="width:40px;"></th>
+                                    <th>Código</th>
+                                    <th>Obs2</th>
+                                    <th class="text-end">Bruto</th>
+                                    <th class="text-end">Neto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="piezasRemisionBody">
+                                <tr><td colspan="5" class="text-center text-muted py-3">
+                                    <i class="fa-solid fa-inbox fa-2x mb-1 d-block"></i>Seleccione una remisión
+                                </td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Totales -->
+                    <div class="row mt-2 border-top pt-2">
+                        <div class="col-6 text-end">
+                            <strong class="small">Total Bruto:</strong>
+                            <span id="txtTotalBruto" class="ms-1 text-primary fw-bold">$0.00</span>
+                        </div>
+                        <div class="col-6 text-end">
+                            <strong class="small">Total Neto:</strong>
+                            <span id="txtTotalNeto" class="ms-1 text-success fw-bold">$0.00</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
+<!-- Modal buscar proveedores -->
+<div class="modal fade" id="modalProveedores" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title"><i class="fa-solid fa-magnifying-glass me-2"></i>Buscar Proveedor</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" class="form-control form-control-sm mb-2" id="txtBuscarProveedor"
+                       placeholder="Buscar por nombre o ID..." onkeyup="filtrarProveedores()">
+                <div class="table-responsive" style="max-height:300px; overflow-y:auto;">
+                    <table class="table table-hover table-sm">
+                        <thead class="table-dark sticky-top">
+                            <tr><th>ID</th><th>Nombre</th></tr>
+                        </thead>
+                        <tbody id="proveedoresBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alertas -->
+<div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index:9999;"></div>
+
+<script>
+let searchTimeout, piezaSearchTimeout;
+let remisionActual = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('txtFechaRemision').valueAsDate = new Date();
+    cargarRemisiones();
+});
+
+function buscarConDelay() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(cargarRemisiones, 400);
+}
+
+function buscarPiezaConDelay() {
+    clearTimeout(piezaSearchTimeout);
+    piezaSearchTimeout = setTimeout(cargarPiezasDisponibles, 400);
+}
+
+function limpiarFiltros() {
+    document.getElementById('txtBuscar').value = '';
+    document.getElementById('txtFiltroProveedor').value = '';
+    document.getElementById('chkFiltroConsignacion').checked = false;
+    cargarRemisiones();
+}
+
+// ===== REMISIONES CRUD =====
+
+async function cargarRemisiones() {
+    const params = new URLSearchParams();
+    const buscar = document.getElementById('txtBuscar').value;
+    const provId = document.getElementById('txtFiltroProveedor').value;
+    const consig = document.getElementById('chkFiltroConsignacion').checked;
+
+    if (buscar) params.append('buscar', buscar);
+    if (provId) params.append('proveedorId', provId);
+    if (consig) params.append('soloConsignacion', 'true');
+
+    const qs = params.toString();
+    const url = '/api/remisiones' + (qs ? '?' + qs : '');
+
+    try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('Error al cargar');
+        renderRemisiones(await resp.json());
+    } catch (e) {
+        console.error(e);
+        document.getElementById('remisionesBody').innerHTML =
+            '<tr><td colspan="9" class="text-center text-danger py-3">Error al cargar datos</td></tr>';
     }
 }
 
-<!-- Grids lado a lado -->
-<div class="row">
-    <!-- Piezas Disponibles (sin remisión) -->
-    <div class="col-lg-6">
-        <div class="card mb-4">
-            <div class="card-header bg-secondary text-white">
-                <i class="fa-solid fa-box-open me-2"></i>Piezas Disponibles (sin remisión)
-                <span class="badge bg-light text-dark ms-2">@Model.PiezasDisponibles.Count</span>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                    <table class="table table-hover table-striped table-sm mb-0">
-                        <thead class="table-dark sticky-top">
-                            <tr>
-                                <th>Código</th>
-                                <th>Descripción</th>
-                                <th>Proveedor</th>
-                                <th class="text-end">Precio</th>
-                                <th class="text-center">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if (Model.PiezasDisponibles.Any())
-                            {
-                                @foreach (var p in Model.PiezasDisponibles)
-                                {
-                                    <tr>
-                                        <td><small>@p.CodigoBarras</small></td>
-                                        <td><small>@p.Descripcion</small></td>
-                                        <td><small>@p.NombreProveedor</small></td>
-                                        <td class="text-end"><small>@p.Precio?.ToString("C")</small></td>
-                                        <td class="text-center">
-                                            @if (!string.IsNullOrEmpty(Model.RemisionSeleccionada))
-                                            {
-                                                <form method="post" asp-page-handler="Asignar" class="d-inline">
-                                                    <input type="hidden" name="codigoBarras" value="@p.CodigoBarras" />
-                                                    <input type="hidden" name="idRemision" value="@Model.RemisionSeleccionada" />
-                                                    <button type="submit" class="btn btn-success btn-sm" title="Asignar a remisión">
-                                                        <i class="fa-solid fa-arrow-right"></i>
-                                                    </button>
-                                                </form>
-                                            }
-                                        </td>
-                                    </tr>
-                                }
-                            }
-                            else
-                            {
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted py-4">
-                                        <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
-                                        @(string.IsNullOrEmpty(Model.RemisionSeleccionada)
-                                            ? "Seleccione una remisión para ver piezas disponibles."
-                                            : "No hay piezas disponibles.")
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
+function renderRemisiones(list) {
+    const tbody = document.getElementById('remisionesBody');
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">No hay remisiones</td></tr>';
+        return;
+    }
 
-    <!-- Piezas Asignadas a Remisión -->
-    <div class="col-lg-6">
-        <div class="card mb-4">
-            <div class="card-header bg-success text-white">
-                <i class="fa-solid fa-truck-loading me-2"></i>Piezas Asignadas a Remisión
-                <span class="badge bg-light text-dark ms-2">@Model.PiezasAsignadas.Count</span>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                    <table class="table table-hover table-striped table-sm mb-0">
-                        <thead class="table-dark sticky-top">
-                            <tr>
-                                <th>Código</th>
-                                <th>Descripción</th>
-                                <th>Proveedor</th>
-                                <th class="text-end">Precio</th>
-                                <th class="text-center">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if (Model.PiezasAsignadas.Any())
-                            {
-                                @foreach (var p in Model.PiezasAsignadas)
-                                {
-                                    <tr>
-                                        <td><small>@p.CodigoBarras</small></td>
-                                        <td><small>@p.Descripcion</small></td>
-                                        <td><small>@p.NombreProveedor</small></td>
-                                        <td class="text-end"><small>@p.Precio?.ToString("C")</small></td>
-                                        <td class="text-center">
-                                            <form method="post" asp-page-handler="Desasignar" class="d-inline">
-                                                <input type="hidden" name="codigoBarras" value="@p.CodigoBarras" />
-                                                <input type="hidden" name="idRemision" value="@Model.RemisionSeleccionada" />
-                                                <button type="submit" class="btn btn-danger btn-sm" title="Desasignar"
-                                                        onclick="return confirm('¿Desasignar pieza @p.CodigoBarras?')">
-                                                    <i class="fa-solid fa-arrow-left"></i>
-                                                </button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                }
-                            }
-                            else
-                            {
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted py-4">
-                                        <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
-                                        @(string.IsNullOrEmpty(Model.RemisionSeleccionada)
-                                            ? "Seleccione una remisión para ver piezas asignadas."
-                                            : "No hay piezas asignadas a esta remisión.")
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+    tbody.innerHTML = list.map(r => {
+        const fecha = r.fechaRemision ? new Date(r.fechaRemision).toLocaleDateString('es-MX') : '-';
+        const consig = r.consignacion
+            ? '<span class="badge bg-warning text-dark">Sí</span>'
+            : '<span class="badge bg-secondary">No</span>';
+        const sel = remisionActual === r.idRemision ? 'table-active' : '';
+
+        return `<tr class="${sel}" style="cursor:pointer;" onclick="seleccionarRemision(${r.idRemision})">
+            <td><strong>${r.idRemision}</strong></td>
+            <td>${esc(r.remision)}</td>
+            <td>${esc(r.nombreProveedor)} <small class="text-muted">(${r.proveedor})</small></td>
+            <td>${fecha}</td>
+            <td class="text-center">${consig}</td>
+            <td class="text-center"><span class="badge bg-info">${r.totalPiezas}</span></td>
+            <td class="text-end">$${fmt(r.totalBruto)}</td>
+            <td class="text-end">$${fmt(r.totalNeto)}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary py-0 px-1" onclick="event.stopPropagation();editarRemision(${r.idRemision})" title="Editar">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="event.stopPropagation();eliminarRemision(${r.idRemision})" title="Eliminar">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function nuevaRemision() {
+    document.getElementById('panelDetalle').style.display = '';
+    document.getElementById('panelPiezas').style.display = 'none';
+    document.getElementById('hdnModo').value = 'nuevo';
+    document.getElementById('hdnIdRemision').value = '';
+    document.getElementById('lblIdRemision').textContent = 'Nueva';
+    document.getElementById('formRemision').reset();
+    document.getElementById('txtFechaRemision').valueAsDate = new Date();
+    remisionActual = null;
+    document.getElementById('txtProveedor').focus();
+}
+
+async function seleccionarRemision(id) {
+    try {
+        const resp = await fetch(`/api/remisiones/${id}`);
+        if (!resp.ok) throw new Error('No encontrada');
+        const r = await resp.json();
+
+        document.getElementById('panelDetalle').style.display = '';
+        document.getElementById('panelPiezas').style.display = '';
+        document.getElementById('hdnModo').value = 'editar';
+        document.getElementById('hdnIdRemision').value = r.idRemision;
+        document.getElementById('lblIdRemision').textContent = 'ID: ' + r.idRemision;
+        document.getElementById('txtProveedor').value = r.proveedor;
+        document.getElementById('txtNombreProveedor').value = r.nombreProveedor;
+        document.getElementById('txtNumRemision').value = r.remision;
+        document.getElementById('chkConsignacion').checked = r.consignacion;
+        if (r.fechaRemision) {
+            document.getElementById('txtFechaRemision').value = r.fechaRemision.split('T')[0];
+        }
+
+        remisionActual = r.idRemision;
+        cargarRemisiones();
+        cargarPiezasDisponibles();
+        cargarPiezasRemision();
+    } catch (e) {
+        console.error(e);
+        alerta('danger', 'Error al cargar la remisión');
+    }
+}
+
+async function editarRemision(id) {
+    await seleccionarRemision(id);
+}
+
+async function guardarRemision(event) {
+    event.preventDefault();
+    const modo = document.getElementById('hdnModo').value;
+    const btn = document.getElementById('btnGuardar');
+    btn.disabled = true;
+
+    const data = {
+        proveedor: parseInt(document.getElementById('txtProveedor').value) || 0,
+        remision: document.getElementById('txtNumRemision').value.trim(),
+        fechaRemision: document.getElementById('txtFechaRemision').value || null,
+        consignacion: document.getElementById('chkConsignacion').checked
+    };
+
+    try {
+        let resp;
+        if (modo === 'nuevo') {
+            resp = await fetch('/api/remisiones', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(data)
+            });
+        } else {
+            const id = document.getElementById('hdnIdRemision').value;
+            resp = await fetch(`/api/remisiones/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(data)
+            });
+        }
+
+        const result = await resp.json();
+        if (resp.ok) {
+            alerta('success', result.message);
+            cargarRemisiones();
+            if (modo === 'nuevo' && result.idRemision) {
+                await seleccionarRemision(result.idRemision);
+            }
+        } else {
+            alerta('danger', result.message || result || 'Error al guardar');
+        }
+    } catch (e) {
+        console.error(e);
+        alerta('danger', 'Error de conexión al guardar');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function eliminarRemision(id) {
+    if (!confirm('¿Eliminar la remisión ' + id + '?\nLas piezas deben estar desvinculadas.')) return;
+
+    try {
+        const resp = await fetch(`/api/remisiones/${id}`, { method: 'DELETE' });
+        const result = await resp.json();
+        if (resp.ok) {
+            alerta('success', result.message);
+            if (remisionActual === id) {
+                document.getElementById('panelDetalle').style.display = 'none';
+                remisionActual = null;
+            }
+            cargarRemisiones();
+        } else {
+            alerta('danger', result.message || 'Error al eliminar');
+        }
+    } catch (e) {
+        console.error(e);
+        alerta('danger', 'Error de conexión');
+    }
+}
+
+function cancelarEdicion() {
+    document.getElementById('panelDetalle').style.display = 'none';
+    remisionActual = null;
+    cargarRemisiones();
+}
+
+// ===== PIEZAS =====
+
+async function cargarPiezasDisponibles() {
+    if (!remisionActual) return;
+    const buscar = document.getElementById('txtBuscarPieza').value;
+    const params = buscar ? `?buscar=${encodeURIComponent(buscar)}` : '';
+
+    try {
+        const resp = await fetch(`/api/remisiones/${remisionActual}/piezas-disponibles${params}`);
+        if (!resp.ok) throw new Error();
+        renderPiezasDisponibles(await resp.json());
+    } catch (e) {
+        document.getElementById('piezasDisponiblesBody').innerHTML =
+            '<tr><td colspan="4" class="text-center text-danger">Error al cargar</td></tr>';
+    }
+}
+
+function renderPiezasDisponibles(list) {
+    const tbody = document.getElementById('piezasDisponiblesBody');
+    document.getElementById('lblCountDisponibles').textContent = list.length;
+
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No hay piezas disponibles</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = list.map(p => `<tr>
+        <td><small>${esc(p.codigoBarras)}</small></td>
+        <td><small>${esc(p.descripcion || p.obs2 || '')}</small></td>
+        <td class="text-end"><small>$${fmt(p.costoMN || p.costoBrutoMN || 0)}</small></td>
+        <td>
+            <button class="btn btn-sm btn-success py-0 px-1" onclick="vincularPieza('${esc(p.codigoBarras)}')" title="Asignar">
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </td>
+    </tr>`).join('');
+}
+
+async function cargarPiezasRemision() {
+    if (!remisionActual) return;
+
+    try {
+        const resp = await fetch(`/api/remisiones/${remisionActual}/piezas`);
+        if (!resp.ok) throw new Error();
+        renderPiezasRemision(await resp.json());
+        actualizarTotales();
+    } catch (e) {
+        document.getElementById('piezasRemisionBody').innerHTML =
+            '<tr><td colspan="5" class="text-center text-danger">Error al cargar</td></tr>';
+    }
+}
+
+function renderPiezasRemision(list) {
+    const tbody = document.getElementById('piezasRemisionBody');
+    document.getElementById('lblCountRemision').textContent = list.length;
+
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Sin piezas asignadas</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = list.map(p => `<tr>
+        <td>
+            <button class="btn btn-sm btn-warning py-0 px-1" onclick="desvincularPieza('${esc(p.codigoBarras)}')" title="Quitar">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+        </td>
+        <td><small>${esc(p.codigoBarras)}</small></td>
+        <td><small>${esc(p.obs2 || '')}</small></td>
+        <td class="text-end"><small>$${fmt(p.bruto)}</small></td>
+        <td class="text-end"><small>$${fmt(p.neto)}</small></td>
+    </tr>`).join('');
+}
+
+async function vincularPieza(codigoBarras) {
+    if (!remisionActual) { alerta('warning', 'Primero guarde la remisión'); return; }
+
+    try {
+        const resp = await fetch(`/api/remisiones/${remisionActual}/vincular`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ codigoBarras })
+        });
+        if (resp.ok) {
+            cargarPiezasDisponibles();
+            cargarPiezasRemision();
+            cargarRemisiones();
+        } else {
+            const r = await resp.json();
+            alerta('danger', r.message || 'Error al vincular');
+        }
+    } catch (e) {
+        alerta('danger', 'Error de conexión');
+    }
+}
+
+async function desvincularPieza(codigoBarras) {
+    if (!remisionActual) return;
+
+    try {
+        const resp = await fetch(`/api/remisiones/${remisionActual}/desvincular`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ codigoBarras })
+        });
+        if (resp.ok) {
+            cargarPiezasDisponibles();
+            cargarPiezasRemision();
+            cargarRemisiones();
+        } else {
+            const r = await resp.json();
+            alerta('danger', r.message || 'Error al desvincular');
+        }
+    } catch (e) {
+        alerta('danger', 'Error de conexión');
+    }
+}
+
+async function actualizarTotales() {
+    if (!remisionActual) return;
+    try {
+        const resp = await fetch(`/api/remisiones/${remisionActual}/totales`);
+        if (resp.ok) {
+            const d = await resp.json();
+            document.getElementById('txtTotalBruto').textContent = '$' + fmt(d.bruto);
+            document.getElementById('txtTotalNeto').textContent = '$' + fmt(d.neto);
+        }
+    } catch (e) {}
+}
+
+// ===== PROVEEDORES =====
+
+async function buscarProveedor() {
+    const val = document.getElementById('txtProveedor').value.trim();
+    if (!val) { document.getElementById('txtNombreProveedor').value = ''; return; }
+
+    try {
+        const resp = await fetch(`/api/remisiones/proveedores?buscar=${encodeURIComponent(val)}`);
+        if (resp.ok) {
+            const list = await resp.json();
+            const match = list.find(p => p.proveedor == val);
+            document.getElementById('txtNombreProveedor').value = match ? match.nombreProveedor : '(No encontrado)';
+        }
+    } catch (e) {}
+}
+
+async function mostrarBuscadorProveedores() {
+    const modal = new bootstrap.Modal(document.getElementById('modalProveedores'));
+    modal.show();
+    try {
+        const resp = await fetch('/api/remisiones/proveedores');
+        if (resp.ok) renderProveedores(await resp.json());
+    } catch (e) {}
+}
+
+function renderProveedores(list) {
+    document.getElementById('proveedoresBody').innerHTML = list.map(p =>
+        `<tr style="cursor:pointer;" onclick="seleccionarProveedor(${p.proveedor},'${esc(p.nombreProveedor)}')">
+            <td>${p.proveedor}</td><td>${esc(p.nombreProveedor)}</td>
+        </tr>`).join('');
+}
+
+async function filtrarProveedores() {
+    const buscar = document.getElementById('txtBuscarProveedor').value;
+    try {
+        const resp = await fetch(`/api/remisiones/proveedores?buscar=${encodeURIComponent(buscar)}`);
+        if (resp.ok) renderProveedores(await resp.json());
+    } catch (e) {}
+}
+
+function seleccionarProveedor(id, nombre) {
+    document.getElementById('txtProveedor').value = id;
+    document.getElementById('txtNombreProveedor').value = nombre;
+    bootstrap.Modal.getInstance(document.getElementById('modalProveedores')).hide();
+}
+
+// ===== UTILS =====
+
+function esc(t) {
+    if (!t) return '';
+    const d = document.createElement('div');
+    d.textContent = t;
+    return d.innerHTML;
+}
+
+function fmt(n) {
+    return (n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function alerta(tipo, msg) {
+    const c = document.getElementById('alertContainer');
+    const id = 'a-' + Date.now();
+    c.innerHTML = `<div id="${id}" class="alert alert-${tipo} alert-dismissible fade show shadow" role="alert">
+        ${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+    setTimeout(() => { const el = document.getElementById(id); if (el) el.remove(); }, 5000);
+}
+</script>

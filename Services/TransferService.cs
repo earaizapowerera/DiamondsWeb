@@ -51,9 +51,9 @@ public class TransferService
                 p.CodigoBarras, p.Descripcion, p.IdLocalizacion,
                 l.NombreLocalizacion,
                 ISNULL(p.Precio, 0) AS Precio,
-                CAST(p.Proveedor AS VARCHAR(20)) AS Proveedor,
+                ISNULL(CAST(p.Proveedor AS VARCHAR(20)), '') AS Proveedor,
                 p.FechaUltEdicion, 'Sencilla' AS TipoPieza
-            FROM piezas p
+            FROM vpiezas p
             INNER JOIN localizaciones l ON p.IdLocalizacion = l.IdLocalizacion
             INNER JOIN localizaciones_tiendas lt ON lt.IdLocalizacion = l.IdLocalizacion
             WHERE lt.IdTienda = @Tienda

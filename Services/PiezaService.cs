@@ -94,7 +94,7 @@ public class PiezaService
         return await db.QueryFirstOrDefaultAsync<TipoCambio>(sql, new { IdMoneda = idMoneda });
     }
 
-    public async Task<List<RazonSocialProveedor>> ObtenerRazonesSocialesAsync(int proveedor)
+    public async Task<List<RazonSocialProveedorCombo>> ObtenerRazonesSocialesAsync(int proveedor)
     {
         using var db = CreateConnection();
         var sql = @"SELECT TOP 20 rs.IdRazonSocialProveedor, rs.RazonSocialProveedor AS RazonSocial
@@ -103,7 +103,7 @@ public class PiezaService
                        ON rs.IdRazonSocialProveedor = rsp.IdRazonSocialProveedor
                      WHERE rsp.Proveedor = @Proveedor
                      ORDER BY rs.RazonSocialProveedor";
-        return (await db.QueryAsync<RazonSocialProveedor>(sql, new { Proveedor = proveedor })).ToList();
+        return (await db.QueryAsync<RazonSocialProveedorCombo>(sql, new { Proveedor = proveedor })).ToList();
     }
 
     public async Task<List<UtilidadExtraRango>> ObtenerRangosUtilidadExtraAsync()

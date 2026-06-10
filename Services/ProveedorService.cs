@@ -65,13 +65,14 @@ public class ProveedorService
     public async Task<int> CrearRazonSocialAsync(RazonSocialProveedor rs)
     {
         var sql = @"
+            DECLARE @NewId INT = (SELECT ISNULL(MAX(IdRazonSocialProveedor), 0) + 1 FROM RAZONES_SOCIALES_PROVEEDORES);
             INSERT INTO RAZONES_SOCIALES_PROVEEDORES
-                (RFC, RazonSocialProveedor, Calle, CodigoPostal, Colonia, Municipio, Estado,
+                (IdRazonSocialProveedor, RFC, RazonSocialProveedor, Calle, CodigoPostal, Colonia, Municipio, Estado,
                  FechaCaptura, FechaUltEdicion, IdUsuario)
             VALUES
-                (@RFC, @RazonSocialProveedorNombre, @Calle, @CodigoPostal, @Colonia, @Municipio, @Estado,
+                (@NewId, @RFC, @RazonSocialProveedorNombre, @Calle, @CodigoPostal, @Colonia, @Municipio, @Estado,
                  GETUTCDATE(), GETUTCDATE(), @IdUsuario);
-            SELECT CAST(SCOPE_IDENTITY() AS INT);";
+            SELECT @NewId;";
 
         using var conn = CreateConnection();
         var newId = await conn.QuerySingleAsync<int>(sql, rs);
@@ -157,11 +158,12 @@ public class ProveedorService
         }
 
         var sql = @"
+            DECLARE @NewId INT = (SELECT ISNULL(MAX(Id), 0) + 1 FROM RAZONES_SOCIALES_PROVEEDORES_PROVEEDORES);
             INSERT INTO RAZONES_SOCIALES_PROVEEDORES_PROVEEDORES
-                (IdRazonSocialProveedor, Proveedor, FechaCaptura, FechaUltEdicion, IdUsuario)
+                (Id, IdRazonSocialProveedor, Proveedor, FechaCaptura, FechaUltEdicion, IdUsuario)
             VALUES
-                (@IdRazonSocial, @Proveedor, GETUTCDATE(), GETUTCDATE(), @IdUsuario);
-            SELECT CAST(SCOPE_IDENTITY() AS INT);";
+                (@NewId, @IdRazonSocial, @Proveedor, GETUTCDATE(), GETUTCDATE(), @IdUsuario);
+            SELECT @NewId;";
 
         var newId = await conn.QuerySingleAsync<int>(sql, new
         {

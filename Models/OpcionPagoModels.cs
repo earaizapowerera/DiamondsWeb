@@ -1,17 +1,6 @@
 namespace DiamondsWeb.Models;
 
 /// <summary>
-/// Moneda para dropdown de opciones de pago.
-/// Nota: si MonedaModels.cs ya existe (de otro branch), esta clase se puede eliminar.
-/// </summary>
-public class MonedaItem
-{
-    public int IdMoneda { get; set; }
-    public string Nombre { get; set; } = string.Empty;
-    public bool Extranjera { get; set; }
-}
-
-/// <summary>
 /// Opcion de pago — migrado de frmOpcionesPago.frm (VB6).
 /// Tabla: OpcionesPago | Vista: vOpcionesPago.
 /// </summary>
@@ -23,10 +12,22 @@ public class OpcionPago
     public string? NombreMoneda { get; set; }
     public string? Logo { get; set; }
     public bool Activa { get; set; }
-    public DateTime FechaCaptura { get; set; }
-    public DateTime FechaUltEdicion { get; set; }
+    public DateTime? FechaCaptura { get; set; }
+    public DateTime? FechaUltEdicion { get; set; }
     public int IdUsuario { get; set; }
     public string? NombreUsuario { get; set; }
+
+    /// <summary>Alias for Nombre — used by views expecting OpcionPago1</summary>
+    public string OpcionPago1 => Nombre;
+
+    /// <summary>Alias for Logo as nullable int — views check HasValue</summary>
+    public int? IdLogo => int.TryParse(Logo, out var v) ? v : (int?)null;
+
+    /// <summary>Alias for Activa — views use Activo</summary>
+    public bool Activo => Activa;
+
+    /// <summary>Alias for NombreMoneda — views use Moneda</summary>
+    public string? Moneda => NombreMoneda;
 
     /// <summary>
     /// Mapea el valor entero de Logo (legacy VB6) a clase Font Awesome.

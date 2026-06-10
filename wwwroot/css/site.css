@@ -145,6 +145,27 @@
     background-color: #e8f4f8;
 }
 
+/* ===== Inventario Fisico ===== */
+.scan-panel {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    color: #fff;
+}
+.scan-panel h5 { color: #fff; }
+.scan-panel small { color: rgba(255,255,255,0.8); }
+.scan-panel .form-control {
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    font-weight: 700;
+}
+
+.nav-pills.nav-sm .nav-link {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .stat-card {
