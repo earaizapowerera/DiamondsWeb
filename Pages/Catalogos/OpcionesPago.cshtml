@@ -45,7 +45,7 @@
                     <select class="form-select" name="IdMoneda" id="IdMoneda">
                         @foreach (var m in Model.Monedas)
                         {
-                            <option value="@m.IdMoneda">@m.Nombre</option>
+                            <option value="@m.IdMoneda">@m.Moneda</option>
                         }
                     </select>
                 </div>
@@ -151,8 +151,8 @@
                                 }
                             </td>
                             <td>
-                                <span class="utc-date" data-utc="@op.FechaUltEdicion.ToString("o")">
-                                    @op.FechaUltEdicion.ToString("dd/MM/yyyy HH:mm")
+                                <span class="utc-date" data-utc="@(op.FechaUltEdicion?.ToString("o"))">
+                                    @(op.FechaUltEdicion?.ToString("dd/MM/yyyy HH:mm"))
                                 </span>
                             </td>
                             <td class="text-center">

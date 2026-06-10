@@ -73,8 +73,8 @@
                                 </td>
                                 <td>@d.NombreUsuario</td>
                                 <td>
-                                    <span class="utc-date" data-utc="@d.FechaCaptura.ToString("o")">
-                                        @d.FechaCaptura.ToString("dd/MM/yyyy HH:mm")
+                                    <span class="utc-date" data-utc="@(d.FechaCaptura?.ToString("o"))">
+                                        @(d.FechaCaptura?.ToString("dd/MM/yyyy HH:mm"))
                                     </span>
                                 </td>
                                 <td class="text-center">

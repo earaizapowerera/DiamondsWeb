@@ -148,13 +148,13 @@
                                     <td>@b.IdCambioStatus</td>
                                     <td>@b.CodigoBarras</td>
                                     <td>
-                                        <span class="badge bg-secondary">@b.StatusAnterior</span>
+                                        <span class="badge bg-secondary">@b.NombreStatusAnterior</span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-primary">@b.StatusNuevo</span>
+                                        <span class="badge bg-primary">@b.NombreStatusNuevo</span>
                                     </td>
                                     <td>@b.IdUsuario</td>
-                                    <td>@b.FechaCambio?.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>@(b.FechaCaptura.ToString("dd/MM/yyyy HH:mm"))</td>
                                 </tr>
                             }
                         }

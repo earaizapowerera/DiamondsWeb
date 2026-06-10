@@ -16,6 +16,8 @@ public class NotaVenta
     public DateTime? FechaCaptura { get; set; }
     public DateTime? FechaBaja { get; set; }
     public string? Comentarios { get; set; }
+    public decimal? Total { get; set; }
+    public int CantidadPiezas { get; set; }
 }
 
 /// <summary>
@@ -36,6 +38,7 @@ public class PiezaNota
     public decimal? CNTotal { get; set; }
     public int? IdMoneda { get; set; }
     public decimal? Precio { get; set; }
+    public string? NombreProveedor => Proveedor;
 }
 
 /// <summary>

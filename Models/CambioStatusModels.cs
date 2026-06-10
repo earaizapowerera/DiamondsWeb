@@ -37,4 +37,8 @@ public class BitacoraStatus
     public string? NombreStatusNuevo { get; set; }
     public DateTime FechaCaptura { get; set; }
     public int? IdUsuario { get; set; }
+    // Aliases used by Razor views
+    public string? StatusAnterior => NombreStatusAnterior;
+    public string? StatusNuevo => NombreStatusNuevo;
+    public DateTime? FechaCambio => FechaCaptura;
 }

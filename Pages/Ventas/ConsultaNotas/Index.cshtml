@@ -79,21 +79,21 @@
                     {
                         @foreach (var n in Model.Notas)
                         {
-                            var isSelected = Model.NotaSeleccionada == n.IdNota;
+                            var isSelected = Model.NotaSeleccionada == n.IdNota.ToString();
                             <tr class="@(isSelected ? "table-info" : "")">
                                 <td><strong>@n.IdNota</strong></td>
                                 <td>@n.NombreCliente</td>
-                                <td>@n.FechaBaja?.ToString("dd/MM/yyyy HH:mm")</td>
-                                <td class="text-end">@n.Bruto?.ToString("C2")</td>
-                                <td class="text-end">@n.Descuento?.ToString("N2")%</td>
-                                <td class="text-end">@n.Neto?.ToString("C2")</td>
-                                <td class="text-end">@n.Total?.ToString("C2")</td>
+                                <td>@(n.FechaBaja?.ToString("dd/MM/yyyy HH:mm"))</td>
+                                <td class="text-end">@(n.Bruto.ToString("C2"))</td>
+                                <td class="text-end">@(n.Descuento.ToString("N2"))%</td>
+                                <td class="text-end">@(n.Neto.ToString("C2"))</td>
+                                <td class="text-end">@(n.Total?.ToString("C2") ?? n.Neto.ToString("C2"))</td>
                                 <td class="text-center">
                                     <span class="badge bg-secondary">@n.CantidadPiezas</span>
                                 </td>
                                 <td class="text-center">
                                     <div class="btn-group btn-group-sm">
-                                        <a href="?Desde=@Model.Desde?.ToString("yyyy-MM-dd")&Hasta=@Model.Hasta?.ToString("yyyy-MM-dd")&NombreCliente=@Model.NombreCliente&CodigoBarras=@Model.CodigoBarras&IdNotaDetalle=@n.IdNota"
+                                        <a href="?Desde=@(Model.Desde?.ToString("yyyy-MM-dd"))&Hasta=@(Model.Hasta?.ToString("yyyy-MM-dd"))&NombreCliente=@Model.NombreCliente&CodigoBarras=@Model.CodigoBarras&IdNotaDetalle=@n.IdNota"
                                            class="btn btn-outline-info" title="Ver detalle">
                                             <i class="fa-solid fa-eye"></i>
                                         </a>
@@ -134,9 +134,9 @@
                                                                     <tr>
                                                                         <td>@p.CodigoBarras</td>
                                                                         <td>@p.Descripcion</td>
-                                                                        <td>@p.NombreProveedor</td>
-                                                                        <td class="text-end">@p.Precio?.ToString("C2")</td>
-                                                                        <td class="text-end">@p.Total?.ToString("C2")</td>
+                                                                        <td>@p.Proveedor</td>
+                                                                        <td class="text-end">@(p.Precio?.ToString("C2"))</td>
+                                                                        <td class="text-end">@(p.Total.ToString("C2"))</td>
                                                                     </tr>
                                                                 }
                                                             }
@@ -165,8 +165,8 @@
                                                                 {
                                                                     <tr>
                                                                         <td>@pg.OpcionPago</td>
-                                                                        <td class="text-end">@pg.Importe.ToString("C2")</td>
-                                                                        <td class="text-end">@pg.TipoCambio?.ToString("N4")</td>
+                                                                        <td class="text-end">@(pg.Importe.ToString("C2"))</td>
+                                                                        <td class="text-end">@(pg.TipoCambio?.ToString("N4"))</td>
                                                                     </tr>
                                                                 }
                                                             }

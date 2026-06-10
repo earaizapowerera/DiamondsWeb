@@ -30,7 +30,7 @@ public class IndexModel : PageModel
     {
         try
         {
-            PreBajasHoy = await _inventoryService.ObtenerPreBajasAsync();
+            PreBajasHoy = await _inventoryService.ObtenerPreBajasDelDiaAsync();
         }
         catch (Exception ex)
         {
@@ -49,16 +49,8 @@ public class IndexModel : PageModel
                 return RedirectToPage();
             }
 
-            var resultado = await _inventoryService.CrearPreBajaAsync(CodigoBarras.Trim(), TipoBaja);
-
-            if (resultado == "Pre-baja registrada")
-            {
-                TempData["Success"] = $"Pre-baja registrada para pieza {CodigoBarras} ({(TipoBaja == 1 ? "Venta" : "Devolución")}).";
-            }
-            else
-            {
-                TempData["Error"] = resultado;
-            }
+            await _inventoryService.RegistrarPreBajaAsync(CodigoBarras.Trim(), TipoBaja);
+            TempData["Success"] = $"Pre-baja registrada para pieza {CodigoBarras} ({(TipoBaja == 1 ? "Venta" : "Devolución")}).";
         }
         catch (Exception ex)
         {

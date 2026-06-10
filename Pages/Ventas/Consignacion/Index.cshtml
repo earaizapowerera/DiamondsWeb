@@ -1,194 +1,255 @@
 @page
 @model DiamondsWeb.Pages.Ventas.Consignacion.IndexModel
 @{
-    ViewData["Title"] = "Consignacion";
+    ViewData["Title"] = "Cuentas de Consignacion";
 }
 
-@if (TempData["Error"] != null)
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
 {
-<div class="alert alert-danger alert-dismissible fade show">
-    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-}
-@if (TempData["Success"] != null)
-{
-<div class="alert alert-success alert-dismissible fade show">
-    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<div class="alert alert-danger">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
 </div>
 }
 
-<div class="card mb-4">
-    <div class="card-header bg-primary text-white">
-        <i class="fa-solid fa-handshake me-2"></i>Consignacion
+<!-- Dashboard Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-primary-custom">
+            <div class="stat-number">@Model.Stats.TotalRemisiones</div>
+            <div class="stat-label"><i class="fa-solid fa-file-invoice me-1"></i>Remisiones</div>
+        </div>
     </div>
-    <div class="card-body">
-        <!-- Filtro -->
-        <form method="get" class="row g-3 align-items-end mb-4">
-            <div class="col-md-6">
-                <label class="form-label"><small>Filtrar por Remision</small></label>
-                <input type="text" class="form-control form-control-sm" name="IdRemision"
-                       value="@Model.IdRemision" placeholder="ID de remision..." />
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-success-custom">
+            <div class="stat-number">@Model.Stats.PiezasEnExistencia</div>
+            <div class="stat-label"><i class="fa-solid fa-gem me-1"></i>En Existencia</div>
+            <div class="stat-sublabel">@Model.Stats.MontoEnExistencia.ToString("C2")</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-warning-custom">
+            <div class="stat-number">@Model.Stats.PiezasPorDevolver</div>
+            <div class="stat-label"><i class="fa-solid fa-clock-rotate-left me-1"></i>Por Devolver</div>
+            <div class="stat-sublabel">@Model.Stats.MontoPorDevolver.ToString("C2")</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-2">
+        <div class="stat-card bg-secondary">
+            <div class="stat-number">@Model.Stats.PiezasDevueltas</div>
+            <div class="stat-label"><i class="fa-solid fa-check-circle me-1"></i>Devueltas</div>
+            <div class="stat-sublabel">@Model.Stats.MontoDevueltas.ToString("C2")</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="filter-panel">
+    <form method="get" id="filterForm">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label"><small>Remision</small></label>
+                <select class="form-select form-select-sm" name="idRemision" id="selectRemision">
+                    <option value="">-- Todas las remisiones --</option>
+                    @foreach (var rem in Model.Remisiones)
+                    {
+                        if (Model.IdRemision == rem.IdRemision)
+                        {
+                            <option value="@rem.IdRemision" selected>
+                                @rem.Remision - @rem.NombreProveedor (@rem.FechaRemision.ToString("dd/MM/yyyy")) — @rem.TotalPiezas pzas
+                            </option>
+                        }
+                        else
+                        {
+                            <option value="@rem.IdRemision">
+                                @rem.Remision - @rem.NombreProveedor (@rem.FechaRemision.ToString("dd/MM/yyyy")) — @rem.TotalPiezas pzas
+                            </option>
+                        }
+                    }
+                </select>
             </div>
             <div class="col-md-3">
+                <label class="form-label"><small>Cuentas desde</small></label>
+                <input type="date" class="form-control form-control-sm" name="fechaDesde"
+                       value="@(Model.FechaDesde?.ToString("yyyy-MM-dd"))" />
+            </div>
+            <div class="col-md-2">
                 <button type="submit" class="btn btn-primary btn-sm w-100">
                     <i class="fa-solid fa-magnifying-glass me-1"></i>Filtrar
                 </button>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <a href="/Ventas/Consignacion" class="btn btn-outline-secondary btn-sm w-100">
                     <i class="fa-solid fa-eraser me-1"></i>Limpiar
                 </a>
             </div>
-        </form>
-
-        <!-- Resumen -->
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card border-success">
-                    <div class="card-body text-center py-2">
-                        <small class="text-muted">En Existencia</small>
-                        <h4 class="mb-0 text-success">@Model.EnExistencia.Count</h4>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card border-warning">
-                    <div class="card-body text-center py-2">
-                        <small class="text-muted">Por Devolver</small>
-                        <h4 class="mb-0 text-warning">@Model.PorDevolver.Count</h4>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card border-secondary">
-                    <div class="card-body text-center py-2">
-                        <small class="text-muted">Devuelto</small>
-                        <h4 class="mb-0 text-secondary">@Model.Devuelto.Count</h4>
-                    </div>
-                </div>
-            </div>
         </div>
+    </form>
+</div>
 
-        <!-- Seccion: En Existencia -->
-        <h6 class="mt-3">
-            <i class="fa-solid fa-box-open me-2 text-success"></i>En Existencia
-            <span class="badge bg-success ms-1">@Model.EnExistencia.Count</span>
-        </h6>
-        <div class="table-responsive mb-4">
-            <table class="table table-hover table-striped mb-0">
-                <thead class="table-dark">
+<!-- Grid: En Existencia -->
+<div class="card mb-4">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-gem me-2"></i>En Existencia (@Model.EnExistencia.Count)</span>
+        <span class="badge bg-light text-dark">@Model.EnExistencia.Sum(p => p.CBTotal).ToString("C2")</span>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.EnExistencia.Any())
+        {
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0" id="tblEnExistencia">
+                <thead class="table-light">
                     <tr>
+                        <th>#</th>
                         <th>Codigo</th>
                         <th>Descripcion</th>
-                        <th class="text-end">Precio</th>
                         <th>Proveedor</th>
                         <th>Remision</th>
+                        <th>Fecha</th>
+                        <th class="text-end">Peso</th>
+                        <th class="text-end">Precio</th>
+                        <th>Kilates</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model.EnExistencia.Any())
+                    @for (int i = 0; i < Model.EnExistencia.Count; i++)
                     {
-                        @foreach (var item in Model.EnExistencia)
-                        {
-                            <tr>
-                                <td>@item.CodigoBarras</td>
-                                <td>@item.Descripcion</td>
-                                <td class="text-end">@item.Precio?.ToString("C2")</td>
-                                <td>@item.NombreProveedor</td>
-                                <td>@item.IdRemision</td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
+                        var p = Model.EnExistencia[i];
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-3">Sin piezas en existencia.</td>
+                            <td>@(i + 1)</td>
+                            <td><code>@p.CodigoBarras</code></td>
+                            <td>@p.Descripcion</td>
+                            <td>@p.NombreProveedor</td>
+                            <td>@p.Remision</td>
+                            <td>@p.FechaRemision.ToString("dd/MM/yyyy")</td>
+                            <td class="text-end">@(p.Peso > 0 ? p.Peso.ToString("N3") : "-")</td>
+                            <td class="text-end"><strong>@p.CBTotal.ToString("C2")</strong></td>
+                            <td>@(string.IsNullOrWhiteSpace(p.Kilates) ? "-" : p.Kilates)</td>
+                            <td><span class="badge bg-success">@p.NombreStatus</span></td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
+        }
+        else
+        {
+        <div class="text-center text-muted py-4">
+            <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+            <small>No hay piezas en existencia con los filtros seleccionados</small>
+        </div>
+        }
+    </div>
+</div>
 
-        <!-- Seccion: Por Devolver -->
-        <h6 class="mt-3">
-            <i class="fa-solid fa-clock me-2 text-warning"></i>Por Devolver
-            <span class="badge bg-warning text-dark ms-1">@Model.PorDevolver.Count</span>
-        </h6>
-        <div class="table-responsive mb-4">
-            <table class="table table-hover table-striped mb-0">
-                <thead class="table-dark">
+<!-- Grid: Por Devolver (Vendidas) -->
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-clock-rotate-left me-2"></i>Por Devolver — Vendidas (@Model.PorDevolver.Count)</span>
+        <span class="badge bg-dark text-white">@Model.PorDevolver.Sum(p => p.CBTotal).ToString("C2")</span>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.PorDevolver.Any())
+        {
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0" id="tblPorDevolver">
+                <thead class="table-light">
                     <tr>
+                        <th>#</th>
                         <th>Codigo</th>
                         <th>Descripcion</th>
-                        <th class="text-end">Precio</th>
                         <th>Proveedor</th>
                         <th>Remision</th>
+                        <th>Fecha</th>
+                        <th class="text-end">Peso</th>
+                        <th class="text-end">Precio</th>
+                        <th>Kilates</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model.PorDevolver.Any())
+                    @for (int i = 0; i < Model.PorDevolver.Count; i++)
                     {
-                        @foreach (var item in Model.PorDevolver)
-                        {
-                            <tr>
-                                <td>@item.CodigoBarras</td>
-                                <td>@item.Descripcion</td>
-                                <td class="text-end">@item.Precio?.ToString("C2")</td>
-                                <td>@item.NombreProveedor</td>
-                                <td>@item.IdRemision</td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
+                        var p = Model.PorDevolver[i];
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-3">Sin piezas por devolver.</td>
+                            <td>@(i + 1)</td>
+                            <td><code>@p.CodigoBarras</code></td>
+                            <td>@p.Descripcion</td>
+                            <td>@p.NombreProveedor</td>
+                            <td>@p.Remision</td>
+                            <td>@p.FechaRemision.ToString("dd/MM/yyyy")</td>
+                            <td class="text-end">@(p.Peso > 0 ? p.Peso.ToString("N3") : "-")</td>
+                            <td class="text-end"><strong>@p.CBTotal.ToString("C2")</strong></td>
+                            <td>@(string.IsNullOrWhiteSpace(p.Kilates) ? "-" : p.Kilates)</td>
+                            <td><span class="badge bg-warning text-dark">@p.NombreStatus</span></td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
+        }
+        else
+        {
+        <div class="text-center text-muted py-4">
+            <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+            <small>No hay piezas por devolver con los filtros seleccionados</small>
+        </div>
+        }
+    </div>
+</div>
 
-        <!-- Seccion: Devuelto -->
-        <h6 class="mt-3">
-            <i class="fa-solid fa-check-circle me-2 text-secondary"></i>Devuelto
-            <span class="badge bg-secondary ms-1">@Model.Devuelto.Count</span>
-        </h6>
-        <div class="table-responsive mb-4">
-            <table class="table table-hover table-striped mb-0">
-                <thead class="table-dark">
+<!-- Grid: Devueltas -->
+<div class="card mb-4">
+    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-check-circle me-2"></i>Devueltas (@Model.Devueltas.Count)</span>
+        <span class="badge bg-light text-dark">@Model.Devueltas.Sum(p => p.CBTotal).ToString("C2")</span>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.Devueltas.Any())
+        {
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0" id="tblDevueltas">
+                <thead class="table-light">
                     <tr>
+                        <th>#</th>
                         <th>Codigo</th>
                         <th>Descripcion</th>
-                        <th class="text-end">Precio</th>
                         <th>Proveedor</th>
                         <th>Remision</th>
+                        <th>Fecha</th>
+                        <th class="text-end">Peso</th>
+                        <th class="text-end">Precio</th>
+                        <th>Kilates</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model.Devuelto.Any())
+                    @for (int i = 0; i < Model.Devueltas.Count; i++)
                     {
-                        @foreach (var item in Model.Devuelto)
-                        {
-                            <tr>
-                                <td>@item.CodigoBarras</td>
-                                <td>@item.Descripcion</td>
-                                <td class="text-end">@item.Precio?.ToString("C2")</td>
-                                <td>@item.NombreProveedor</td>
-                                <td>@item.IdRemision</td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="5" class="text-center text-muted py-3">Sin piezas devueltas.</td>
+                        var p = Model.Devueltas[i];
+                        <tr class="table-light text-muted">
+                            <td>@(i + 1)</td>
+                            <td><code>@p.CodigoBarras</code></td>
+                            <td>@p.Descripcion</td>
+                            <td>@p.NombreProveedor</td>
+                            <td>@p.Remision</td>
+                            <td>@p.FechaRemision.ToString("dd/MM/yyyy")</td>
+                            <td class="text-end">@(p.Peso > 0 ? p.Peso.ToString("N3") : "-")</td>
+                            <td class="text-end">@p.CBTotal.ToString("C2")</td>
+                            <td>@(string.IsNullOrWhiteSpace(p.Kilates) ? "-" : p.Kilates)</td>
+                            <td><span class="badge bg-secondary">@p.NombreStatus</span></td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
+        }
+        else
+        {
+        <div class="text-center text-muted py-4">
+            <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+            <small>No hay piezas devueltas con los filtros seleccionados</small>
+        </div>
+        }
     </div>
 </div>
