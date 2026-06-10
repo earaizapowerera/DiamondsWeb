@@ -90,6 +90,11 @@ builder.Services.AddScoped<PuntoVentaService>(sp => new PuntoVentaService(
     diamondsConnStr,
     sp.GetRequiredService<ILogger<PuntoVentaService>>()));
 
+// Sales Service (Ventas, Devoluciones, etc.)
+builder.Services.AddScoped<SalesService>(sp => new SalesService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<SalesService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware
