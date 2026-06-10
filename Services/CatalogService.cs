@@ -360,9 +360,9 @@ public class CatalogService
     {
         using var conn = CreateConnection();
         return (await conn.QueryAsync<Proveedor>(
-            @"SELECT TOP 500 Proveedor AS Proveedor1, NombreProveedor, Telefono, Contacto, Direccion,
-                     IdDefaultCaracteristica, IdDefaultTipoCosto, IdDefaultUtilidad, IdMoneda,
-                     MonedaDefault, UtilidadExtraPrecioGramo, IdUsuario, FechaCaptura
+            @"SELECT TOP 500 Proveedor AS Proveedor1, NombreProveedor, Telefono, Atiende, Direccion,
+                     CaracteristicaDefault, CostoDefault, IdDefaultUtilidad, IdMoneda,
+                     UtilizarMoneda, UtilidadExtra, IdUsuario, FechaCaptura
               FROM Proveedores ORDER BY NombreProveedor")).ToList();
     }
 
@@ -370,12 +370,12 @@ public class CatalogService
     {
         using var conn = CreateConnection();
         await conn.ExecuteAsync(
-            @"INSERT INTO Proveedores (NombreProveedor, Telefono, Contacto, Direccion,
-                     IdDefaultCaracteristica, IdDefaultTipoCosto, IdDefaultUtilidad, IdMoneda,
-                     MonedaDefault, UtilidadExtraPrecioGramo, IdUsuario, FechaCaptura)
-              VALUES (@NombreProveedor, @Telefono, @Contacto, @Direccion,
-                     @IdDefaultCaracteristica, @IdDefaultTipoCosto, @IdDefaultUtilidad, @IdMoneda,
-                     @MonedaDefault, @UtilidadExtraPrecioGramo, @IdUsuario, GETUTCDATE())",
+            @"INSERT INTO Proveedores (NombreProveedor, Telefono, Atiende, Direccion,
+                     CaracteristicaDefault, CostoDefault, IdDefaultUtilidad, IdMoneda,
+                     UtilizarMoneda, UtilidadExtra, IdUsuario, FechaCaptura)
+              VALUES (@NombreProveedor, @Telefono, @Atiende, @Direccion,
+                     @CaracteristicaDefault, @CostoDefault, @IdDefaultUtilidad, @IdMoneda,
+                     @UtilizarMoneda, @UtilidadExtra, @IdUsuario, GETUTCDATE())",
             proveedor);
     }
 
@@ -384,10 +384,10 @@ public class CatalogService
         using var conn = CreateConnection();
         await conn.ExecuteAsync(
             @"UPDATE Proveedores SET NombreProveedor = @NombreProveedor, Telefono = @Telefono,
-                     Contacto = @Contacto, Direccion = @Direccion,
-                     IdDefaultCaracteristica = @IdDefaultCaracteristica, IdDefaultTipoCosto = @IdDefaultTipoCosto,
+                     Atiende = @Atiende, Direccion = @Direccion,
+                     CaracteristicaDefault = @CaracteristicaDefault, CostoDefault = @CostoDefault,
                      IdDefaultUtilidad = @IdDefaultUtilidad, IdMoneda = @IdMoneda,
-                     MonedaDefault = @MonedaDefault, UtilidadExtraPrecioGramo = @UtilidadExtraPrecioGramo,
+                     UtilizarMoneda = @UtilizarMoneda, UtilidadExtra = @UtilidadExtra,
                      IdUsuario = @IdUsuario
               WHERE Proveedor = @Proveedor1",
             proveedor);

@@ -126,14 +126,14 @@ public class Proveedor
     public int Proveedor1 { get; set; }
     public string? NombreProveedor { get; set; }
     public string? Telefono { get; set; }
-    public string? Contacto { get; set; }
+    public string? Atiende { get; set; }
     public string? Direccion { get; set; }
-    public int? IdDefaultCaracteristica { get; set; }
-    public int? IdDefaultTipoCosto { get; set; }
+    public string? CaracteristicaDefault { get; set; }
+    public string? CostoDefault { get; set; }
     public int? IdDefaultUtilidad { get; set; }
     public int? IdMoneda { get; set; }
-    public bool MonedaDefault { get; set; }
-    public bool UtilidadExtraPrecioGramo { get; set; }
+    public bool UtilizarMoneda { get; set; }
+    public bool UtilidadExtra { get; set; }
     public int? IdUsuario { get; set; }
     public DateTime? FechaCaptura { get; set; }
 }

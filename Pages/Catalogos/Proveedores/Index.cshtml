@@ -67,9 +67,9 @@
                                 <td>@p.Proveedor1</td>
                                 <td>@p.NombreProveedor</td>
                                 <td>@p.Telefono</td>
-                                <td>@p.Contacto</td>
+                                <td>@p.Atiende</td>
                                 <td>
-                                    @if (p.MonedaDefault)
+                                    @if (p.UtilizarMoneda)
                                     {
                                         <span class="badge bg-success">Si</span>
                                     }
@@ -116,15 +116,15 @@
                                             </div>
                                             <div class="col-md-2">
                                                 <label class="form-label"><small>Contacto</small></label>
-                                                <input type="text" class="form-control form-control-sm" name="EditContacto" value="@p.Contacto" />
+                                                <input type="text" class="form-control form-control-sm" name="EditAtiende" value="@p.Atiende" />
                                             </div>
                                             <div class="col-md-2">
                                                 <label class="form-label"><small>Caracteristica</small></label>
-                                                <input type="number" class="form-control form-control-sm" name="EditIdDefaultCaracteristica" value="@p.IdDefaultCaracteristica" />
+                                                <input type="text" class="form-control form-control-sm" name="EditCaracteristicaDefault" value="@p.CaracteristicaDefault" />
                                             </div>
                                             <div class="col-md-2">
                                                 <label class="form-label"><small>Tipo Costo</small></label>
-                                                <input type="number" class="form-control form-control-sm" name="EditIdDefaultTipoCosto" value="@p.IdDefaultTipoCosto" />
+                                                <input type="text" class="form-control form-control-sm" name="EditCostoDefault" value="@p.CostoDefault" />
                                             </div>
                                             <div class="col-md-2">
                                                 <label class="form-label"><small>Utilidad</small></label>
@@ -148,13 +148,13 @@
                                             </div>
                                             <div class="col-md-2">
                                                 <div class="form-check mt-4">
-                                                    <input type="checkbox" class="form-check-input" name="EditMonedaDefault" value="true" @(p.MonedaDefault ? "checked" : "") />
+                                                    <input type="checkbox" class="form-check-input" name="EditUtilizarMoneda" value="true" @(p.UtilizarMoneda ? "checked" : "") />
                                                     <label class="form-check-label"><small>Moneda Default</small></label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
                                                 <div class="form-check mt-4">
-                                                    <input type="checkbox" class="form-check-input" name="EditUtilidadExtraPrecioGramo" value="true" @(p.UtilidadExtraPrecioGramo ? "checked" : "") />
+                                                    <input type="checkbox" class="form-check-input" name="EditUtilidadExtra" value="true" @(p.UtilidadExtra ? "checked" : "") />
                                                     <label class="form-check-label"><small>Util. Extra P/G</small></label>
                                                 </div>
                                             </div>
@@ -207,15 +207,15 @@
                 </div>
                 <div class="col-md-2">
                     <label class="form-label"><small>Contacto</small></label>
-                    <input type="text" class="form-control form-control-sm" name="NuevoContacto" placeholder="Contacto" />
+                    <input type="text" class="form-control form-control-sm" name="NuevoAtiende" placeholder="Contacto" />
                 </div>
                 <div class="col-md-2">
                     <label class="form-label"><small>Caracteristica</small></label>
-                    <input type="number" class="form-control form-control-sm" name="NuevoIdDefaultCaracteristica" />
+                    <input type="text" class="form-control form-control-sm" name="NuevoCaracteristicaDefault" />
                 </div>
                 <div class="col-md-2">
                     <label class="form-label"><small>Tipo Costo</small></label>
-                    <input type="number" class="form-control form-control-sm" name="NuevoIdDefaultTipoCosto" />
+                    <input type="text" class="form-control form-control-sm" name="NuevoCostoDefault" />
                 </div>
                 <div class="col-md-2">
                     <label class="form-label"><small>Utilidad</small></label>
@@ -239,13 +239,13 @@
                 </div>
                 <div class="col-md-2">
                     <div class="form-check mt-4">
-                        <input type="checkbox" class="form-check-input" name="NuevoMonedaDefault" value="true" />
+                        <input type="checkbox" class="form-check-input" name="NuevoUtilizarMoneda" value="true" />
                         <label class="form-check-label"><small>Moneda Default</small></label>
                     </div>
                 </div>
                 <div class="col-md-2">
                     <div class="form-check mt-4">
-                        <input type="checkbox" class="form-check-input" name="NuevoUtilidadExtraPrecioGramo" value="true" />
+                        <input type="checkbox" class="form-check-input" name="NuevoUtilidadExtra" value="true" />
                         <label class="form-check-label"><small>Util. Extra P/G</small></label>
                     </div>
                 </div>

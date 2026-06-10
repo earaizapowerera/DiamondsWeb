@@ -29,26 +29,26 @@ public class IndexModel : PageModel
     [BindProperty] public string NuevoNombre { get; set; } = "";
     [BindProperty] public string? NuevoTelefono { get; set; }
     [BindProperty] public string? NuevaDireccion { get; set; }
-    [BindProperty] public string? NuevoContacto { get; set; }
-    [BindProperty] public int? NuevoIdDefaultCaracteristica { get; set; }
-    [BindProperty] public int? NuevoIdDefaultTipoCosto { get; set; }
+    [BindProperty] public string? NuevoAtiende { get; set; }
+    [BindProperty] public string? NuevoCaracteristicaDefault { get; set; }
+    [BindProperty] public string? NuevoCostoDefault { get; set; }
     [BindProperty] public int? NuevoIdDefaultUtilidad { get; set; }
     [BindProperty] public int? NuevoIdMoneda { get; set; }
-    [BindProperty] public bool NuevoMonedaDefault { get; set; }
-    [BindProperty] public bool NuevoUtilidadExtraPrecioGramo { get; set; }
+    [BindProperty] public bool NuevoUtilizarMoneda { get; set; }
+    [BindProperty] public bool NuevoUtilidadExtra { get; set; }
 
     // ── Edit fields ──
     [BindProperty] public int? EditId { get; set; }
     [BindProperty] public string? EditNombre { get; set; }
     [BindProperty] public string? EditTelefono { get; set; }
     [BindProperty] public string? EditDireccion { get; set; }
-    [BindProperty] public string? EditContacto { get; set; }
-    [BindProperty] public int? EditIdDefaultCaracteristica { get; set; }
-    [BindProperty] public int? EditIdDefaultTipoCosto { get; set; }
+    [BindProperty] public string? EditAtiende { get; set; }
+    [BindProperty] public string? EditCaracteristicaDefault { get; set; }
+    [BindProperty] public string? EditCostoDefault { get; set; }
     [BindProperty] public int? EditIdDefaultUtilidad { get; set; }
     [BindProperty] public int? EditIdMoneda { get; set; }
-    [BindProperty] public bool EditMonedaDefault { get; set; }
-    [BindProperty] public bool EditUtilidadExtraPrecioGramo { get; set; }
+    [BindProperty] public bool EditUtilizarMoneda { get; set; }
+    [BindProperty] public bool EditUtilidadExtra { get; set; }
 
     public async Task OnGetAsync()
     {
@@ -86,13 +86,13 @@ public class IndexModel : PageModel
                 NombreProveedor = NuevoNombre.Trim(),
                 Telefono = NuevoTelefono?.Trim(),
                 Direccion = NuevaDireccion?.Trim(),
-                Contacto = NuevoContacto?.Trim(),
-                IdDefaultCaracteristica = NuevoIdDefaultCaracteristica,
-                IdDefaultTipoCosto = NuevoIdDefaultTipoCosto,
+                Atiende = NuevoAtiende?.Trim(),
+                CaracteristicaDefault = NuevoCaracteristicaDefault?.Trim(),
+                CostoDefault = NuevoCostoDefault?.Trim(),
                 IdDefaultUtilidad = NuevoIdDefaultUtilidad,
                 IdMoneda = NuevoIdMoneda,
-                MonedaDefault = NuevoMonedaDefault,
-                UtilidadExtraPrecioGramo = NuevoUtilidadExtraPrecioGramo,
+                UtilizarMoneda = NuevoUtilizarMoneda,
+                UtilidadExtra = NuevoUtilidadExtra,
                 IdUsuario = idUsuario
             };
             await _catalogService.CrearProveedorAsync(proveedor);
@@ -124,13 +124,13 @@ public class IndexModel : PageModel
                 NombreProveedor = EditNombre.Trim(),
                 Telefono = EditTelefono?.Trim(),
                 Direccion = EditDireccion?.Trim(),
-                Contacto = EditContacto?.Trim(),
-                IdDefaultCaracteristica = EditIdDefaultCaracteristica,
-                IdDefaultTipoCosto = EditIdDefaultTipoCosto,
+                Atiende = EditAtiende?.Trim(),
+                CaracteristicaDefault = EditCaracteristicaDefault?.Trim(),
+                CostoDefault = EditCostoDefault?.Trim(),
                 IdDefaultUtilidad = EditIdDefaultUtilidad,
                 IdMoneda = EditIdMoneda,
-                MonedaDefault = EditMonedaDefault,
-                UtilidadExtraPrecioGramo = EditUtilidadExtraPrecioGramo,
+                UtilizarMoneda = EditUtilizarMoneda,
+                UtilidadExtra = EditUtilidadExtra,
                 IdUsuario = idUsuario
             };
             await _catalogService.ActualizarProveedorAsync(proveedor);
