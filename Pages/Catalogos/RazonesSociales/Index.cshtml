@@ -68,7 +68,7 @@
                             <tr>
                                 <td>@rs.IdRazonSocialProveedor</td>
                                 <td>
-                                    <span id="display-@rs.IdRazonSocialProveedor">@rs.RazonSocialProveedor1</span>
+                                    <span id="display-@rs.IdRazonSocialProveedor">@rs.RazonSocialProveedorNombre</span>
                                 </td>
                                 <td>@rs.RFC</td>
                                 <td>@rs.Calle</td>
@@ -89,7 +89,7 @@
                                         <form method="post" asp-page-handler="Delete" class="d-inline">
                                             <input type="hidden" name="id" value="@rs.IdRazonSocialProveedor" />
                                             <button type="submit" class="btn btn-outline-danger" title="Eliminar"
-                                                    onclick="return confirm('Eliminar razon social @rs.RazonSocialProveedor1?')">
+                                                    onclick="return confirm('Eliminar razon social @rs.RazonSocialProveedorNombre?')">
                                                 <i class="fa-solid fa-trash"></i>
                                             </button>
                                         </form>
@@ -104,7 +104,7 @@
                                         <div class="row g-2 align-items-end">
                                             <div class="col-md-3">
                                                 <label class="form-label"><small>Razon Social</small></label>
-                                                <input type="text" class="form-control form-control-sm" name="EditRazonSocial" value="@rs.RazonSocialProveedor1" required />
+                                                <input type="text" class="form-control form-control-sm" name="EditRazonSocial" value="@rs.RazonSocialProveedorNombre" required />
                                             </div>
                                             <div class="col-md-2">
                                                 <label class="form-label"><small>RFC</small></label>
@@ -162,7 +162,7 @@
         <!-- Asignaciones Panel -->
         @if (Model.VerAsignaciones.HasValue)
         {
-            var rsName = Model.RazonesSociales.FirstOrDefault(r => r.IdRazonSocialProveedor == Model.VerAsignaciones)?.RazonSocialProveedor1 ?? "";
+            var rsName = Model.RazonesSociales.FirstOrDefault(r => r.IdRazonSocialProveedor == Model.VerAsignaciones)?.RazonSocialProveedorNombre ?? "";
             <hr />
             <div class="card border-info mb-3">
                 <div class="card-header bg-info text-white">
@@ -200,7 +200,7 @@
                                 <option value="">-- Seleccionar --</option>
                                 @foreach (var p in Model.Proveedores)
                                 {
-                                    <option value="@p.Proveedor1">@p.NombreProveedor</option>
+                                    <option value="@p.Proveedor">@p.NombreProveedor</option>
                                 }
                             </select>
                         </div>

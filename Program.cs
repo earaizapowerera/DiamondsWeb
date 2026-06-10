@@ -60,6 +60,36 @@ builder.Services.AddScoped<EtiquetaService>(sp => new EtiquetaService(
     diamondsConnStr,
     sp.GetRequiredService<ILogger<EtiquetaService>>()));
 
+// Proveedor Service (Razones Sociales, asignaciones N:N)
+builder.Services.AddScoped<ProveedorService>(sp => new ProveedorService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<ProveedorService>>()));
+
+// Remision Service (Actualizacion de Remisiones)
+builder.Services.AddScoped<RemisionService>(sp => new RemisionService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<RemisionService>>()));
+
+// Consignacion Service (Cuentas de Consignacion)
+builder.Services.AddScoped<ConsignacionService>(sp => new ConsignacionService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<ConsignacionService>>()));
+
+// Transfer Service (Transferencias de Mercancia entre tiendas)
+builder.Services.AddScoped<TransferService>(sp => new TransferService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<TransferService>>()));
+
+// Inventario Fisico Service
+builder.Services.AddScoped<InventarioFisicoService>(sp => new InventarioFisicoService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<InventarioFisicoService>>()));
+
+// Punto de Venta Service
+builder.Services.AddScoped<PuntoVentaService>(sp => new PuntoVentaService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<PuntoVentaService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware

@@ -183,6 +183,15 @@ public class ProveedorService
         _logger.LogInformation("Asignación eliminada: Id={Id}", id);
     }
 
+    public async Task EliminarAsignacionAsync(int idRazonSocial, int proveedor)
+    {
+        using var conn = CreateConnection();
+        await conn.ExecuteAsync(
+            "DELETE FROM RAZONES_SOCIALES_PROVEEDORES_PROVEEDORES WHERE IdRazonSocialProveedor = @IdRS AND Proveedor = @Prov",
+            new { IdRS = idRazonSocial, Prov = proveedor });
+        _logger.LogInformation("Asignación eliminada: RS={RS}, Prov={Prov}", idRazonSocial, proveedor);
+    }
+
     // ─── Catálogos para dropdowns ─────────────────────────────────────
 
     public async Task<List<ProveedorSimple>> ObtenerProveedoresAsync()
@@ -205,5 +214,123 @@ public class ProveedorService
 
         using var conn = CreateConnection();
         return (await conn.QueryAsync<RazonSocialProveedor>(sql)).ToList();
+    }
+
+    // ─── Proveedores CRUD (Pages/Proveedores) ────────────────────────
+
+    public async Task<List<ProveedorResumen>> ListarAsync(string? buscar = null)
+    {
+        var sql = @"
+            SELECT TOP 200 p.Proveedor, p.NombreProveedor, p.Atiende, p.Telefono, p.Telefono2,
+                   ISNULL(p.CaracteristicaDefault, 'Oro') AS CaracteristicaDefault,
+                   ISNULL(p.CostoDefault, 'Pieza') AS CostoDefault,
+                   p.UtilizarMoneda, m.Moneda AS Moneda,
+                   CAST(du.DefaultUtilidad AS VARCHAR) AS DefaultUtilidad
+            FROM PROVEEDORES p
+            LEFT JOIN Monedas m ON m.IdMoneda = p.IdMoneda
+            LEFT JOIN DefaultsUtilidad du ON du.IdDefaultUtilidad = p.IdDefaultUtilidad
+            WHERE (@Buscar IS NULL
+                OR p.NombreProveedor LIKE '%' + @Buscar + '%'
+                OR p.Atiende LIKE '%' + @Buscar + '%'
+                OR p.Telefono LIKE '%' + @Buscar + '%'
+                OR p.Direccion LIKE '%' + @Buscar + '%')
+            ORDER BY p.NombreProveedor";
+
+        using var conn = CreateConnection();
+        return (await conn.QueryAsync<ProveedorResumen>(sql, new
+        {
+            Buscar = string.IsNullOrWhiteSpace(buscar) ? null : buscar
+        })).ToList();
+    }
+
+    public async Task<int> ContarProveedoresAsync()
+    {
+        using var conn = CreateConnection();
+        return await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM PROVEEDORES");
+    }
+
+    public async Task<ProveedorDetalle?> ObtenerPorIdAsync(int id)
+    {
+        var sql = @"
+            SELECT TOP 1 p.Proveedor, p.NombreProveedor, p.Direccion, p.Telefono, p.Telefono2, p.Atiende,
+                   ISNULL(p.CaracteristicaDefault, 'Oro') AS CaracteristicaDefault,
+                   ISNULL(p.CostoDefault, 'Pieza') AS CostoDefault,
+                   p.IdDefaultUtilidad, p.IdDefaultUtilidadExtra, p.IdMoneda,
+                   p.UtilizarMoneda, p.UtilidadExtra, ISNULL(p.IdDivisor, 1) AS IdDivisor,
+                   ISNULL(p.IdTabla, 2) AS IdTabla
+            FROM PROVEEDORES p
+            WHERE p.Proveedor = @Id";
+
+        using var conn = CreateConnection();
+        return await conn.QueryFirstOrDefaultAsync<ProveedorDetalle>(sql, new { Id = id });
+    }
+
+    public async Task<int> CrearAsync(ProveedorDetalle prov)
+    {
+        var sql = @"
+            INSERT INTO PROVEEDORES (NombreProveedor, Direccion, Telefono, Telefono2, Atiende,
+                CaracteristicaDefault, CostoDefault, IdDefaultUtilidad, IdDefaultUtilidadExtra,
+                IdMoneda, UtilizarMoneda, UtilidadExtra, IdDivisor, IdTabla, FechaCaptura)
+            VALUES (@NombreProveedor, @Direccion, @Telefono, @Telefono2, @Atiende,
+                @CaracteristicaDefault, @CostoDefault, @IdDefaultUtilidad, @IdDefaultUtilidadExtra,
+                @IdMoneda, @UtilizarMoneda, @UtilidadExtra, @IdDivisor, @IdTabla, GETUTCDATE());
+            SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+        using var conn = CreateConnection();
+        return await conn.QuerySingleAsync<int>(sql, prov);
+    }
+
+    public async Task ActualizarAsync(ProveedorDetalle prov)
+    {
+        var sql = @"
+            UPDATE PROVEEDORES SET
+                NombreProveedor = @NombreProveedor, Direccion = @Direccion,
+                Telefono = @Telefono, Telefono2 = @Telefono2, Atiende = @Atiende,
+                CaracteristicaDefault = @CaracteristicaDefault, CostoDefault = @CostoDefault,
+                IdDefaultUtilidad = @IdDefaultUtilidad, IdDefaultUtilidadExtra = @IdDefaultUtilidadExtra,
+                IdMoneda = @IdMoneda, UtilizarMoneda = @UtilizarMoneda,
+                UtilidadExtra = @UtilidadExtra, IdDivisor = @IdDivisor, IdTabla = @IdTabla
+            WHERE Proveedor = @Proveedor";
+
+        using var conn = CreateConnection();
+        await conn.ExecuteAsync(sql, prov);
+    }
+
+    public async Task<bool> EliminarAsync(int id)
+    {
+        using var conn = CreateConnection();
+        var rows = await conn.ExecuteAsync("DELETE FROM PROVEEDORES WHERE Proveedor = @Id", new { Id = id });
+        return rows > 0;
+    }
+
+    public async Task<List<DefaultUtilidadItem>> ObtenerDefaultsUtilidadAsync()
+    {
+        using var conn = CreateConnection();
+        return (await conn.QueryAsync<DefaultUtilidadItem>(
+            @"SELECT IdDefaultUtilidad, DefaultUtilidad, DefaultUtilidadGemas, DefaultUtilidadReloj
+              FROM DefaultsUtilidad WHERE IdDefaultUtilidad > 0
+              ORDER BY IdDefaultUtilidad")).ToList();
+    }
+
+    public async Task<List<CatalogoItem>> ObtenerMonedasAsync()
+    {
+        using var conn = CreateConnection();
+        return (await conn.QueryAsync<CatalogoItem>(
+            "SELECT IdMoneda AS Id, Moneda AS Texto FROM Monedas ORDER BY Moneda")).ToList();
+    }
+
+    public async Task<List<DivisorItem>> ObtenerDivisoresAsync()
+    {
+        using var conn = CreateConnection();
+        return (await conn.QueryAsync<DivisorItem>(
+            @"SELECT IdDivisor, Divisor, Descripcion, IdUsuario, FechaCaptura, FechaUltEdicion
+              FROM Divisores ORDER BY Descripcion")).ToList();
+    }
+
+    public async Task<List<CatalogoItem>> ObtenerTablasJerarquiasAsync()
+    {
+        using var conn = CreateConnection();
+        return (await conn.QueryAsync<CatalogoItem>(
+            "SELECT IdTablaJerarquia AS Id, Descripcion AS Texto FROM TablasJerarquias ORDER BY Descripcion")).ToList();
     }
 }

@@ -9,17 +9,17 @@ namespace DiamondsWeb.Pages.Catalogos.RazonesSociales;
 [Authorize]
 public class IndexModel : PageModel
 {
-    private readonly CatalogService _catalogService;
+    private readonly ProveedorService _proveedorService;
     private readonly ILogger<IndexModel> _logger;
 
-    public IndexModel(CatalogService catalogService, ILogger<IndexModel> logger)
+    public IndexModel(ProveedorService proveedorService, ILogger<IndexModel> logger)
     {
-        _catalogService = catalogService;
+        _proveedorService = proveedorService;
         _logger = logger;
     }
 
     public List<RazonSocialProveedor> RazonesSociales { get; set; } = new();
-    public List<Proveedor> Proveedores { get; set; } = new();
+    public List<ProveedorSimple> Proveedores { get; set; } = new();
     public List<RazonSocialProveedorAsignacion> Asignaciones { get; set; } = new();
 
     [BindProperty(SupportsGet = true)]
@@ -55,17 +55,11 @@ public class IndexModel : PageModel
     {
         try
         {
-            RazonesSociales = await _catalogService.ObtenerRazonesSocialesAsync();
-            Proveedores = await _catalogService.ObtenerProveedoresAsync();
-
-            if (!string.IsNullOrWhiteSpace(Buscar))
-                RazonesSociales = RazonesSociales
-                    .Where(r => r.RazonSocialProveedor1.Contains(Buscar, StringComparison.OrdinalIgnoreCase)
-                             || (r.RFC ?? "").Contains(Buscar, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
+            RazonesSociales = await _proveedorService.ObtenerRazonesSocialesAsync(Buscar);
+            Proveedores = await _proveedorService.ObtenerProveedoresAsync();
 
             if (VerAsignaciones.HasValue)
-                Asignaciones = await _catalogService.ObtenerAsignacionesRazonSocialAsync(VerAsignaciones.Value);
+                Asignaciones = await _proveedorService.ObtenerAsignacionesAsync(VerAsignaciones.Value);
         }
         catch (Exception ex)
         {
@@ -87,7 +81,7 @@ public class IndexModel : PageModel
             var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
             var rs = new RazonSocialProveedor
             {
-                RazonSocialProveedor1 = NuevoRazonSocial.Trim(),
+                RazonSocialProveedorNombre = NuevoRazonSocial.Trim(),
                 RFC = NuevoRFC?.Trim(),
                 Calle = NuevoCalle?.Trim(),
                 Colonia = NuevoColonia?.Trim(),
@@ -96,7 +90,7 @@ public class IndexModel : PageModel
                 Estado = NuevoEstado?.Trim(),
                 IdUsuario = idUsuario
             };
-            await _catalogService.CrearRazonSocialAsync(rs);
+            await _proveedorService.CrearRazonSocialAsync(rs);
             TempData["Success"] = "Razon social creada exitosamente.";
         }
         catch (Exception ex)
@@ -122,7 +116,7 @@ public class IndexModel : PageModel
             var rs = new RazonSocialProveedor
             {
                 IdRazonSocialProveedor = EditId.Value,
-                RazonSocialProveedor1 = EditRazonSocial.Trim(),
+                RazonSocialProveedorNombre = EditRazonSocial.Trim(),
                 RFC = EditRFC?.Trim(),
                 Calle = EditCalle?.Trim(),
                 Colonia = EditColonia?.Trim(),
@@ -131,7 +125,7 @@ public class IndexModel : PageModel
                 Estado = EditEstado?.Trim(),
                 IdUsuario = idUsuario
             };
-            await _catalogService.ActualizarRazonSocialAsync(rs);
+            await _proveedorService.ActualizarRazonSocialAsync(rs);
             TempData["Success"] = "Razon social actualizada exitosamente.";
         }
         catch (Exception ex)
@@ -147,7 +141,7 @@ public class IndexModel : PageModel
     {
         try
         {
-            await _catalogService.EliminarRazonSocialAsync(id);
+            await _proveedorService.EliminarRazonSocialAsync(id);
             TempData["Success"] = "Razon social eliminada exitosamente.";
         }
         catch (Exception ex)
@@ -163,7 +157,8 @@ public class IndexModel : PageModel
     {
         try
         {
-            await _catalogService.AsignarRazonSocialProveedorAsync(AsignarIdRS, AsignarProveedor);
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            await _proveedorService.CrearAsignacionAsync(AsignarIdRS, AsignarProveedor, idUsuario);
             TempData["Success"] = "Proveedor asignado exitosamente.";
         }
         catch (Exception ex)
@@ -179,7 +174,7 @@ public class IndexModel : PageModel
     {
         try
         {
-            await _catalogService.DesasignarRazonSocialProveedorAsync(idRS, proveedor);
+            await _proveedorService.EliminarAsignacionAsync(idRS, proveedor);
             TempData["Success"] = "Proveedor desasignado exitosamente.";
         }
         catch (Exception ex)

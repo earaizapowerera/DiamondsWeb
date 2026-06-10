@@ -15,41 +15,41 @@ public class Pieza
     public int IdGrupo { get; set; }
 
     // Costos Por Pieza
-    public decimal CBPieza { get; set; }
-    public decimal DescPieza { get; set; }
-    public decimal CNPieza { get; set; }
+    public decimal? CBPieza { get; set; }
+    public decimal? DescPieza { get; set; }
+    public decimal? CNPieza { get; set; }
 
     // Costos Por Peso
-    public decimal Peso { get; set; }
-    public decimal PrecioGramo { get; set; }
-    public decimal CBPeso { get; set; }
-    public decimal DescPeso { get; set; }
-    public decimal CNPeso { get; set; }
+    public decimal? Peso { get; set; }
+    public decimal? PrecioGramo { get; set; }
+    public decimal? CBPeso { get; set; }
+    public decimal? DescPeso { get; set; }
+    public decimal? CNPeso { get; set; }
 
     // Costos Mano de Obra (Extras)
-    public decimal CBManoObra { get; set; }
-    public decimal DescManoObra { get; set; }
-    public decimal CNManoObra { get; set; }
+    public decimal? CBManoObra { get; set; }
+    public decimal? DescManoObra { get; set; }
+    public decimal? CNManoObra { get; set; }
     public string? DescripcionManoObra { get; set; }
 
     // Totales
-    public decimal CBTotal { get; set; }
-    public decimal CNTotal { get; set; }
+    public decimal? CBTotal { get; set; }
+    public decimal? CNTotal { get; set; }
 
     // Costos Factura
-    public decimal CBFactura { get; set; }
-    public decimal DescFactura { get; set; }
-    public decimal CNFactura { get; set; }
+    public decimal? CBFactura { get; set; }
+    public decimal? DescFactura { get; set; }
+    public decimal? CNFactura { get; set; }
 
     // Factores de precio
     public int IdMoneda { get; set; } = 1;
-    public decimal TCCotizacion { get; set; } = 1;
-    public decimal TCCosto { get; set; }
-    public decimal Utilidad { get; set; } = 1;
-    public decimal UtilidadExtra { get; set; } = 1;
-    public decimal Impuesto { get; set; } = 1;
-    public decimal Divisor { get; set; } = 1;
-    public int Precio { get; set; }
+    public decimal? TCCotizacion { get; set; } = 1;
+    public decimal? TCCosto { get; set; }
+    public decimal? Utilidad { get; set; } = 1;
+    public decimal? UtilidadExtra { get; set; } = 1;
+    public decimal? Impuesto { get; set; } = 1;
+    public decimal? Divisor { get; set; } = 1;
+    public int? Precio { get; set; }
 
     // Caracteristicas Oro
     public string? Kilates { get; set; }
@@ -68,7 +68,7 @@ public class Pieza
     public string? Obs2 { get; set; }
 
     // Metadata
-    public DateTime FechaCaptura { get; set; }
+    public DateTime? FechaCaptura { get; set; }
     public int IdUsuario { get; set; }
     public DateTime? FechaUltEdicion { get; set; }
     public int? IdDivisor { get; set; }
@@ -91,42 +91,17 @@ public class Pieza
     public string? NombreGrupo { get; set; }
     public string? NombreMoneda { get; set; }
     public string? Observaciones { get; set; }
-}
 
-/// <summary>
-/// Remision (nota de entrada de proveedor)
-/// </summary>
-public class Remision
-{
-    public int IdRemision { get; set; }
-    public int Proveedor { get; set; }
-    public string NombreProveedor { get; set; } = "";
-    public string NumeroRemision { get; set; } = "";
-    public DateTime? FechaRemision { get; set; }
-    public bool Consignacion { get; set; }
-    public int IdUsuario { get; set; }
-    public DateTime FechaCaptura { get; set; }
-    public int? IdTienda { get; set; }
-    public int? IdLocalizacion { get; set; }
-    public int CantidadPiezas { get; set; }
-    public decimal TotalBruto { get; set; }
-    public decimal TotalNeto { get; set; }
-}
-
-/// <summary>
-/// Factura de proveedor
-/// </summary>
-public class Factura
-{
-    public int IdFactura { get; set; }
-    public string FolioFactura { get; set; } = "";
+    // Propiedades de presentacion/join adicionales
     public int? Proveedor { get; set; }
-    public string? NombreProveedor { get; set; }
-    public int IdRazonSocialProveedor { get; set; }
-    public string? RazonSocial { get; set; }
-    public DateTime FechaFactura { get; set; }
-    public string? Pedimento { get; set; }
-    public int IdUsuario { get; set; }
+    public string? Grupo { get; set; }
+    public string? StatusNombre => IdStatus switch
+    {
+        1 => "Activa",
+        2 => "Vendida",
+        3 => "Baja",
+        _ => null
+    };
 }
 
 /// <summary>
@@ -145,17 +120,6 @@ public class ProveedorInfo
     public int IdDivisor { get; set; }
     public int IdTabla { get; set; }
     public bool UtilizarMoneda { get; set; }
-}
-
-/// <summary>
-/// Tipo de cambio por moneda
-/// </summary>
-public class TipoCambio
-{
-    public int IdTipoCambio { get; set; }
-    public int IdMoneda { get; set; }
-    public decimal TipoCambioCotizacion { get; set; }
-    public decimal TipoCambioVenta { get; set; }
 }
 
 /// <summary>
@@ -178,16 +142,6 @@ public class GrupoPieza
 }
 
 /// <summary>
-/// Moneda
-/// </summary>
-public class Moneda
-{
-    public int IdMoneda { get; set; }
-    public string NombreMoneda { get; set; } = "";
-    public bool Extranjera { get; set; }
-}
-
-/// <summary>
 /// Etiqueta/plantilla de impresion
 /// </summary>
 public class EtiquetaPlantilla
@@ -199,7 +153,7 @@ public class EtiquetaPlantilla
 /// <summary>
 /// Razon social del proveedor
 /// </summary>
-public class RazonSocialProveedor
+public class RazonSocialProveedorCombo
 {
     public int IdRazonSocialProveedor { get; set; }
     public string RazonSocial { get; set; } = "";
@@ -233,19 +187,6 @@ public class PiezaResumen
     public string? Linea { get; set; }
     public string? NombreMoneda { get; set; }
     public DateTime FechaCaptura { get; set; }
-}
-
-/// <summary>
-/// Resumen totales de una remision
-/// </summary>
-public class RemisionTotales
-{
-    public int Piezas { get; set; }
-    public decimal Peso { get; set; }
-    public decimal BrutoTotal { get; set; }
-    public decimal NetoTotal { get; set; }
-    public decimal BrutoNota { get; set; }
-    public decimal NetoNota { get; set; }
 }
 
 /// <summary>
