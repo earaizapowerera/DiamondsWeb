@@ -90,6 +90,11 @@ builder.Services.AddScoped<PuntoVentaService>(sp => new PuntoVentaService(
     diamondsConnStr,
     sp.GetRequiredService<ILogger<PuntoVentaService>>()));
 
+// Lotes Repetidas Service (Alta masiva de piezas estándar)
+builder.Services.AddScoped<LotesRepetidasService>(sp => new LotesRepetidasService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<LotesRepetidasService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware
