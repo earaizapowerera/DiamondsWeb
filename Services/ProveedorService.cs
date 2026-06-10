@@ -333,6 +333,6 @@ public class ProveedorService
     {
         using var conn = CreateConnection();
         return (await conn.QueryAsync<CatalogoItem>(
-            "SELECT IdTablaJerarquia AS Id, Descripcion AS Texto FROM TablasJerarquias ORDER BY Descripcion")).ToList();
+            "SELECT IdTabla AS Id, Descripcion AS Texto FROM TablasJerarquias ORDER BY Descripcion")).ToList();
     }
 }

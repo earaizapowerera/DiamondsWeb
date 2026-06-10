@@ -42,17 +42,17 @@
                             {
                                 @foreach (var t in Model.Tablas)
                                 {
-                                    var isSelected = Model.TablaSeleccionada == t.IdTablaJerarquia;
+                                    var isSelected = Model.TablaSeleccionada == t.IdTabla;
                                     <tr class="@(isSelected ? "table-active" : "")">
-                                        <td>@t.IdTablaJerarquia</td>
+                                        <td>@t.IdTabla</td>
                                         <td>@t.Descripcion</td>
                                         <td class="text-center">
                                             <div class="btn-group btn-group-sm">
-                                                <a href="?TablaSeleccionada=@t.IdTablaJerarquia" class="btn btn-outline-primary" title="Ver columnas">
+                                                <a href="?TablaSeleccionada=@t.IdTabla" class="btn btn-outline-primary" title="Ver columnas">
                                                     <i class="fa-solid fa-columns"></i>
                                                 </a>
                                                 <form method="post" asp-page-handler="DeleteTabla" class="d-inline">
-                                                    <input type="hidden" name="id" value="@t.IdTablaJerarquia" />
+                                                    <input type="hidden" name="id" value="@t.IdTabla" />
                                                     <button type="submit" class="btn btn-outline-danger" title="Eliminar"
                                                             onclick="return confirm('Eliminar tabla y todas sus columnas?')">
                                                         <i class="fa-solid fa-trash"></i>
@@ -95,7 +95,7 @@
             <div class="col-md-7">
                 @if (Model.TablaSeleccionada.HasValue)
                 {
-                    var tablaName = Model.Tablas.FirstOrDefault(t => t.IdTablaJerarquia == Model.TablaSeleccionada)?.Descripcion ?? "";
+                    var tablaName = Model.Tablas.FirstOrDefault(t => t.IdTabla == Model.TablaSeleccionada)?.Descripcion ?? "";
                     <h6><i class="fa-solid fa-columns me-1"></i>Columnas de: @tablaName</h6>
                     <div class="table-responsive">
                         <table class="table table-hover table-striped mb-0">

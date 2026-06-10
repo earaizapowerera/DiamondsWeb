@@ -196,14 +196,14 @@ public class CatalogService
     {
         using var conn = CreateConnection();
         return (await conn.QueryAsync<TablaJerarquia>(
-            "SELECT IdTablaJerarquia, Descripcion, IdUsuario FROM TablasJerarquias ORDER BY Descripcion")).ToList();
+            "SELECT IdTabla, Descripcion, IdUsuario FROM TablasJerarquias ORDER BY Descripcion")).ToList();
     }
 
     public async Task<List<Jerarquia>> ObtenerJerarquiasAsync(int idTabla)
     {
         using var conn = CreateConnection();
         return (await conn.QueryAsync<Jerarquia>(
-            "SELECT IdJerarquia, IdTablaJerarquia, Columna, Orden FROM Jerarquias WHERE IdTablaJerarquia = @Id ORDER BY IdJerarquia",
+            "SELECT IdJerarquia, IdTabla, Columna, Orden FROM Jerarquias WHERE IdTabla = @Id ORDER BY IdJerarquia",
             new { Id = idTabla })).ToList();
     }
 
@@ -211,7 +211,7 @@ public class CatalogService
     {
         using var conn = CreateConnection();
         return await conn.ExecuteScalarAsync<int>(
-            "INSERT INTO TablasJerarquias (Descripcion, IdUsuario) OUTPUT INSERTED.IdTablaJerarquia VALUES (@Desc, @IdUsuario)",
+            "INSERT INTO TablasJerarquias (Descripcion, IdUsuario) OUTPUT INSERTED.IdTabla VALUES (@Desc, @IdUsuario)",
             new { Desc = descripcion, IdUsuario = idUsuario });
     }
 
@@ -219,22 +219,22 @@ public class CatalogService
     {
         using var conn = CreateConnection();
         await conn.ExecuteAsync(
-            "UPDATE TablasJerarquias SET Descripcion = @Desc, IdUsuario = @IdUsuario WHERE IdTablaJerarquia = @Id",
+            "UPDATE TablasJerarquias SET Descripcion = @Desc, IdUsuario = @IdUsuario WHERE IdTabla = @Id",
             new { Id = id, Desc = descripcion, IdUsuario = idUsuario });
     }
 
     public async Task EliminarTablaJerarquiaAsync(int id)
     {
         using var conn = CreateConnection();
-        await conn.ExecuteAsync("DELETE FROM Jerarquias WHERE IdTablaJerarquia = @Id", new { Id = id });
-        await conn.ExecuteAsync("DELETE FROM TablasJerarquias WHERE IdTablaJerarquia = @Id", new { Id = id });
+        await conn.ExecuteAsync("DELETE FROM Jerarquias WHERE IdTabla = @Id", new { Id = id });
+        await conn.ExecuteAsync("DELETE FROM TablasJerarquias WHERE IdTabla = @Id", new { Id = id });
     }
 
     public async Task<int> CrearJerarquiaAsync(int idTabla, string columna, int orden)
     {
         using var conn = CreateConnection();
         return await conn.ExecuteScalarAsync<int>(
-            "INSERT INTO Jerarquias (IdTablaJerarquia, Columna, Orden) OUTPUT INSERTED.IdJerarquia VALUES (@IdTabla, @Columna, @Orden)",
+            "INSERT INTO Jerarquias (IdTabla, Columna, Orden) OUTPUT INSERTED.IdJerarquia VALUES (@IdTabla, @Columna, @Orden)",
             new { IdTabla = idTabla, Columna = columna, Orden = orden });
     }
 

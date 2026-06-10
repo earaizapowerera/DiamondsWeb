@@ -51,7 +51,7 @@ public class IndexModel : PageModel
         await CargarTablas();
         if (SelId.HasValue)
         {
-            TablaSeleccionada = Tablas.FirstOrDefault(t => t.IdTablaJerarquia == SelId.Value);
+            TablaSeleccionada = Tablas.FirstOrDefault(t => t.IdTabla == SelId.Value);
             if (TablaSeleccionada != null)
                 Jerarquias = await _catalogService.ObtenerJerarquiasAsync(SelId.Value);
         }

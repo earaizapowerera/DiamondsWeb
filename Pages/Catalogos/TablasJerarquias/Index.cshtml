@@ -71,32 +71,32 @@
                         {
                             @foreach (var t in Model.Tablas)
                             {
-                                var isSelected = Model.SelId == t.IdTablaJerarquia;
-                                <tr class="@(isSelected ? "table-active" : "")" id="fila-tabla-@t.IdTablaJerarquia">
-                                    <td>@t.IdTablaJerarquia</td>
+                                var isSelected = Model.SelId == t.IdTabla;
+                                <tr class="@(isSelected ? "table-active" : "")" id="fila-tabla-@t.IdTabla">
+                                    <td>@t.IdTabla</td>
                                     <td>
-                                        <a href="?SelId=@t.IdTablaJerarquia@(Model.Buscar != null ? $"&Buscar={Model.Buscar}" : "")"
+                                        <a href="?SelId=@t.IdTabla@(Model.Buscar != null ? $"&Buscar={Model.Buscar}" : "")"
                                            class="text-decoration-none @(isSelected ? "fw-bold" : "")">
-                                            <span id="display-tabla-@t.IdTablaJerarquia">@t.Descripcion</span>
+                                            <span id="display-tabla-@t.IdTabla">@t.Descripcion</span>
                                         </a>
-                                        <form method="post" asp-page-handler="EditTabla" class="d-none" id="edit-tabla-form-@t.IdTablaJerarquia">
+                                        <form method="post" asp-page-handler="EditTabla" class="d-none" id="edit-tabla-form-@t.IdTabla">
                                             <input type="hidden" name="SelId" value="@Model.SelId" />
                                             <div class="input-group input-group-sm">
-                                                <input type="hidden" name="EditTablaId" value="@t.IdTablaJerarquia" />
-                                                <input type="text" class="form-control" name="EditDescripcion" value="@t.Descripcion" id="edit-tabla-input-@t.IdTablaJerarquia" />
+                                                <input type="hidden" name="EditTablaId" value="@t.IdTabla" />
+                                                <input type="text" class="form-control" name="EditDescripcion" value="@t.Descripcion" id="edit-tabla-input-@t.IdTabla" />
                                                 <button type="submit" class="btn btn-success btn-sm"><i class="fa-solid fa-check"></i></button>
-                                                <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEditTabla(@t.IdTablaJerarquia)"><i class="fa-solid fa-times"></i></button>
+                                                <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEditTabla(@t.IdTabla)"><i class="fa-solid fa-times"></i></button>
                                             </div>
                                         </form>
                                     </td>
                                     <td class="text-center">
                                         <div class="btn-group btn-group-sm">
                                             <button type="button" class="btn btn-outline-warning btn-edit-tabla" title="Editar"
-                                                    onclick="startEditTabla(@t.IdTablaJerarquia)">
+                                                    onclick="startEditTabla(@t.IdTabla)">
                                                 <i class="fa-solid fa-pen"></i>
                                             </button>
                                             <form method="post" asp-page-handler="DeleteTabla" class="d-inline">
-                                                <input type="hidden" name="id" value="@t.IdTablaJerarquia" />
+                                                <input type="hidden" name="id" value="@t.IdTabla" />
                                                 <button type="submit" class="btn btn-outline-danger btn-delete-tabla" title="Eliminar"
                                                         onclick="return confirm('Eliminar tabla y todas sus columnas?')">
                                                     <i class="fa-solid fa-trash"></i>
