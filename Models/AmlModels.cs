@@ -14,6 +14,7 @@ public class ClienteAmlResumen
     public bool RequiereAvisoSAT { get; set; }
     public bool YaReportado { get; set; }
     public DateTime? FechaReportePrevio { get; set; }
+    public string? ReportadoPor { get; set; }
 }
 
 public class NotaDetalle

@@ -72,12 +72,19 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostMarcarReportadoAsync(
         string nombreCliente, string? rfc, string? telefonos,
-        int mes, int anio, decimal totalAcumulado, int numOperaciones, string nivelAlerta)
+        int mes, int anio, decimal totalAcumulado, int numOperaciones, string nivelAlerta,
+        int? mesReporteFecha = null, int? anioReporteFecha = null)
     {
         var reportadoPor = User.Identity?.Name ?? "admin";
+
+        // Si el mes es antiguo (2+ meses atrás), usar la fecha proporcionada por el usuario
+        DateTime? fechaReporte = null;
+        if (mesReporteFecha.HasValue && anioReporteFecha.HasValue)
+            fechaReporte = new DateTime(anioReporteFecha.Value, mesReporteFecha.Value, 1);
+
         await _amlService.MarcarComoReportadoAsync(
             nombreCliente, rfc, telefonos, mes, anio,
-            totalAcumulado, numOperaciones, nivelAlerta, reportadoPor, null);
+            totalAcumulado, numOperaciones, nivelAlerta, reportadoPor, null, fechaReporte);
 
         return RedirectToPage(new { Mes = mes, Anio = anio });
     }

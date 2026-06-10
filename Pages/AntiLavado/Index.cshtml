@@ -5,6 +5,9 @@
     var meses = new[] { "Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre" };
     var pendientes = Model.Clientes.Where(c => !c.YaReportado).ToList();
     var yaReportados = Model.Clientes.Where(c => c.YaReportado).ToList();
+    var ahora = DateTime.UtcNow;
+    var mesSeleccionado = new DateTime(Model.Anio ?? ahora.Year, Model.Mes ?? ahora.Month, 1);
+    var esMesAntiguo = mesSeleccionado < new DateTime(ahora.Year, ahora.Month, 1).AddMonths(-1);
 }
 
 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
@@ -184,20 +187,30 @@
                                        class="btn btn-outline-primary" title="Ver detalle">
                                         <i class="fa-solid fa-eye"></i>
                                     </a>
-                                    <form method="post" asp-page-handler="MarcarReportado" class="d-inline">
-                                        <input type="hidden" name="nombreCliente" value="@c.NombreCliente" />
-                                        <input type="hidden" name="rfc" value="@c.RFC" />
-                                        <input type="hidden" name="telefonos" value="@c.Telefonos" />
-                                        <input type="hidden" name="mes" value="@Model.Mes" />
-                                        <input type="hidden" name="anio" value="@Model.Anio" />
-                                        <input type="hidden" name="totalAcumulado" value="@c.TotalAcumulado" />
-                                        <input type="hidden" name="numOperaciones" value="@c.NumeroOperaciones" />
-                                        <input type="hidden" name="nivelAlerta" value="@c.NivelAlerta" />
-                                        <button type="submit" class="btn btn-outline-success" title="Marcar como reportado"
-                                                onclick="return confirm('Marcar a @c.NombreCliente como reportado para @meses[(Model.Mes ?? 1) - 1] @Model.Anio?')">
+                                    @if (esMesAntiguo)
+                                    {
+                                        <button type="button" class="btn btn-outline-success" title="Marcar como reportado"
+                                                onclick="abrirModalReporte('@c.NombreCliente.Replace("'", "\\'")','@c.RFC','@c.Telefonos','@Model.Mes','@Model.Anio','@c.TotalAcumulado','@c.NumeroOperaciones','@c.NivelAlerta')">
                                             <i class="fa-solid fa-check"></i>
                                         </button>
-                                    </form>
+                                    }
+                                    else
+                                    {
+                                        <form method="post" asp-page-handler="MarcarReportado" class="d-inline">
+                                            <input type="hidden" name="nombreCliente" value="@c.NombreCliente" />
+                                            <input type="hidden" name="rfc" value="@c.RFC" />
+                                            <input type="hidden" name="telefonos" value="@c.Telefonos" />
+                                            <input type="hidden" name="mes" value="@Model.Mes" />
+                                            <input type="hidden" name="anio" value="@Model.Anio" />
+                                            <input type="hidden" name="totalAcumulado" value="@c.TotalAcumulado" />
+                                            <input type="hidden" name="numOperaciones" value="@c.NumeroOperaciones" />
+                                            <input type="hidden" name="nivelAlerta" value="@c.NivelAlerta" />
+                                            <button type="submit" class="btn btn-outline-success" title="Marcar como reportado"
+                                                    onclick="return confirm('Marcar a @c.NombreCliente como reportado para @meses[(Model.Mes ?? 1) - 1] @Model.Anio?')">
+                                                <i class="fa-solid fa-check"></i>
+                                            </button>
+                                        </form>
+                                    }
                                 </div>
                             </td>
                         </tr>
@@ -229,6 +242,7 @@
                         <th class="text-center">Operaciones</th>
                         <th class="text-center">Nivel</th>
                         <th>Fecha Reporte</th>
+                        <th>Reportado por</th>
                         <th class="text-center">Detalle</th>
                     </tr>
                 </thead>
@@ -247,6 +261,7 @@
                                 <span class="badge bg-secondary">@c.NivelAlerta</span>
                             </td>
                             <td>@c.FechaReportePrevio?.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@(string.IsNullOrWhiteSpace(c.ReportadoPor) ? "-" : c.ReportadoPor)</td>
                             <td class="text-center">
                                 <a href="/AntiLavado/Detalle?cliente=@System.Net.WebUtility.UrlEncode(c.NombreCliente)&mes=@Model.Mes&anio=@Model.Anio"
                                    class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-eye"></i></a>
@@ -280,3 +295,72 @@
         <i class="fa-solid fa-clock-rotate-left me-1"></i>Ver historial de reportados
     </a>
 </div>
+
+<!-- Modal: Fecha de reporte para meses antiguos -->
+<div class="modal fade" id="modalFechaReporte" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="MarcarReportado" id="formReporteAntiguo">
+                <div class="modal-header">
+                    <h6 class="modal-title"><i class="fa-solid fa-calendar-check me-2"></i>Fecha de reporte al SAT</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Este mes tiene mas de 2 meses de antiguedad. Indique cuando se reporto al SAT:</p>
+                    <p class="fw-bold mb-3" id="modalNombreCliente"></p>
+                    <input type="hidden" name="nombreCliente" id="modalHidNombre" />
+                    <input type="hidden" name="rfc" id="modalHidRfc" />
+                    <input type="hidden" name="telefonos" id="modalHidTel" />
+                    <input type="hidden" name="mes" id="modalHidMes" />
+                    <input type="hidden" name="anio" id="modalHidAnio" />
+                    <input type="hidden" name="totalAcumulado" id="modalHidTotal" />
+                    <input type="hidden" name="numOperaciones" id="modalHidOps" />
+                    <input type="hidden" name="nivelAlerta" id="modalHidNivel" />
+                    <div class="row g-2">
+                        <div class="col-7">
+                            <label class="form-label small">Mes de reporte</label>
+                            <select class="form-select form-select-sm" name="mesReporteFecha" id="modalMesReporte">
+                                @for (int i = 1; i <= 12; i++)
+                                {
+                                    <option value="@i" selected="@(i == DateTime.UtcNow.Month)">@meses[i - 1]</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label small">Anio</label>
+                            <select class="form-select form-select-sm" name="anioReporteFecha" id="modalAnioReporte">
+                                @for (int y = DateTime.UtcNow.Year; y >= 2020; y--)
+                                {
+                                    <option value="@y" selected="@(y == DateTime.UtcNow.Year)">@y</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <i class="fa-solid fa-check me-1"></i>Marcar como reportado
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function abrirModalReporte(nombre, rfc, tel, mes, anio, total, ops, nivel) {
+    document.getElementById('modalNombreCliente').textContent = nombre;
+    document.getElementById('modalHidNombre').value = nombre;
+    document.getElementById('modalHidRfc').value = rfc;
+    document.getElementById('modalHidTel').value = tel;
+    document.getElementById('modalHidMes').value = mes;
+    document.getElementById('modalHidAnio').value = anio;
+    document.getElementById('modalHidTotal').value = total;
+    document.getElementById('modalHidOps').value = ops;
+    document.getElementById('modalHidNivel').value = nivel;
+    new bootstrap.Modal(document.getElementById('modalFechaReporte')).show();
+}
+</script>
+}

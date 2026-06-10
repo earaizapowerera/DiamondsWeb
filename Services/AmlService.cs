@@ -65,7 +65,8 @@ public class AmlService
                    ca.TotalAcumulado, ca.NumeroOperaciones,
                    ca.PrimeraOperacion, ca.UltimaOperacion,
                    CASE WHEN r.Id IS NOT NULL THEN 1 ELSE 0 END AS YaReportado,
-                   r.FechaReporte AS FechaReportePrevio
+                   r.FechaReporte AS FechaReportePrevio,
+                   r.ReportadoPor
             FROM (
                 SELECT
                     COALESCE(h.NombreCanonical, bn.NombreCliente) AS NombreCliente,
@@ -262,16 +263,17 @@ public class AmlService
     /// </summary>
     public async Task MarcarComoReportadoAsync(string nombreCliente, string? rfc, string? telefonos,
         int mes, int anio, decimal totalAcumulado, int numOperaciones, string nivelAlerta,
-        string? reportadoPor, string? observaciones)
+        string? reportadoPor, string? observaciones, DateTime? fechaReporte = null)
     {
+        var fecha = fechaReporte ?? DateTime.Now;
         var sql = @"
             IF NOT EXISTS (SELECT 1 FROM AML_Reportados
                            WHERE NombreCliente = @NombreCliente
                              AND MesReporte = @Mes AND AnioReporte = @Anio)
                 INSERT INTO AML_Reportados (NombreCliente, RFC, Telefonos, MesReporte, AnioReporte,
-                    TotalAcumulado, NumeroOperaciones, NivelAlerta, ReportadoPor, Observaciones)
+                    TotalAcumulado, NumeroOperaciones, NivelAlerta, ReportadoPor, Observaciones, FechaReporte)
                 VALUES (@NombreCliente, @RFC, @Telefonos, @Mes, @Anio,
-                    @TotalAcumulado, @NumOperaciones, @NivelAlerta, @ReportadoPor, @Observaciones)";
+                    @TotalAcumulado, @NumOperaciones, @NivelAlerta, @ReportadoPor, @Observaciones, @FechaReporte)";
 
         try
         {
@@ -287,7 +289,8 @@ public class AmlService
                 NumOperaciones = numOperaciones,
                 NivelAlerta = nivelAlerta,
                 ReportadoPor = reportadoPor,
-                Observaciones = observaciones
+                Observaciones = observaciones,
+                FechaReporte = fecha
             });
 
             _logger.LogInformation("Cliente {Cliente} marcado como reportado para {Mes}/{Anio}",
