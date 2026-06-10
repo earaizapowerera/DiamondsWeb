@@ -72,7 +72,7 @@
 
     // ─── API Helper ────────────────────────────────────────────
     async function api(handler, method, body) {
-        const url = `/PuntoVenta?handler=${handler}`;
+        const url = `/Ventas/PuntoDeVenta?handler=${handler}`;
         const opts = { method, headers: {} };
         if (method === 'POST') {
             opts.headers['Content-Type'] = 'application/json';
