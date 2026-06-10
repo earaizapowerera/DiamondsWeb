@@ -51,7 +51,8 @@ public class AmlService
             mes, anio, fechaDesde.ToString("yyyy-MM-dd"), fechaHasta.ToString("yyyy-MM-dd"),
             _config.MontoIdentificacion);
 
-        // Usar subquery en vez de CTE para máxima compatibilidad
+        // Usar homologación aprobada para consolidar nombres de clientes.
+        // COALESCE(h.NombreCanonical, bn.NombreCliente) agrupa variantes bajo el nombre canónico.
         var sql = @"
             SELECT TOP 100 ca.NombreCliente, ca.RFC, ca.Telefonos,
                    ca.TotalAcumulado, ca.NumeroOperaciones,
@@ -60,7 +61,7 @@ public class AmlService
                    r.FechaReporte AS FechaReportePrevio
             FROM (
                 SELECT
-                    bn.NombreCliente,
+                    COALESCE(h.NombreCanonical, bn.NombreCliente) AS NombreCliente,
                     MAX(bn.RFC) AS RFC,
                     MAX(bn.Telefonos) AS Telefonos,
                     SUM(bp.Importe) AS TotalAcumulado,
@@ -69,15 +70,16 @@ public class AmlService
                     MAX(bn.FechaBaja) AS UltimaOperacion
                 FROM BAJASPAGOSNOTAS bp
                 INNER JOIN BAJASNOTAS bn ON bn.IdNota = bp.IdNota
+                LEFT JOIN AML_Homologacion h ON h.NombreOriginal = bn.NombreCliente AND h.Aprobado = 1
                 WHERE bn.FechaBaja >= @FechaDesde
                   AND bn.FechaBaja <= @FechaHasta
                   AND bn.NombreCliente IS NOT NULL
                   AND LTRIM(RTRIM(bn.NombreCliente)) <> ''
                   AND (@BuscarCliente IS NULL OR
-                       bn.NombreCliente LIKE '%' + @BuscarCliente + '%' OR
+                       COALESCE(h.NombreCanonical, bn.NombreCliente) LIKE '%' + @BuscarCliente + '%' OR
                        bn.RFC LIKE '%' + @BuscarCliente + '%' OR
                        bn.Telefonos LIKE '%' + @BuscarCliente + '%')
-                GROUP BY bn.NombreCliente
+                GROUP BY COALESCE(h.NombreCanonical, bn.NombreCliente)
                 HAVING SUM(bp.Importe) >= @MontoIdentificacion
             ) ca
             LEFT JOIN AML_Reportados r
@@ -140,6 +142,7 @@ public class AmlService
     {
         var (fechaDesde, fechaHasta) = CalcularPeriodo(mes, anio);
 
+        // Buscar por nombre exacto O por cualquier variante homologada al nombre canónico
         var sql = @"
             SELECT TOP 500
                 bn.IdNota,
@@ -151,7 +154,10 @@ public class AmlService
                 bn.FormaPago
             FROM BAJASNOTAS bn
             INNER JOIN BAJASPAGOSNOTAS bp ON bp.IdNota = bn.IdNota
-            WHERE bn.NombreCliente = @NombreCliente
+            WHERE (bn.NombreCliente = @NombreCliente
+                   OR bn.NombreCliente IN (
+                       SELECT NombreOriginal FROM AML_Homologacion
+                       WHERE NombreCanonical = @NombreCliente AND Aprobado = 1))
               AND bn.FechaBaja >= @FechaDesde
               AND bn.FechaBaja <= @FechaHasta
             GROUP BY bn.IdNota, bn.NombreCliente, bn.RFC, bn.Telefonos, bn.FechaBaja, bn.FormaPago
@@ -191,16 +197,17 @@ public class AmlService
                 ISNULL(SUM(NumOperaciones), 0) AS TotalOperaciones
             FROM (
                 SELECT
-                    bn.NombreCliente,
+                    COALESCE(h.NombreCanonical, bn.NombreCliente) AS NombreCliente,
                     SUM(bp.Importe) AS TotalAcumulado,
                     COUNT(DISTINCT bn.IdNota) AS NumOperaciones
                 FROM BAJASPAGOSNOTAS bp
                 INNER JOIN BAJASNOTAS bn ON bn.IdNota = bp.IdNota
+                LEFT JOIN AML_Homologacion h ON h.NombreOriginal = bn.NombreCliente AND h.Aprobado = 1
                 WHERE bn.FechaBaja >= @FechaDesde
                   AND bn.FechaBaja <= @FechaHasta
                   AND bn.NombreCliente IS NOT NULL
                   AND LTRIM(RTRIM(bn.NombreCliente)) <> ''
-                GROUP BY bn.NombreCliente
+                GROUP BY COALESCE(h.NombreCanonical, bn.NombreCliente)
             ) sub";
 
         try

@@ -90,6 +90,11 @@ builder.Services.AddScoped<PuntoVentaService>(sp => new PuntoVentaService(
     diamondsConnStr,
     sp.GetRequiredService<ILogger<PuntoVentaService>>()));
 
+// Homologacion Service (detección y consolidación de nombres duplicados)
+builder.Services.AddScoped<HomologacionService>(sp => new HomologacionService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<HomologacionService>>()));
+
 var app = builder.Build();
 
 // UserPortal middleware
