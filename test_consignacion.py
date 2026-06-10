@@ -31,11 +31,11 @@ def test_login(driver):
     driver.get(f"{BASE_URL}/Security/Auth/Login")
     wait = WebDriverWait(driver, 15)
 
-    user_field = wait.until(EC.presence_of_element_located((By.NAME, "Input.Username")))
+    user_field = wait.until(EC.presence_of_element_located((By.NAME, "LoginViewModel.Username")))
     user_field.clear()
     user_field.send_keys(LOGIN_USER)
 
-    pass_field = driver.find_element(By.NAME, "Input.Password")
+    pass_field = driver.find_element(By.NAME, "LoginViewModel.Password")
     pass_field.clear()
     pass_field.send_keys(LOGIN_PASS)
 
