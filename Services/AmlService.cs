@@ -66,7 +66,9 @@ public class AmlService
                    ca.PrimeraOperacion, ca.UltimaOperacion,
                    CASE WHEN r.Id IS NOT NULL THEN 1 ELSE 0 END AS YaReportado,
                    r.FechaReporte AS FechaReportePrevio,
-                   r.ReportadoPor
+                   r.ReportadoPor,
+                   r.NombreArchivoXml,
+                   r.FechaGeneracionXml
             FROM (
                 SELECT
                     COALESCE(h.NombreCanonical, bn.NombreCliente) AS NombreCliente,
@@ -263,7 +265,8 @@ public class AmlService
     /// </summary>
     public async Task MarcarComoReportadoAsync(string nombreCliente, string? rfc, string? telefonos,
         int mes, int anio, decimal totalAcumulado, int numOperaciones, string nivelAlerta,
-        string? reportadoPor, string? observaciones, DateTime? fechaReporte = null)
+        string? reportadoPor, string? observaciones, DateTime? fechaReporte = null,
+        string? nombreArchivoXml = null, DateTime? fechaGeneracionXml = null)
     {
         var fecha = fechaReporte ?? DateTime.Now;
         var sql = @"
@@ -271,9 +274,11 @@ public class AmlService
                            WHERE NombreCliente = @NombreCliente
                              AND MesReporte = @Mes AND AnioReporte = @Anio)
                 INSERT INTO AML_Reportados (NombreCliente, RFC, Telefonos, MesReporte, AnioReporte,
-                    TotalAcumulado, NumeroOperaciones, NivelAlerta, ReportadoPor, Observaciones, FechaReporte)
+                    TotalAcumulado, NumeroOperaciones, NivelAlerta, ReportadoPor, Observaciones, FechaReporte,
+                    NombreArchivoXml, FechaGeneracionXml)
                 VALUES (@NombreCliente, @RFC, @Telefonos, @Mes, @Anio,
-                    @TotalAcumulado, @NumOperaciones, @NivelAlerta, @ReportadoPor, @Observaciones, @FechaReporte)";
+                    @TotalAcumulado, @NumOperaciones, @NivelAlerta, @ReportadoPor, @Observaciones, @FechaReporte,
+                    @NombreArchivoXml, @FechaGeneracionXml)";
 
         try
         {
@@ -290,7 +295,9 @@ public class AmlService
                 NivelAlerta = nivelAlerta,
                 ReportadoPor = reportadoPor,
                 Observaciones = observaciones,
-                FechaReporte = fecha
+                FechaReporte = fecha,
+                NombreArchivoXml = nombreArchivoXml,
+                FechaGeneracionXml = fechaGeneracionXml
             });
 
             _logger.LogInformation("Cliente {Cliente} marcado como reportado para {Mes}/{Anio}",

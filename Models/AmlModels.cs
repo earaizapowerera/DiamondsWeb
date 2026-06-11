@@ -15,6 +15,8 @@ public class ClienteAmlResumen
     public bool YaReportado { get; set; }
     public DateTime? FechaReportePrevio { get; set; }
     public string? ReportadoPor { get; set; }
+    public string? NombreArchivoXml { get; set; }
+    public DateTime? FechaGeneracionXml { get; set; }
 }
 
 public class NotaDetalle
@@ -42,6 +44,8 @@ public class ClienteReportado
     public DateTime FechaReporte { get; set; }
     public string? ReportadoPor { get; set; }
     public string? Observaciones { get; set; }
+    public string? NombreArchivoXml { get; set; }
+    public DateTime? FechaGeneracionXml { get; set; }
 }
 
 public class AmlConfig

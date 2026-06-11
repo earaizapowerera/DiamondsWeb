@@ -32,6 +32,7 @@ public class IndexModel : PageModel
     public DateTime PeriodoDesde { get; set; }
     public DateTime PeriodoHasta { get; set; }
     public string? ErrorMessage { get; set; }
+    public string? SuccessMessage { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public int? Mes { get; set; }
@@ -50,7 +51,6 @@ public class IndexModel : PageModel
         Mes ??= DateTime.UtcNow.Month;
         Anio ??= DateTime.UtcNow.Year;
 
-        // Calcular UMA vigente según mes/año seleccionado
         Config = _config.ParaMesAnio(Mes.Value, Anio.Value);
 
         PeriodoHasta = new DateTime(Anio.Value, Mes.Value, DateTime.DaysInMonth(Anio.Value, Mes.Value));
@@ -70,49 +70,44 @@ public class IndexModel : PageModel
         }
     }
 
-    public async Task<IActionResult> OnPostMarcarReportadoAsync(
-        string nombreCliente, string? rfc, string? telefonos,
-        int mes, int anio, decimal totalAcumulado, int numOperaciones, string nivelAlerta,
-        int? mesReporteFecha = null, int? anioReporteFecha = null)
-    {
-        var reportadoPor = User.Identity?.Name ?? "admin";
-
-        // Si el mes es antiguo (2+ meses atrás), usar la fecha proporcionada por el usuario
-        DateTime? fechaReporte = null;
-        if (mesReporteFecha.HasValue && anioReporteFecha.HasValue)
-            fechaReporte = new DateTime(anioReporteFecha.Value, mesReporteFecha.Value, 1);
-
-        await _amlService.MarcarComoReportadoAsync(
-            nombreCliente, rfc, telefonos, mes, anio,
-            totalAcumulado, numOperaciones, nivelAlerta, reportadoPor, null, fechaReporte);
-
-        return RedirectToPage(new { Mes = mes, Anio = anio });
-    }
-
     /// <summary>
-    /// Genera y descarga el XML para SPPLD (Anexo 6)
+    /// Genera XML solo para los clientes seleccionados y los marca como reportados
     /// </summary>
-    public async Task<IActionResult> OnPostGenerarXmlAsync(int mes, int anio)
+    public async Task<IActionResult> OnPostGenerarXmlAsync(int mes, int anio, List<string> clientesSeleccionados)
     {
-        var clientes = await _amlService.ObtenerClientesParaReporteAsync(
-            mes, anio, null, null);
+        if (clientesSeleccionados == null || !clientesSeleccionados.Any())
+            return RedirectToPage(new { Mes = mes, Anio = anio });
+
+        var todosClientes = await _amlService.ObtenerClientesParaReporteAsync(mes, anio, null, null);
+        var clientes = todosClientes
+            .Where(c => !c.YaReportado && clientesSeleccionados.Contains(c.NombreCliente))
+            .ToList();
 
         if (!clientes.Any())
             return RedirectToPage(new { Mes = mes, Anio = anio });
 
-        // Obtener operaciones detalladas por cada cliente
         var operacionesPorCliente = new Dictionary<string, List<NotaDetalle>>();
         foreach (var cliente in clientes)
         {
-            var notas = await _amlService.ObtenerNotasClienteAsync(
-                cliente.NombreCliente, mes, anio);
+            var notas = await _amlService.ObtenerNotasClienteAsync(cliente.NombreCliente, mes, anio);
             operacionesPorCliente[cliente.NombreCliente] = notas;
         }
 
-        var xmlBytes = _sppldService.GenerarXmlAviso(
-            _sppldConfig, mes, anio, clientes, operacionesPorCliente);
-
+        var xmlBytes = _sppldService.GenerarXmlAviso(_sppldConfig, mes, anio, clientes, operacionesPorCliente);
         var fileName = $"SPPLD_Anexo6_{anio}{mes:D2}.xml";
+        var fechaGeneracion = DateTime.Now;
+        var reportadoPor = User.Identity?.Name ?? "admin";
+
+        // Marcar cada cliente seleccionado como reportado con datos del XML
+        foreach (var cliente in clientes)
+        {
+            await _amlService.MarcarComoReportadoAsync(
+                cliente.NombreCliente, cliente.RFC, cliente.Telefonos,
+                mes, anio, cliente.TotalAcumulado, cliente.NumeroOperaciones,
+                cliente.NivelAlerta, reportadoPor, null, fechaGeneracion,
+                fileName, fechaGeneracion);
+        }
+
         return File(xmlBytes, "application/xml", fileName);
     }
 }
