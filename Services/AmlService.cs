@@ -41,26 +41,37 @@ public class AmlService
     /// Acumula los 6 meses anteriores al mes seleccionado.
     /// Excluye clientes ya reportados en el mismo mes/año.
     /// </summary>
+    /// <summary>
+    /// Obtiene el config con UMA ajustado al mes/año seleccionado
+    /// </summary>
+    private AmlConfig ConfigParaMes(int mes, int anio) => _config.ParaMesAnio(mes, anio);
+
     public async Task<List<ClienteAmlResumen>> ObtenerClientesParaReporteAsync(
         int mes, int anio, string? buscarCliente, string? nivelAlerta)
     {
         var (fechaDesde, fechaHasta) = CalcularPeriodo(mes, anio);
+        var cfg = ConfigParaMes(mes, anio);
 
         _logger.LogInformation(
-            "ObtenerClientes: mes={Mes}, anio={Anio}, periodo={Desde} a {Hasta}, umbral={Umbral}",
+            "ObtenerClientes: mes={Mes}, anio={Anio}, periodo={Desde} a {Hasta}, UMA={Uma}, umbral={Umbral}",
             mes, anio, fechaDesde.ToString("yyyy-MM-dd"), fechaHasta.ToString("yyyy-MM-dd"),
-            _config.MontoIdentificacion);
+            cfg.ValorUMA, cfg.MontoIdentificacion);
 
-        // Usar subquery en vez de CTE para máxima compatibilidad
+        // Excluir notas pagadas 100% en Pesos.
+        // Para notas mixtas (Pesos + otra forma), incluir solo si Pesos <= 50% del total.
+        // IdOpcionPago=6 es "Pesos" en OPCIONESPAGO.
         var sql = @"
             SELECT TOP 100 ca.NombreCliente, ca.RFC, ca.Telefonos,
                    ca.TotalAcumulado, ca.NumeroOperaciones,
                    ca.PrimeraOperacion, ca.UltimaOperacion,
                    CASE WHEN r.Id IS NOT NULL THEN 1 ELSE 0 END AS YaReportado,
-                   r.FechaReporte AS FechaReportePrevio
+                   r.FechaReporte AS FechaReportePrevio,
+                   r.ReportadoPor,
+                   r.NombreArchivoXml,
+                   r.FechaGeneracionXml
             FROM (
                 SELECT
-                    bn.NombreCliente,
+                    COALESCE(h.NombreCanonical, bn.NombreCliente) AS NombreCliente,
                     MAX(bn.RFC) AS RFC,
                     MAX(bn.Telefonos) AS Telefonos,
                     SUM(bp.Importe) AS TotalAcumulado,
@@ -69,15 +80,23 @@ public class AmlService
                     MAX(bn.FechaBaja) AS UltimaOperacion
                 FROM BAJASPAGOSNOTAS bp
                 INNER JOIN BAJASNOTAS bn ON bn.IdNota = bp.IdNota
+                LEFT JOIN AML_Homologacion h ON h.NombreOriginal = bn.NombreCliente AND h.Aprobado = 1
                 WHERE bn.FechaBaja >= @FechaDesde
                   AND bn.FechaBaja <= @FechaHasta
                   AND bn.NombreCliente IS NOT NULL
                   AND LTRIM(RTRIM(bn.NombreCliente)) <> ''
+                  AND bn.IdNota NOT IN (
+                      SELECT pn.IdNota
+                      FROM BAJASPAGOSNOTAS pn
+                      GROUP BY pn.IdNota
+                      HAVING ISNULL(SUM(CASE WHEN pn.IdOpcionPago = 6 THEN pn.Importe ELSE 0 END), 0)
+                             > SUM(pn.Importe) * 0.5
+                  )
                   AND (@BuscarCliente IS NULL OR
-                       bn.NombreCliente LIKE '%' + @BuscarCliente + '%' OR
+                       COALESCE(h.NombreCanonical, bn.NombreCliente) LIKE '%' + @BuscarCliente + '%' OR
                        bn.RFC LIKE '%' + @BuscarCliente + '%' OR
                        bn.Telefonos LIKE '%' + @BuscarCliente + '%')
-                GROUP BY bn.NombreCliente
+                GROUP BY COALESCE(h.NombreCanonical, bn.NombreCliente)
                 HAVING SUM(bp.Importe) >= @MontoIdentificacion
             ) ca
             LEFT JOIN AML_Reportados r
@@ -96,7 +115,7 @@ public class AmlService
                 FechaDesde = fechaDesde,
                 FechaHasta = fechaHasta,
                 BuscarCliente = string.IsNullOrWhiteSpace(buscarCliente) ? null : buscarCliente,
-                MontoIdentificacion = _config.MontoIdentificacion,
+                MontoIdentificacion = cfg.MontoIdentificacion,
                 Mes = mes,
                 Anio = anio
             })).ToList();
@@ -106,7 +125,7 @@ public class AmlService
             // Clasificar nivel de alerta
             foreach (var cliente in resultados)
             {
-                if (cliente.TotalAcumulado >= _config.MontoAvisoSAT)
+                if (cliente.TotalAcumulado >= cfg.MontoAvisoSAT)
                 {
                     cliente.NivelAlerta = "AvisoSAT";
                     cliente.RequiereIdentificacion = true;
@@ -140,6 +159,8 @@ public class AmlService
     {
         var (fechaDesde, fechaHasta) = CalcularPeriodo(mes, anio);
 
+        // Buscar por nombre exacto O por cualquier variante homologada al nombre canónico
+        // Excluir notas donde Pesos (IdOpcionPago=6) > 50% del total
         var sql = @"
             SELECT TOP 500
                 bn.IdNota,
@@ -151,9 +172,19 @@ public class AmlService
                 bn.FormaPago
             FROM BAJASNOTAS bn
             INNER JOIN BAJASPAGOSNOTAS bp ON bp.IdNota = bn.IdNota
-            WHERE bn.NombreCliente = @NombreCliente
+            WHERE (bn.NombreCliente = @NombreCliente
+                   OR bn.NombreCliente IN (
+                       SELECT NombreOriginal FROM AML_Homologacion
+                       WHERE NombreCanonical = @NombreCliente AND Aprobado = 1))
               AND bn.FechaBaja >= @FechaDesde
               AND bn.FechaBaja <= @FechaHasta
+              AND bn.IdNota NOT IN (
+                  SELECT pn.IdNota
+                  FROM BAJASPAGOSNOTAS pn
+                  GROUP BY pn.IdNota
+                  HAVING ISNULL(SUM(CASE WHEN pn.IdOpcionPago = 6 THEN pn.Importe ELSE 0 END), 0)
+                         > SUM(pn.Importe) * 0.5
+              )
             GROUP BY bn.IdNota, bn.NombreCliente, bn.RFC, bn.Telefonos, bn.FechaBaja, bn.FormaPago
             ORDER BY bn.FechaBaja DESC";
 
@@ -181,6 +212,7 @@ public class AmlService
     public async Task<AmlDashboardStats> ObtenerEstadisticasAsync(int mes, int anio)
     {
         var (fechaDesde, fechaHasta) = CalcularPeriodo(mes, anio);
+        var cfg = ConfigParaMes(mes, anio);
 
         var sql = @"
             SELECT TOP 1
@@ -191,16 +223,24 @@ public class AmlService
                 ISNULL(SUM(NumOperaciones), 0) AS TotalOperaciones
             FROM (
                 SELECT
-                    bn.NombreCliente,
+                    COALESCE(h.NombreCanonical, bn.NombreCliente) AS NombreCliente,
                     SUM(bp.Importe) AS TotalAcumulado,
                     COUNT(DISTINCT bn.IdNota) AS NumOperaciones
                 FROM BAJASPAGOSNOTAS bp
                 INNER JOIN BAJASNOTAS bn ON bn.IdNota = bp.IdNota
+                LEFT JOIN AML_Homologacion h ON h.NombreOriginal = bn.NombreCliente AND h.Aprobado = 1
                 WHERE bn.FechaBaja >= @FechaDesde
                   AND bn.FechaBaja <= @FechaHasta
                   AND bn.NombreCliente IS NOT NULL
                   AND LTRIM(RTRIM(bn.NombreCliente)) <> ''
-                GROUP BY bn.NombreCliente
+                  AND bn.IdNota NOT IN (
+                      SELECT pn.IdNota
+                      FROM BAJASPAGOSNOTAS pn
+                      GROUP BY pn.IdNota
+                      HAVING ISNULL(SUM(CASE WHEN pn.IdOpcionPago = 6 THEN pn.Importe ELSE 0 END), 0)
+                             > SUM(pn.Importe) * 0.5
+                  )
+                GROUP BY COALESCE(h.NombreCanonical, bn.NombreCliente)
             ) sub";
 
         try
@@ -210,8 +250,8 @@ public class AmlService
             {
                 FechaDesde = fechaDesde,
                 FechaHasta = fechaHasta,
-                MontoIdentificacion = _config.MontoIdentificacion,
-                MontoAvisoSAT = _config.MontoAvisoSAT
+                MontoIdentificacion = cfg.MontoIdentificacion,
+                MontoAvisoSAT = cfg.MontoAvisoSAT
             }) ?? new AmlDashboardStats();
 
             _logger.LogInformation(
@@ -233,16 +273,20 @@ public class AmlService
     /// </summary>
     public async Task MarcarComoReportadoAsync(string nombreCliente, string? rfc, string? telefonos,
         int mes, int anio, decimal totalAcumulado, int numOperaciones, string nivelAlerta,
-        string? reportadoPor, string? observaciones)
+        string? reportadoPor, string? observaciones, DateTime? fechaReporte = null,
+        string? nombreArchivoXml = null, DateTime? fechaGeneracionXml = null)
     {
+        var fecha = fechaReporte ?? DateTime.Now;
         var sql = @"
             IF NOT EXISTS (SELECT 1 FROM AML_Reportados
                            WHERE NombreCliente = @NombreCliente
                              AND MesReporte = @Mes AND AnioReporte = @Anio)
                 INSERT INTO AML_Reportados (NombreCliente, RFC, Telefonos, MesReporte, AnioReporte,
-                    TotalAcumulado, NumeroOperaciones, NivelAlerta, ReportadoPor, Observaciones)
+                    TotalAcumulado, NumeroOperaciones, NivelAlerta, ReportadoPor, Observaciones, FechaReporte,
+                    NombreArchivoXml, FechaGeneracionXml)
                 VALUES (@NombreCliente, @RFC, @Telefonos, @Mes, @Anio,
-                    @TotalAcumulado, @NumOperaciones, @NivelAlerta, @ReportadoPor, @Observaciones)";
+                    @TotalAcumulado, @NumOperaciones, @NivelAlerta, @ReportadoPor, @Observaciones, @FechaReporte,
+                    @NombreArchivoXml, @FechaGeneracionXml)";
 
         try
         {
@@ -258,7 +302,10 @@ public class AmlService
                 NumOperaciones = numOperaciones,
                 NivelAlerta = nivelAlerta,
                 ReportadoPor = reportadoPor,
-                Observaciones = observaciones
+                Observaciones = observaciones,
+                FechaReporte = fecha,
+                NombreArchivoXml = nombreArchivoXml,
+                FechaGeneracionXml = fechaGeneracionXml
             });
 
             _logger.LogInformation("Cliente {Cliente} marcado como reportado para {Mes}/{Anio}",

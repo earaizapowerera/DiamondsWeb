@@ -22,7 +22,7 @@ builder.Services.AddUserPortalComponent(options =>
     options.SessionExpirationMinutes = 60;
     options.SlidingExpiration = true;
     options.AutoInitializeDatabase = true;
-    options.DefaultAdminPassword = "u38a8fk3j0!";
+    options.DefaultAdminPassword = "Waykee2026!";
     options.SystemName = "Diamonds Web";
     options.LogoUrl = "";
 });
@@ -89,6 +89,11 @@ builder.Services.AddScoped<InventarioFisicoService>(sp => new InventarioFisicoSe
 builder.Services.AddScoped<PuntoVentaService>(sp => new PuntoVentaService(
     diamondsConnStr,
     sp.GetRequiredService<ILogger<PuntoVentaService>>()));
+
+// Homologacion Service (detección y consolidación de nombres duplicados)
+builder.Services.AddScoped<HomologacionService>(sp => new HomologacionService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<HomologacionService>>()));
 
 var app = builder.Build();
 
