@@ -27,10 +27,13 @@ public class IndexModel : PageModel
     public string NuevoMotivo { get; set; } = "";
 
     [BindProperty]
-    public int? RemisionDevolucionId { get; set; }
+    public string? RemisionCodigoBarras { get; set; }
 
     [BindProperty]
     public string? RemisionValor { get; set; }
+
+    [BindProperty]
+    public string? EliminarCodigoBarras { get; set; }
 
     public async Task OnGetAsync()
     {
@@ -56,9 +59,10 @@ public class IndexModel : PageModel
             }
 
             var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
-            var resultado = await _salesService.CrearDevolucionAsync(NuevoCodigoBarras.Trim(), NuevoMotivo.Trim(), idUsuario);
+            var resultado = await _salesService.CrearDevolucionAsync(
+                NuevoCodigoBarras.Trim(), NuevoMotivo.Trim(), idUsuario);
 
-            if (resultado == "Pieza no encontrada")
+            if (resultado == "Pieza no encontrada" || resultado.Contains("ya tiene"))
                 TempData["Error"] = resultado;
             else
                 TempData["Success"] = resultado;
@@ -76,19 +80,46 @@ public class IndexModel : PageModel
     {
         try
         {
-            if (RemisionDevolucionId == null || string.IsNullOrWhiteSpace(RemisionValor))
+            if (string.IsNullOrWhiteSpace(RemisionCodigoBarras) || string.IsNullOrWhiteSpace(RemisionValor))
             {
                 TempData["Error"] = "Datos incompletos para asignar remision.";
                 return RedirectToPage();
             }
 
-            await _salesService.AplicarRemisionDevolucionAsync(RemisionDevolucionId.Value, RemisionValor.Trim());
+            await _salesService.AplicarRemisionDevolucionAsync(
+                RemisionCodigoBarras.Trim(), RemisionValor.Trim());
             TempData["Success"] = "Remision asignada exitosamente.";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al asignar remision");
             TempData["Error"] = $"Error al asignar remision: {ex.Message}";
+        }
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostEliminarAsync()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(EliminarCodigoBarras))
+            {
+                TempData["Error"] = "Codigo de barras no proporcionado.";
+                return RedirectToPage();
+            }
+
+            var resultado = await _salesService.EliminarDevolucionAsync(EliminarCodigoBarras.Trim());
+
+            if (resultado.Contains("No se encontro"))
+                TempData["Error"] = resultado;
+            else
+                TempData["Success"] = resultado;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al eliminar devolucion");
+            TempData["Error"] = $"Error al eliminar devolucion: {ex.Message}";
         }
 
         return RedirectToPage();
