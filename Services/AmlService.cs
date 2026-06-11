@@ -160,6 +160,7 @@ public class AmlService
         var (fechaDesde, fechaHasta) = CalcularPeriodo(mes, anio);
 
         // Buscar por nombre exacto O por cualquier variante homologada al nombre canónico
+        // Excluir notas donde Pesos (IdOpcionPago=6) > 50% del total
         var sql = @"
             SELECT TOP 500
                 bn.IdNota,
@@ -177,6 +178,13 @@ public class AmlService
                        WHERE NombreCanonical = @NombreCliente AND Aprobado = 1))
               AND bn.FechaBaja >= @FechaDesde
               AND bn.FechaBaja <= @FechaHasta
+              AND bn.IdNota NOT IN (
+                  SELECT pn.IdNota
+                  FROM BAJASPAGOSNOTAS pn
+                  GROUP BY pn.IdNota
+                  HAVING ISNULL(SUM(CASE WHEN pn.IdOpcionPago = 6 THEN pn.Importe ELSE 0 END), 0)
+                         > SUM(pn.Importe) * 0.5
+              )
             GROUP BY bn.IdNota, bn.NombreCliente, bn.RFC, bn.Telefonos, bn.FechaBaja, bn.FormaPago
             ORDER BY bn.FechaBaja DESC";
 
