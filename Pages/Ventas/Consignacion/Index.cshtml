@@ -2,6 +2,30 @@
 @model DiamondsWeb.Pages.Ventas.Consignacion.IndexModel
 @{
     ViewData["Title"] = "Cuentas de Consignacion";
+
+    // Helper: genera la URL de paginación preservando filtros y páginas de otros grids
+    string PageUrl(string paramName, int page)
+    {
+        var qs = new Dictionary<string, string?>();
+        if (Model.IdRemision.HasValue)
+            qs["idRemision"] = Model.IdRemision.Value.ToString();
+        if (Model.FechaDesde.HasValue)
+            qs["fechaDesde"] = Model.FechaDesde.Value.ToString("yyyy-MM-dd");
+        qs["pageExistencia"] = (paramName == "pageExistencia" ? page : Model.PageExistencia).ToString();
+        qs["pagePorDevolver"] = (paramName == "pagePorDevolver" ? page : Model.PagePorDevolver).ToString();
+        qs["pageDevueltas"] = (paramName == "pageDevueltas" ? page : Model.PageDevueltas).ToString();
+        return "/Ventas/Consignacion?" + string.Join("&", qs.Where(kv => kv.Value != null).Select(kv => $"{kv.Key}={kv.Value}"));
+    }
+
+    // Calcula rango "Mostrando X - Y de Z"
+    string RangeLabel(int currentPage, int pageSize, int totalItems, int itemsInPage)
+    {
+        if (totalItems == 0) return "0";
+        int from = (currentPage - 1) * pageSize + 1;
+        int to = from + itemsInPage - 1;
+        if (totalItems <= pageSize) return totalItems.ToString();
+        return $"{from}-{to} de {totalItems:N0}";
+    }
 }
 
 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
@@ -49,7 +73,7 @@
             <div class="col-md-4">
                 <label class="form-label"><small>Remision</small></label>
                 <select class="form-select form-select-sm" name="idRemision" id="selectRemision">
-                    <option value="">-- Todas las remisiones --</option>
+                    <option value="">-- Todas las remisiones (@Model.Remisiones.Count) --</option>
                     @foreach (var rem in Model.Remisiones)
                     {
                         if (Model.IdRemision == rem.IdRemision)
@@ -105,8 +129,11 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Grid: En Existencia -->
 <div class="card mb-4">
     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-        <span><i class="fa-solid fa-gem me-2"></i>En Existencia (@Model.EnExistencia.Count)</span>
-        <span class="badge bg-light text-dark">@Model.EnExistencia.Sum(p => p.CBTotal).ToString("C2")</span>
+        <span>
+            <i class="fa-solid fa-gem me-2"></i>En Existencia
+            (@RangeLabel(Model.PageExistencia, Model.PageSize, Model.Stats.PiezasEnExistencia, Model.EnExistencia.Count))
+        </span>
+        <span class="badge bg-light text-dark">@Model.Stats.MontoEnExistencia.ToString("C2")</span>
     </div>
     <div class="card-body p-0">
         @if (Model.EnExistencia.Any())
@@ -128,11 +155,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     </tr>
                 </thead>
                 <tbody>
+                    @{ int rowExist = (Model.PageExistencia - 1) * Model.PageSize; }
                     @for (int i = 0; i < Model.EnExistencia.Count; i++)
                     {
                         var p = Model.EnExistencia[i];
                         <tr>
-                            <td>@(i + 1)</td>
+                            <td>@(rowExist + i + 1)</td>
                             <td><code>@p.CodigoBarras</code></td>
                             <td>@p.Descripcion</td>
                             <td>@p.NombreProveedor</td>
@@ -147,6 +175,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tbody>
             </table>
         </div>
+        @if (Model.TotalPagesExistencia > 1)
+        {
+        <nav class="d-flex justify-content-center py-2">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(Model.PageExistencia <= 1 ? "disabled" : "")">
+                    <a class="page-link" href="@PageUrl("pageExistencia", Model.PageExistencia - 1)">Anterior</a>
+                </li>
+                @for (int pg = Math.Max(1, Model.PageExistencia - 2); pg <= Math.Min(Model.TotalPagesExistencia, Model.PageExistencia + 2); pg++)
+                {
+                <li class="page-item @(pg == Model.PageExistencia ? "active" : "")">
+                    <a class="page-link" href="@PageUrl("pageExistencia", pg)">@pg</a>
+                </li>
+                }
+                <li class="page-item @(Model.PageExistencia >= Model.TotalPagesExistencia ? "disabled" : "")">
+                    <a class="page-link" href="@PageUrl("pageExistencia", Model.PageExistencia + 1)">Siguiente</a>
+                </li>
+            </ul>
+        </nav>
+        }
         }
         else
         {
@@ -161,8 +208,11 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Grid: Por Devolver (Vendidas) -->
 <div class="card mb-4">
     <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-        <span><i class="fa-solid fa-clock-rotate-left me-2"></i>Por Devolver — Vendidas (@Model.PorDevolver.Count)</span>
-        <span class="badge bg-dark text-white">@Model.PorDevolver.Sum(p => p.CBTotal).ToString("C2")</span>
+        <span>
+            <i class="fa-solid fa-clock-rotate-left me-2"></i>Por Devolver — Vendidas
+            (@RangeLabel(Model.PagePorDevolver, Model.PageSize, Model.Stats.PiezasPorDevolver, Model.PorDevolver.Count))
+        </span>
+        <span class="badge bg-dark text-white">@Model.Stats.MontoPorDevolver.ToString("C2")</span>
     </div>
     <div class="card-body p-0">
         @if (Model.PorDevolver.Any())
@@ -184,11 +234,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     </tr>
                 </thead>
                 <tbody>
+                    @{ int rowDev = (Model.PagePorDevolver - 1) * Model.PageSize; }
                     @for (int i = 0; i < Model.PorDevolver.Count; i++)
                     {
                         var p = Model.PorDevolver[i];
                         <tr>
-                            <td>@(i + 1)</td>
+                            <td>@(rowDev + i + 1)</td>
                             <td><code>@p.CodigoBarras</code></td>
                             <td>@p.Descripcion</td>
                             <td>@p.NombreProveedor</td>
@@ -203,6 +254,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tbody>
             </table>
         </div>
+        @if (Model.TotalPagesPorDevolver > 1)
+        {
+        <nav class="d-flex justify-content-center py-2">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(Model.PagePorDevolver <= 1 ? "disabled" : "")">
+                    <a class="page-link" href="@PageUrl("pagePorDevolver", Model.PagePorDevolver - 1)">Anterior</a>
+                </li>
+                @for (int pg = Math.Max(1, Model.PagePorDevolver - 2); pg <= Math.Min(Model.TotalPagesPorDevolver, Model.PagePorDevolver + 2); pg++)
+                {
+                <li class="page-item @(pg == Model.PagePorDevolver ? "active" : "")">
+                    <a class="page-link" href="@PageUrl("pagePorDevolver", pg)">@pg</a>
+                </li>
+                }
+                <li class="page-item @(Model.PagePorDevolver >= Model.TotalPagesPorDevolver ? "disabled" : "")">
+                    <a class="page-link" href="@PageUrl("pagePorDevolver", Model.PagePorDevolver + 1)">Siguiente</a>
+                </li>
+            </ul>
+        </nav>
+        }
         }
         else
         {
@@ -217,8 +287,11 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Grid: Devueltas -->
 <div class="card mb-4">
     <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-        <span><i class="fa-solid fa-check-circle me-2"></i>Devueltas (@Model.Devueltas.Count)</span>
-        <span class="badge bg-light text-dark">@Model.Devueltas.Sum(p => p.CBTotal).ToString("C2")</span>
+        <span>
+            <i class="fa-solid fa-check-circle me-2"></i>Devueltas
+            (@RangeLabel(Model.PageDevueltas, Model.PageSize, Model.Stats.PiezasDevueltas, Model.Devueltas.Count))
+        </span>
+        <span class="badge bg-light text-dark">@Model.Stats.MontoDevueltas.ToString("C2")</span>
     </div>
     <div class="card-body p-0">
         @if (Model.Devueltas.Any())
@@ -240,11 +313,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     </tr>
                 </thead>
                 <tbody>
+                    @{ int rowDvta = (Model.PageDevueltas - 1) * Model.PageSize; }
                     @for (int i = 0; i < Model.Devueltas.Count; i++)
                     {
                         var p = Model.Devueltas[i];
                         <tr class="table-light text-muted">
-                            <td>@(i + 1)</td>
+                            <td>@(rowDvta + i + 1)</td>
                             <td><code>@p.CodigoBarras</code></td>
                             <td>@p.Descripcion</td>
                             <td>@p.NombreProveedor</td>
@@ -259,6 +333,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tbody>
             </table>
         </div>
+        @if (Model.TotalPagesDevueltas > 1)
+        {
+        <nav class="d-flex justify-content-center py-2">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(Model.PageDevueltas <= 1 ? "disabled" : "")">
+                    <a class="page-link" href="@PageUrl("pageDevueltas", Model.PageDevueltas - 1)">Anterior</a>
+                </li>
+                @for (int pg = Math.Max(1, Model.PageDevueltas - 2); pg <= Math.Min(Model.TotalPagesDevueltas, Model.PageDevueltas + 2); pg++)
+                {
+                <li class="page-item @(pg == Model.PageDevueltas ? "active" : "")">
+                    <a class="page-link" href="@PageUrl("pageDevueltas", pg)">@pg</a>
+                </li>
+                }
+                <li class="page-item @(Model.PageDevueltas >= Model.TotalPagesDevueltas ? "disabled" : "")">
+                    <a class="page-link" href="@PageUrl("pageDevueltas", Model.PageDevueltas + 1)">Siguiente</a>
+                </li>
+            </ul>
+        </nav>
+        }
         }
         else
         {
