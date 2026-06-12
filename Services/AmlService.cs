@@ -207,6 +207,31 @@ public class AmlService
     }
 
     /// <summary>
+    /// Obtiene el desglose de pagos por nota para un conjunto de notas
+    /// </summary>
+    public async Task<Dictionary<int, List<PagoDetalle>>> ObtenerDesglosePageosAsync(List<int> idNotas)
+    {
+        if (idNotas == null || !idNotas.Any())
+            return new Dictionary<int, List<PagoDetalle>>();
+
+        var sql = @"
+            SELECT TOP 500 bp.IdNota, op.OpcionPago, bp.Importe
+            FROM BAJASPAGOSNOTAS bp
+            INNER JOIN OPCIONESPAGO op ON op.IdOpcionPago = bp.IdOpcionPago
+            WHERE bp.IdNota IN @IdNotas
+            ORDER BY bp.IdNota, op.OpcionPago";
+
+        using var conn = CreateConnection();
+        var rows = await conn.QueryAsync<(int IdNota, string OpcionPago, decimal Importe)>(sql, new { IdNotas = idNotas });
+
+        return rows
+            .GroupBy(r => r.IdNota)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(r => new PagoDetalle { OpcionPago = r.OpcionPago, Importe = r.Importe }).ToList());
+    }
+
+    /// <summary>
     /// Obtiene estadísticas para el mes seleccionado
     /// </summary>
     public async Task<AmlDashboardStats> ObtenerEstadisticasAsync(int mes, int anio)

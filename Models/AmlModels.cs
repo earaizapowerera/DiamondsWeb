@@ -19,6 +19,12 @@ public class ClienteAmlResumen
     public DateTime? FechaGeneracionXml { get; set; }
 }
 
+public class PagoDetalle
+{
+    public string OpcionPago { get; set; } = string.Empty;
+    public decimal Importe { get; set; }
+}
+
 public class NotaDetalle
 {
     public int IdNota { get; set; }

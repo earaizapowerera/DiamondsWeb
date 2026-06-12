@@ -83,7 +83,22 @@
                             <td>@(string.IsNullOrWhiteSpace(nota.Telefonos) ? "-" : nota.Telefonos)</td>
                             <td class="text-end fw-bold">@nota.Total.ToString("C2")</td>
                             <td>@nota.FechaBaja.ToString("dd/MM/yyyy")</td>
-                            <td>@(nota.FormaPago ?? "-")</td>
+                            <td>
+                                @{
+                                    var tieneDesglose = Model.DesglosePageos.TryGetValue(nota.IdNota, out var pagos) && pagos.Count > 1;
+                                }
+                                @if (tieneDesglose)
+                                {
+                                    var tooltipLines = string.Join("&#10;", pagos!.Select(p => $"{p.OpcionPago}: {p.Importe.ToString("C2")}"));
+                                    <span style="border-bottom: 1px dotted #666; cursor: help;" title="@tooltipLines">
+                                        @(nota.FormaPago ?? "-")
+                                    </span>
+                                }
+                                else
+                                {
+                                    @(nota.FormaPago ?? "-")
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>

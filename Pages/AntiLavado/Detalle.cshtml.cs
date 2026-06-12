@@ -19,6 +19,7 @@ public class DetalleModel : PageModel
     }
 
     public List<NotaDetalle> Notas { get; set; } = new();
+    public Dictionary<int, List<PagoDetalle>> DesglosePageos { get; set; } = new();
     public string ClienteNombre { get; set; } = string.Empty;
     public decimal TotalAcumulado { get; set; }
     public string NivelAlerta { get; set; } = "Normal";
@@ -50,6 +51,9 @@ public class DetalleModel : PageModel
         ClienteNombre = Cliente;
         Notas = await _amlService.ObtenerNotasClienteAsync(Cliente, Mes.Value, Anio.Value);
         TotalAcumulado = Notas.Sum(n => n.Total);
+
+        var idNotas = Notas.Select(n => n.IdNota).ToList();
+        DesglosePageos = await _amlService.ObtenerDesglosePageosAsync(idNotas);
 
         if (TotalAcumulado >= _config.MontoAvisoSAT)
             NivelAlerta = "AvisoSAT";
