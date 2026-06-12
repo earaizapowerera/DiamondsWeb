@@ -1,4 +1,5 @@
 using System.Globalization;
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using PowerEra.UserPortal.Component.Extensions;
@@ -27,77 +28,22 @@ builder.Services.AddUserPortalComponent(options =>
     options.LogoUrl = "";
 });
 
-// AML Config
+// Configs
 var amlConfig = new AmlConfig();
 builder.Configuration.GetSection("AmlConfig").Bind(amlConfig);
 builder.Services.AddSingleton(amlConfig);
 
-// Catalog Service (Grupos, Monedas, Defaults, etc.)
-var diamondsConnStr = builder.Configuration.GetConnectionString("DiamondsDb")!;
-builder.Services.AddScoped<CatalogService>(sp => new CatalogService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<CatalogService>>()));
-
-// AML Service
-builder.Services.AddScoped<AmlService>(sp => new AmlService(
-    diamondsConnStr,
-    sp.GetRequiredService<AmlConfig>(),
-    sp.GetRequiredService<ILogger<AmlService>>()));
-
-// Jerarquias Service (config etiquetas)
-builder.Services.AddScoped<JerarquiasService>(sp => new JerarquiasService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<JerarquiasService>>()));
-
-// SPPLD Config & Service
 var sppldConfig = new SppldConfig();
 builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
-builder.Services.AddScoped<SppldXmlService>();
 
-// Etiquetas Service
-builder.Services.AddScoped<EtiquetaService>(sp => new EtiquetaService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<EtiquetaService>>()));
-
-// Proveedor Service (Razones Sociales, asignaciones N:N)
-builder.Services.AddScoped<ProveedorService>(sp => new ProveedorService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<ProveedorService>>()));
-
-// Remision Service (Actualizacion de Remisiones)
-builder.Services.AddScoped<RemisionService>(sp => new RemisionService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<RemisionService>>()));
-
-// Consignacion Service (Cuentas de Consignacion)
-builder.Services.AddScoped<ConsignacionService>(sp => new ConsignacionService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<ConsignacionService>>()));
-
-// Transfer Service (Transferencias de Mercancia entre tiendas)
-builder.Services.AddScoped<TransferService>(sp => new TransferService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<TransferService>>()));
-
-// Inventario Fisico Service
-builder.Services.AddScoped<InventarioFisicoService>(sp => new InventarioFisicoService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<InventarioFisicoService>>()));
-
-// Punto de Venta Service
-builder.Services.AddScoped<PuntoVentaService>(sp => new PuntoVentaService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<PuntoVentaService>>()));
-
-// Homologacion Service (detección y consolidación de nombres duplicados)
-builder.Services.AddScoped<HomologacionService>(sp => new HomologacionService(
-    diamondsConnStr,
-    sp.GetRequiredService<ILogger<HomologacionService>>()));
+// Todos los servicios de Diamonds (30 servicios con patrón estándar + AML + SPPLD)
+var diamondsConnStr = builder.Configuration.GetConnectionString("DiamondsDb")!;
+builder.Services.AddDiamondsServices(diamondsConnStr);
 
 var app = builder.Build();
 
-// UserPortal middleware
+// Middleware
 app.UseUserPortal();
 
 if (!app.Environment.IsDevelopment())
@@ -107,7 +53,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles(); // Sirve static files del RCL (bootstrap, fontawesome, etc.)
+app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -115,26 +61,17 @@ app.MapStaticAssets();
 app.MapRazorPages().WithStaticAssets();
 app.MapControllers();
 
-// Redirigir raíz y rutas huérfanas de UserPortal compartido a la pantalla principal
-app.MapGet("/", context =>
-{
-    context.Response.Redirect("/Inventario");
-    return Task.CompletedTask;
-});
-app.MapGet("/becario", context =>
-{
-    context.Response.Redirect("/Inventario");
-    return Task.CompletedTask;
-});
+// Redirects
+app.MapGet("/", context => { context.Response.Redirect("/Inventario"); return Task.CompletedTask; });
+app.MapGet("/becario", context => { context.Response.Redirect("/Inventario"); return Task.CompletedTask; });
 
-// Endpoint de diagnóstico para verificar conexión a DB
-app.MapGet("/api/test-db", async (AmlService aml) =>
+// Endpoint de diagnóstico
+app.MapGet("/api/test-db", async (DiamondsWeb.Services.AmlService aml) =>
 {
     var result = await aml.TestConexionAsync();
     return Results.Ok(new { status = result });
 });
 
-// Initialize UserPortal database
 await app.Services.InitializeUserPortalDatabase();
 
 app.Run();
