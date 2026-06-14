@@ -207,8 +207,46 @@ function syncObs1(value) {
     if (hidden) hidden.value = value;
 }
 
+// ==================== RECALCULO EN LOST FOCUS ====================
+// RN-02: Al salir de CUALQUIER campo numérico que participe en cálculos,
+// se recalcula el producto inmediatamente (equivalente a LostFocus del VB6).
+// IDs de campos que al perder foco disparan recálculo de costos (sumas, productos, netos):
+var CAMPOS_COSTOS = [
+    'cbPieza', 'descPieza', 'peso', 'precioGramo', 'descPeso',
+    'cbManoObra', 'descManoObra', 'cbFactura', 'descFactura', 'tcCosto',
+    'brutoConIVA'
+];
+// IDs de campos que al perder foco disparan recálculo de precio final (factores multiplicativos):
+var CAMPOS_PRECIO = [
+    'utilidad', 'utilidadExtra', 'impuesto', 'tcCotizacion'
+];
+
 // Sync reverso: Oro -> Reloj/Diamante
 document.addEventListener('DOMContentLoaded', function() {
+    // --- Recálculo en blur (lost focus) para campos de costos ---
+    CAMPOS_COSTOS.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('blur', function() {
+                if (id === 'brutoConIVA') {
+                    calcularDesdeIVA();
+                } else {
+                    calcularCostos();
+                }
+            });
+        }
+    });
+
+    // --- Recálculo en blur para factores de precio ---
+    CAMPOS_PRECIO.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('blur', function() {
+                calcularPrecio();
+            });
+        }
+    });
+
     var modeloOro = document.getElementById('modeloOro');
     if (modeloOro) {
         modeloOro.addEventListener('change', function() {
@@ -236,8 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Auto-calcular utilidad extra cuando cambia precio gramo
     var precioGramo = document.getElementById('precioGramo');
     if (precioGramo) {
-        precioGramo.addEventListener('change', function() {
-            // Solo auto-buscar si el campo utilidadExtra tiene indicador de auto
+        precioGramo.addEventListener('blur', function() {
             var ue = document.getElementById('utilidadExtra');
             if (ue && ue.classList.contains('bg-warning-subtle')) {
                 buscarUtilidadExtra();
