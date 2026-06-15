@@ -54,6 +54,22 @@ public class ClienteReportado
     public DateTime? FechaGeneracionXml { get; set; }
 }
 
+public class AmlIdentificacion
+{
+    public int Id { get; set; }
+    public string NombreCliente { get; set; } = string.Empty;
+    public string TipoDocumento { get; set; } = string.Empty;
+    public string StoredFileName { get; set; } = string.Empty;
+    public string? OriginalFileName { get; set; }
+    public string? ContentType { get; set; }
+    public long FileSize { get; set; }
+    public string? SubidoPor { get; set; }
+    public DateTime FechaSubida { get; set; }
+    public string? Notas { get; set; }
+    public int? FotoId { get; set; }
+    public string Url => $"/aml-identificaciones/{StoredFileName}";
+}
+
 public class AmlConfig
 {
     public decimal ValorUMA { get; set; } = 117.31m;

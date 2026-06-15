@@ -1,0 +1,221 @@
+@page
+@model DiamondsWeb.Pages.Inventario.Periodos.IndexModel
+@{
+    ViewData["Title"] = "Registro de Periodos de Inventario";
+}
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.MensajeExito
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.MensajeError
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Panel de alta/edicion -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>
+            <i class="fa-solid fa-calendar-plus me-2"></i>
+            <span id="formTitle">Nuevo Periodo</span>
+        </span>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="btnNuevo"
+                onclick="resetForm()">
+            <i class="fa-solid fa-plus me-1"></i>Nuevo
+        </button>
+    </div>
+    <div class="card-body">
+        <form method="post" asp-page-handler="Guardar" id="formPeriodo">
+            <input type="hidden" name="IdPeriodo" id="IdPeriodo" value="0" />
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label"><small>Periodo Desde <span class="text-danger">*</span></small></label>
+                    <input type="date" class="form-control form-control-sm" name="PeriodoDesde"
+                           id="PeriodoDesde" required />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><small>Periodo Hasta</small></label>
+                    <input type="date" class="form-control form-control-sm" name="PeriodoHasta"
+                           id="PeriodoHasta" />
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm" id="btnGuardar">
+                            <i class="fa-solid fa-floppy-disk me-1"></i>Registrar
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetForm()">
+                            <i class="fa-solid fa-xmark me-1"></i>Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Barra de herramientas -->
+<div class="filter-panel mb-3">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-5">
+            <form method="get" class="d-flex gap-2">
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Buscar por usuario o fecha..." />
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+                <a href="/Inventario/Periodos" class="btn btn-outline-secondary btn-sm">
+                    <i class="fa-solid fa-rotate me-1"></i>
+                </a>
+            </form>
+        </div>
+        <div class="col-md-7 text-end">
+            <a href="/Inventario/Periodos?handler=ExportarExcel" class="btn btn-success btn-sm">
+                <i class="fa-solid fa-file-excel me-1"></i>Exportar XLS
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de periodos -->
+<div class="card">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-list me-2"></i>Periodos de Inventario</span>
+        <span class="badge bg-light text-dark">@Model.TotalPeriodos total / @Model.Periodos.Count mostrados</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="tablaPeriodos">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width:70px">#</th>
+                        <th>Periodo Desde</th>
+                        <th>Periodo Hasta</th>
+                        <th>Fecha Captura</th>
+                        <th>Ultima Edicion</th>
+                        <th>Usuario</th>
+                        <th class="text-center" style="width:120px">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Periodos.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron periodos de inventario
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var p in Model.Periodos)
+                    {
+                        <tr>
+                            <td>@p.IdPeriodo</td>
+                            <td>
+                                @if (p.PeriodoDesde.HasValue)
+                                {
+                                    <strong>@p.PeriodoDesde.Value.ToString("dd/MM/yyyy")</strong>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td>
+                                @if (p.PeriodoHasta.HasValue)
+                                {
+                                    @p.PeriodoHasta.Value.ToString("dd/MM/yyyy")
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fa-solid fa-clock me-1"></i>Abierto
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                @if (p.FechaCaptura.HasValue)
+                                {
+                                    <small>@p.FechaCaptura.Value.ToString("dd/MM/yyyy HH:mm")</small>
+                                }
+                            </td>
+                            <td>
+                                @if (p.FechaUltEdicion.HasValue)
+                                {
+                                    <small>@p.FechaUltEdicion.Value.ToString("dd/MM/yyyy HH:mm")</small>
+                                }
+                            </td>
+                            <td>@(p.NombreUsuario ?? "-")</td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-warning"
+                                            title="Editar"
+                                            onclick="editarPeriodo(@p.IdPeriodo, '@(p.PeriodoDesde?.ToString("yyyy-MM-dd") ?? "")', '@(p.PeriodoHasta?.ToString("yyyy-MM-dd") ?? "")')">
+                                        <i class="fa-solid fa-pencil"></i>
+                                    </button>
+                                    <form method="post" asp-page-handler="Eliminar" class="d-inline">
+                                        <input type="hidden" name="IdPeriodo" value="@p.IdPeriodo" />
+                                        <button type="submit" class="btn btn-outline-danger"
+                                                title="Eliminar"
+                                                onclick="return confirm('Eliminar periodo #@p.IdPeriodo?')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Establecer fecha actual como default al cargar
+    document.addEventListener('DOMContentLoaded', function () {
+        var hoy = new Date().toISOString().split('T')[0];
+        var desde = document.getElementById('PeriodoDesde');
+        if (desde && !desde.value) {
+            desde.value = hoy;
+        }
+    });
+
+    function editarPeriodo(id, desde, hasta) {
+        document.getElementById('IdPeriodo').value = id;
+        document.getElementById('PeriodoDesde').value = desde;
+        document.getElementById('PeriodoHasta').value = hasta;
+        document.getElementById('formTitle').textContent = 'Editar Periodo #' + id;
+        document.getElementById('btnGuardar').innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Actualizar';
+        document.getElementById('PeriodoDesde').focus();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        var hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('IdPeriodo').value = '0';
+        document.getElementById('PeriodoDesde').value = hoy;
+        document.getElementById('PeriodoHasta').value = '';
+        document.getElementById('formTitle').textContent = 'Nuevo Periodo';
+        document.getElementById('btnGuardar').innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Registrar';
+        document.getElementById('PeriodoDesde').focus();
+    }
+
+    // Validacion: PeriodoHasta >= PeriodoDesde
+    document.getElementById('formPeriodo').addEventListener('submit', function (e) {
+        var desde = document.getElementById('PeriodoDesde').value;
+        var hasta = document.getElementById('PeriodoHasta').value;
+        if (hasta && desde && hasta < desde) {
+            e.preventDefault();
+            alert('El Periodo Hasta no puede ser anterior al Periodo Desde.');
+        }
+    });
+</script>
+}

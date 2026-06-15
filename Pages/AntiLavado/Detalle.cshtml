@@ -54,6 +54,179 @@
     </div>
 </div>
 
+<!-- ==================== IDENTIFICACIONES DEL CLIENTE ==================== -->
+<div class="card mb-4">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-id-card me-2"></i>Identificaciones del Cliente</span>
+        <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSubirId">
+            <i class="fa-solid fa-plus me-1"></i>Agregar
+        </button>
+    </div>
+
+    <!-- Documentos existentes -->
+    <div class="card-body">
+        @if (Model.Identificaciones.Count == 0)
+        {
+            <p class="text-muted mb-0"><i class="fa-solid fa-info-circle me-1"></i>No hay identificaciones registradas para este cliente.</p>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var doc in Model.Identificaciones)
+                {
+                    var isPdf = doc.ContentType?.Contains("pdf") == true;
+                    <div class="col-md-4 col-lg-3">
+                        <div class="card h-100 border">
+                            @if (isPdf)
+                            {
+                                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 160px;">
+                                    <a href="@doc.Url" target="_blank"><i class="fa-solid fa-file-pdf text-danger" style="font-size: 4rem;"></i></a>
+                                </div>
+                            }
+                            else
+                            {
+                                <a href="@doc.Url" target="_blank">
+                                    <img src="@doc.Url" class="card-img-top" style="height: 160px; object-fit: cover;" alt="@doc.TipoDocumento" />
+                                </a>
+                            }
+                            <div class="card-body p-2">
+                                <span class="badge bg-primary">@doc.TipoDocumento</span>
+                                <small class="d-block text-muted mt-1">@doc.FechaSubida.ToString("dd/MM/yyyy HH:mm")</small>
+                                @if (!string.IsNullOrEmpty(doc.Notas))
+                                {
+                                    <small class="d-block text-muted">@doc.Notas</small>
+                                }
+                                <small class="d-block text-muted">Por: @doc.SubidoPor</small>
+                            </div>
+                            <div class="card-footer p-1 text-end">
+                                <form method="post" asp-page-handler="DeleteId"
+                                      asp-route-mes="@Model.Mes" asp-route-anio="@Model.Anio"
+                                      onsubmit="return confirm('Eliminar esta identificacion?')">
+                                    <input type="hidden" name="cliente" value="@Model.ClienteNombre" />
+                                    <input type="hidden" name="idDoc" value="@doc.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i></button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Formulario para agregar identificacion -->
+    <div class="collapse" id="collapseSubirId">
+        <div class="card-body border-top">
+            <ul class="nav nav-tabs mb-3" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabUpload" type="button">
+                        <i class="fa-solid fa-upload me-1"></i>Subir Archivo
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabMovil" type="button">
+                        <i class="fa-solid fa-mobile-screen me-1"></i>Fotos del Movil (@Model.FotosMovilRecientes.Count)
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <!-- Tab: Subir archivo -->
+                <div class="tab-pane fade show active" id="tabUpload">
+                    <form method="post" asp-page-handler="Upload" enctype="multipart/form-data"
+                          asp-route-mes="@Model.Mes" asp-route-anio="@Model.Anio">
+                        <input type="hidden" name="cliente" value="@Model.ClienteNombre" />
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <label class="form-label">Tipo de Documento</label>
+                                <select name="tipoDocumento" class="form-select" required>
+                                    <option value="INE">INE / IFE</option>
+                                    <option value="Pasaporte">Pasaporte</option>
+                                    <option value="CURP">CURP</option>
+                                    <option value="RFC">Constancia RFC</option>
+                                    <option value="Comprobante">Comprobante Domicilio</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Archivo</label>
+                                <input type="file" name="archivo" class="form-control" accept="image/*,.pdf" required />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Notas (opcional)</label>
+                                <input type="text" name="notas" class="form-control" placeholder="Ej: Frente, Reverso..." />
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fa-solid fa-upload me-1"></i>Subir
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tab: Fotos del movil -->
+                <div class="tab-pane fade" id="tabMovil">
+                    @if (Model.FotosMovilRecientes.Count == 0)
+                    {
+                        <p class="text-muted">No hay fotos recientes del movil disponibles. Usa la app para tomar fotos primero.</p>
+                    }
+                    else
+                    {
+                        <form method="post" asp-page-handler="LinkFoto"
+                              asp-route-mes="@Model.Mes" asp-route-anio="@Model.Anio" id="formLinkFoto">
+                            <input type="hidden" name="cliente" value="@Model.ClienteNombre" />
+                            <input type="hidden" name="fotoId" id="selectedFotoId" value="" />
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">Tipo de Documento</label>
+                                    <select name="tipoDocumento" class="form-select" required>
+                                        <option value="INE">INE / IFE</option>
+                                        <option value="Pasaporte">Pasaporte</option>
+                                        <option value="CURP">CURP</option>
+                                        <option value="RFC">Constancia RFC</option>
+                                        <option value="Comprobante">Comprobante Domicilio</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Notas (opcional)</label>
+                                    <input type="text" name="notas" class="form-control" placeholder="Ej: Frente, Reverso..." />
+                                </div>
+                                <div class="col-md-3 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-success w-100" id="btnLinkFoto" disabled>
+                                        <i class="fa-solid fa-link me-1"></i>Vincular Seleccionada
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="row g-2">
+                            @foreach (var foto in Model.FotosMovilRecientes)
+                            {
+                                <div class="col-4 col-md-2">
+                                    <div class="card foto-movil-card @(foto.IsLinked ? "opacity-50" : "")"
+                                         data-foto-id="@foto.Id" style="cursor: pointer;"
+                                         onclick="selectFotoMovil(this, @foto.Id)">
+                                        <img src="@foto.Url" class="card-img-top" style="height: 100px; object-fit: cover;" />
+                                        <div class="card-body p-1 text-center">
+                                            <small class="text-muted">@foto.UploadedAt.ToString("dd/MM HH:mm")</small>
+                                            @if (foto.IsLinked)
+                                            {
+                                                <br /><small class="text-warning">Vinculada</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== DETALLE DE OPERACIONES ==================== -->
 <div class="card">
     <div class="card-header bg-dark text-white"><i class="fa-solid fa-receipt me-2"></i>Detalle de Operaciones</div>
     <div class="card-body p-0">
@@ -113,3 +286,14 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+<script>
+function selectFotoMovil(card, fotoId) {
+    document.querySelectorAll('.foto-movil-card').forEach(c => c.classList.remove('border-primary', 'border-3'));
+    card.classList.add('border-primary', 'border-3');
+    document.getElementById('selectedFotoId').value = fotoId;
+    document.getElementById('btnLinkFoto').disabled = false;
+}
+</script>
+}

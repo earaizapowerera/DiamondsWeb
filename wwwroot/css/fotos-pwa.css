@@ -1,0 +1,340 @@
+/* ============================================================
+   fotos-pwa.css — Diamonds Fotos PWA (mobile-first)
+   ============================================================ */
+
+/* ==================== Header ==================== */
+.pwa-header {
+    background: linear-gradient(135deg, #6f42c1, #8b5cf6);
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+/* ==================== Container ==================== */
+.fotos-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+/* ==================== Camera Button ==================== */
+.btn-camera {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 64px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    border-radius: 12px;
+    border: 2px dashed #6f42c1;
+    background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+    color: #6f42c1;
+    transition: all 0.2s;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+}
+.btn-camera:hover, .btn-camera:active {
+    background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%);
+    border-style: solid;
+    transform: scale(0.98);
+}
+.btn-camera i { font-size: 1.5rem; }
+
+.camera-input { display: none; }
+
+/* ==================== Live Camera ==================== */
+.camera-live {
+    position: relative;
+    width: 100%;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 4/3;
+    max-height: 70vh;
+    max-height: 70dvh;
+}
+
+.camera-live video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.camera-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.camera-guide {
+    position: absolute;
+    top: 10%;
+    left: 10%;
+    right: 10%;
+    bottom: 10%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 0.5rem;
+}
+
+.camera-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 1rem 2rem;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+}
+
+.btn-snap {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    border: 4px solid #fff;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 2.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    padding: 0;
+    transition: transform 0.1s, background 0.1s;
+}
+.btn-snap:active {
+    transform: scale(0.9);
+    background: rgba(255,255,255,0.5);
+}
+
+.btn-ctrl {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    padding: 0;
+}
+.btn-ctrl:active { background: rgba(255,255,255,0.3); }
+
+/* Flash al capturar */
+.camera-live.flash::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    animation: flashAnim 0.2s ease-out;
+    pointer-events: none;
+}
+@keyframes flashAnim {
+    0% { opacity: 0.8; }
+    100% { opacity: 0; }
+}
+
+/* ==================== Upload Progress ==================== */
+.upload-progress {
+    display: none;
+    text-align: center;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    margin-top: 1rem;
+}
+.upload-progress.active { display: block; }
+.upload-progress .spinner-border { width: 2rem; height: 2rem; }
+
+/* ==================== Photo Grid ==================== */
+.fotos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+.foto-card {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: #fff;
+}
+.foto-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    cursor: pointer;
+}
+.foto-card .foto-info {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.75rem;
+    color: #666;
+}
+.foto-card .btn-delete {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(220,53,69,0.85);
+    color: white;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+    padding: 0;
+    -webkit-appearance: none;
+    appearance: none;
+}
+.foto-card:hover .btn-delete,
+.foto-card:active .btn-delete { opacity: 1; }
+@media (hover: none) {
+    .foto-card .btn-delete { opacity: 1; }
+}
+
+/* ==================== Status Badges ==================== */
+.badge-source {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+}
+
+/* ==================== Empty State ==================== */
+.empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #999;
+}
+.empty-state i { font-size: 3rem; margin-bottom: 1rem; }
+
+/* ==================== Offline Banner ==================== */
+.offline-banner {
+    display: none;
+    background: #ffc107;
+    color: #333;
+    text-align: center;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.offline-banner.active { display: block; }
+
+/* ==================== Install Banner ==================== */
+.install-banner {
+    display: none;
+    background: linear-gradient(135deg, #6f42c1, #8b5cf6);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    align-items: center;
+    gap: 0.75rem;
+}
+.install-banner.active { display: flex; }
+.install-banner .btn-install {
+    background: white;
+    color: #6f42c1;
+    border: none;
+    border-radius: 8px;
+    padding: 0.4rem 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.install-banner .btn-dismiss {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    font-size: 1.25rem;
+}
+
+/* ==================== iOS Instructions ==================== */
+.ios-instructions {
+    background: #e8f4fd;
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    display: none;
+}
+.ios-instructions.active { display: block; }
+
+/* ==================== Photo Viewer ==================== */
+.photo-viewer {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.photo-viewer img {
+    max-width: 100%;
+    max-height: 90vh;
+    max-height: 90dvh;
+    object-fit: contain;
+    border-radius: 0.5rem;
+}
+.btn-close-viewer {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(220,53,69,0.85);
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* ==================== Toast ==================== */
+.foto-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #198754;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+.foto-toast.active { opacity: 1; }
+
+/* ==================== Safe Areas ==================== */
+@supports (padding: env(safe-area-inset-top)) {
+    .pwa-header { padding-top: env(safe-area-inset-top); }
+    .fotos-container { padding-bottom: env(safe-area-inset-bottom); }
+}

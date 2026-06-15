@@ -405,6 +405,143 @@ public class AmlService
     }
 
     public AmlConfig ObtenerConfiguracion() => _config;
+
+    // ==================== IDENTIFICACIONES ====================
+
+    private static readonly HashSet<string> ExtensionesPermitidas = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".pdf"
+    };
+
+    /// <summary>
+    /// Sube un archivo de identificación para un cliente AML.
+    /// </summary>
+    public async Task<AmlIdentificacion?> SubirIdentificacionAsync(
+        Stream fileStream, string originalFileName, string contentType, long fileSize,
+        string nombreCliente, string tipoDocumento, string? subidoPor, string? notas,
+        string storagePath)
+    {
+        var ext = Path.GetExtension(originalFileName);
+        if (!ExtensionesPermitidas.Contains(ext))
+            return null;
+
+        var storedFileName = $"{Guid.NewGuid()}{ext.ToLower()}";
+        var dir = Path.Combine(storagePath, "aml-identificaciones");
+        if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+
+        var filePath = Path.Combine(dir, storedFileName);
+        using (var fs = new FileStream(filePath, FileMode.Create))
+            await fileStream.CopyToAsync(fs);
+
+        using var conn = CreateConnection();
+        var id = await conn.QuerySingleAsync<int>(@"
+            INSERT INTO AML_Identificaciones (NombreCliente, TipoDocumento, StoredFileName, OriginalFileName,
+                ContentType, FileSize, SubidoPor, Notas)
+            VALUES (@NombreCliente, @TipoDocumento, @StoredFileName, @OriginalFileName,
+                @ContentType, @FileSize, @SubidoPor, @Notas);
+            SELECT CAST(SCOPE_IDENTITY() AS INT)", new
+        {
+            NombreCliente = nombreCliente,
+            TipoDocumento = tipoDocumento,
+            StoredFileName = storedFileName,
+            OriginalFileName = Path.GetFileName(originalFileName),
+            ContentType = contentType,
+            FileSize = fileSize,
+            SubidoPor = subidoPor,
+            Notas = notas
+        });
+
+        return new AmlIdentificacion
+        {
+            Id = id, NombreCliente = nombreCliente, TipoDocumento = tipoDocumento,
+            StoredFileName = storedFileName, OriginalFileName = Path.GetFileName(originalFileName),
+            ContentType = contentType, FileSize = fileSize, SubidoPor = subidoPor, Notas = notas
+        };
+    }
+
+    /// <summary>
+    /// Vincula una foto del móvil (PiezasFotos) como identificación de un cliente AML.
+    /// Copia el archivo al directorio de identificaciones.
+    /// </summary>
+    public async Task<AmlIdentificacion?> VincularFotoComoIdentificacionAsync(
+        int fotoId, string nombreCliente, string tipoDocumento, string? subidoPor, string? notas,
+        string storagePath)
+    {
+        using var conn = CreateConnection();
+        var foto = await conn.QueryFirstOrDefaultAsync<(string StoredFileName, string FileName, string ContentType, long FileSize)>(
+            "SELECT StoredFileName, FileName, ContentType, FileSize FROM PiezasFotos WHERE Id = @Id",
+            new { Id = fotoId });
+
+        if (string.IsNullOrEmpty(foto.StoredFileName)) return null;
+
+        // Copiar archivo al directorio de identificaciones
+        var srcDir = Path.Combine(storagePath, "fotos-piezas");
+        var dstDir = Path.Combine(storagePath, "aml-identificaciones");
+        if (!Directory.Exists(dstDir)) Directory.CreateDirectory(dstDir);
+
+        var ext = Path.GetExtension(foto.StoredFileName);
+        var newStoredFileName = $"{Guid.NewGuid()}{ext}";
+        var srcPath = Path.Combine(srcDir, foto.StoredFileName);
+        var dstPath = Path.Combine(dstDir, newStoredFileName);
+
+        if (File.Exists(srcPath))
+            File.Copy(srcPath, dstPath);
+
+        var id = await conn.QuerySingleAsync<int>(@"
+            INSERT INTO AML_Identificaciones (NombreCliente, TipoDocumento, StoredFileName, OriginalFileName,
+                ContentType, FileSize, SubidoPor, Notas, FotoId)
+            VALUES (@NombreCliente, @TipoDocumento, @StoredFileName, @OriginalFileName,
+                @ContentType, @FileSize, @SubidoPor, @Notas, @FotoId);
+            SELECT CAST(SCOPE_IDENTITY() AS INT)", new
+        {
+            NombreCliente = nombreCliente,
+            TipoDocumento = tipoDocumento,
+            StoredFileName = newStoredFileName,
+            OriginalFileName = foto.FileName,
+            ContentType = foto.ContentType,
+            FileSize = foto.FileSize,
+            SubidoPor = subidoPor,
+            Notas = notas,
+            FotoId = fotoId
+        });
+
+        return new AmlIdentificacion
+        {
+            Id = id, NombreCliente = nombreCliente, TipoDocumento = tipoDocumento,
+            StoredFileName = newStoredFileName, FotoId = fotoId
+        };
+    }
+
+    /// <summary>
+    /// Lista identificaciones de un cliente.
+    /// </summary>
+    public async Task<List<AmlIdentificacion>> ObtenerIdentificacionesAsync(string nombreCliente)
+    {
+        using var conn = CreateConnection();
+        return (await conn.QueryAsync<AmlIdentificacion>(
+            @"SELECT Id, NombreCliente, TipoDocumento, StoredFileName, OriginalFileName,
+              ContentType, FileSize, SubidoPor, FechaSubida, Notas, FotoId
+              FROM AML_Identificaciones WHERE NombreCliente = @NombreCliente
+              ORDER BY FechaSubida DESC",
+            new { NombreCliente = nombreCliente })).ToList();
+    }
+
+    /// <summary>
+    /// Elimina una identificación.
+    /// </summary>
+    public async Task<bool> EliminarIdentificacionAsync(int id, string storagePath)
+    {
+        using var conn = CreateConnection();
+        var stored = await conn.QueryFirstOrDefaultAsync<string>(
+            "SELECT StoredFileName FROM AML_Identificaciones WHERE Id = @Id", new { Id = id });
+        if (stored == null) return false;
+
+        var filePath = Path.Combine(storagePath, "aml-identificaciones", stored);
+        if (File.Exists(filePath)) File.Delete(filePath);
+
+        await conn.ExecuteAsync("DELETE FROM AML_Identificaciones WHERE Id = @Id", new { Id = id });
+        return true;
+    }
 }
 
 public class AmlDashboardStats

@@ -6,7 +6,9 @@ namespace DiamondsWeb.Controllers;
 
 /// <summary>
 /// API Controller para fotos de piezas.
-/// Expone endpoints para la app movil Diamonds y consultas internas.
+/// Expone endpoints para la app movil Diamonds (PWA) y consultas internas.
+/// Los endpoints soportan autenticacion por cookie (PWA en el mismo dominio).
+/// Si el usuario esta autenticado, se usa IdUsuario del claim y se ignora el parametro userId.
 /// </summary>
 [ApiController]
 [Route("api/fotos")]
@@ -17,25 +19,41 @@ public class FotosController : ControllerBase
     public FotosController(FotoService fotoService) => _fotoService = fotoService;
 
     /// <summary>
-    /// Subir foto desde la app movil Diamonds.
+    /// Resuelve el IdUsuario: si esta autenticado, del claim; si no, del parametro.
+    /// </summary>
+    private int ResolveUserId(int? userIdParam)
+    {
+        // Primero intentar del claim (cookie auth)
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            var claim = User.FindFirst("IdUsuario")?.Value;
+            if (int.TryParse(claim, out var claimId) && claimId > 0)
+                return claimId;
+        }
+        return userIdParam ?? 0;
+    }
+
+    /// <summary>
+    /// Subir foto desde la app movil Diamonds (PWA).
     /// POST /api/fotos/upload
     /// Content-Type: multipart/form-data
-    /// Fields: file (required), userId (required)
+    /// Fields: file (required), userId (optional si esta autenticado)
     /// </summary>
     [HttpPost("upload")]
-    [AllowAnonymous] // TODO: Agregar API key auth para app movil
+    [AllowAnonymous]
     [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
-    public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromForm] int userId)
+    public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromForm] int userId = 0)
     {
         if (file == null || file.Length == 0)
             return BadRequest(new { error = "No se envio archivo" });
 
-        if (userId <= 0)
+        var resolvedUserId = ResolveUserId(userId > 0 ? userId : null);
+        if (resolvedUserId <= 0)
             return BadRequest(new { error = "userId es requerido" });
 
         using var stream = file.OpenReadStream();
         var result = await _fotoService.SubirFotoAsync(
-            stream, file.FileName, file.ContentType, file.Length, userId, "mobile");
+            stream, file.FileName, file.ContentType, file.Length, resolvedUserId, "mobile");
 
         if (!result.Success)
             return BadRequest(new { error = result.Error });
@@ -53,13 +71,14 @@ public class FotosController : ControllerBase
     /// GET /api/fotos/recientes?userId=1&count=3&source=mobile
     /// </summary>
     [HttpGet("recientes")]
-    [AllowAnonymous] // TODO: Agregar API key auth para app movil
-    public async Task<IActionResult> Recientes([FromQuery] int userId, [FromQuery] int count = 3, [FromQuery] string? source = null)
+    [AllowAnonymous]
+    public async Task<IActionResult> Recientes([FromQuery] int userId = 0, [FromQuery] int count = 3, [FromQuery] string? source = null)
     {
-        if (userId <= 0)
+        var resolvedUserId = ResolveUserId(userId > 0 ? userId : null);
+        if (resolvedUserId <= 0)
             return BadRequest(new { error = "userId es requerido" });
 
-        var fotos = await _fotoService.ObtenerFotosRecientesAsync(userId, count, source);
+        var fotos = await _fotoService.ObtenerFotosRecientesAsync(resolvedUserId, count, source);
         return Ok(fotos.Select(f => new
         {
             f.Id,

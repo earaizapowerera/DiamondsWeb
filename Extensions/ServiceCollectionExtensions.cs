@@ -19,6 +19,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped(sp => new ConsignacionService(connectionString, sp.GetRequiredService<ILogger<ConsignacionService>>()));
         services.AddScoped(sp => new TransferService(connectionString, sp.GetRequiredService<ILogger<TransferService>>()));
         services.AddScoped(sp => new InventarioFisicoService(connectionString, sp.GetRequiredService<ILogger<InventarioFisicoService>>()));
+        services.AddScoped(sp => new PeriodosInventarioService(connectionString, sp.GetRequiredService<ILogger<PeriodosInventarioService>>()));
         services.AddScoped(sp => new PuntoVentaService(connectionString, sp.GetRequiredService<ILogger<PuntoVentaService>>()));
         services.AddScoped(sp => new HomologacionService(connectionString, sp.GetRequiredService<ILogger<HomologacionService>>()));
         services.AddScoped(sp => new CompuestaService(connectionString, sp.GetRequiredService<ILogger<CompuestaService>>()));
