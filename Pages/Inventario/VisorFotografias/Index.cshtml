@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'RequestVerificationToken': token
+                    'X-CSRF-TOKEN': token
                 },
                 body: JSON.stringify({ codigosVisibles: codigos })
             });
@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'RequestVerificationToken': token
+                    'X-CSRF-TOKEN': token
                 },
                 body: JSON.stringify({ visible: true, buscar: buscar })
             });
@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'RequestVerificationToken': token
+                    'X-CSRF-TOKEN': token
                 },
                 body: JSON.stringify({ visible: false, buscar: buscar })
             });
