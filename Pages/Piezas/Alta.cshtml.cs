@@ -30,9 +30,12 @@ public class AltaModel : PageModel
     [BindProperty] public string TabCaracteristica { get; set; } = "Oro";
     [BindProperty] public string TabCosto { get; set; } = "Pieza";
 
-    // Remision actual
+    // Remision/Factura actual
     [BindProperty(SupportsGet = true)] public int? IdRemision { get; set; }
     public Remision? RemisionActual { get; set; }
+    public Factura? FacturaActual { get; set; }
+    public List<PiezaRemision> PiezasRemision { get; set; } = new();
+    public RemisionTotales? Totales { get; set; }
 
     // Foto
     public List<PiezaFoto> FotosRecientes { get; set; } = new();
