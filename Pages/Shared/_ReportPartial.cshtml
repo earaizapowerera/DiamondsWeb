@@ -1,0 +1,248 @@
+@* Vista parcial genérica para reportes tabulares.
+   Reemplaza ImprimirDB del VB6 con una tabla HTML + CSS print + exportación.
+
+   Uso: @await Html.PartialAsync("_ReportPartial", new ReportPartialModel { ... })
+
+   Modelo: DiamondsWeb.Models.Reporting.ReportPartialModel
+*@
+@using DiamondsWeb.Models.Reporting
+@model ReportPartialModel
+
+<link rel="stylesheet" href="~/css/print.css" />
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show no-print">
+        <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Filtros (no se imprimen) -->
+@if (Model.Filters.Any())
+{
+    <div class="card mb-3 no-print">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <span><i class="fa-solid fa-file-lines me-2"></i>@Model.Report.Definition.Title</span>
+            @if (!string.IsNullOrEmpty(Model.BackUrl))
+            {
+                <a href="@Model.BackUrl" class="btn btn-light btn-sm">
+                    <i class="fa-solid fa-arrow-left me-1"></i>Volver
+                </a>
+            }
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end mb-3">
+                @foreach (var filter in Model.Filters)
+                {
+                    <div class="col-md-3">
+                        <label class="form-label"><small>@filter.Label</small></label>
+                        @if (filter.Type == FilterType.Text)
+                        {
+                            <input type="text" class="form-control form-control-sm"
+                                   name="@filter.Name" value="@filter.CurrentValue"
+                                   placeholder="@filter.Placeholder" />
+                        }
+                        else if (filter.Type == FilterType.Select)
+                        {
+                            <select name="@filter.Name" class="form-select form-select-sm report-select-filter"
+                                    id="sel-@filter.Name">
+                                <option value="">-- Todos --</option>
+                                @foreach (var opt in filter.Options)
+                                {
+                                    <option value="@opt.Value"
+                                            selected="@(filter.CurrentValue == opt.Value)">@opt.Label</option>
+                                }
+                            </select>
+                        }
+                        else if (filter.Type == FilterType.Date)
+                        {
+                            <input type="date" class="form-control form-control-sm"
+                                   name="@filter.Name" value="@filter.CurrentValue" />
+                        }
+                    </div>
+                }
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary btn-sm w-100" title="Aplicar filtros">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
+                <div class="col-md-1">
+                    <a href="@Model.ReportPageUrl" class="btn btn-outline-secondary btn-sm w-100" title="Limpiar">
+                        <i class="fa-solid fa-eraser"></i>
+                    </a>
+                </div>
+            </form>
+
+            <!-- Barra de acciones -->
+            <div class="report-toolbar">
+                <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()">
+                    <i class="fa-solid fa-print me-1"></i>Imprimir
+                </button>
+                @if (!string.IsNullOrEmpty(Model.ExcelHandlerUrl))
+                {
+                    <a href="@Model.ExcelHandlerUrl" class="btn btn-success btn-sm">
+                        <i class="fa-solid fa-file-excel me-1"></i>Exportar Excel
+                    </a>
+                }
+                @if (!string.IsNullOrEmpty(Model.PdfHandlerUrl))
+                {
+                    <a href="@Model.PdfHandlerUrl" class="btn btn-danger btn-sm">
+                        <i class="fa-solid fa-file-pdf me-1"></i>Exportar PDF
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <!-- Sin filtros: solo toolbar -->
+    <div class="mb-3 no-print">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5><i class="fa-solid fa-file-lines me-2"></i>@Model.Report.Definition.Title</h5>
+            @if (!string.IsNullOrEmpty(Model.BackUrl))
+            {
+                <a href="@Model.BackUrl" class="btn btn-outline-secondary btn-sm">
+                    <i class="fa-solid fa-arrow-left me-1"></i>Volver
+                </a>
+            }
+        </div>
+        <div class="report-toolbar">
+            <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()">
+                <i class="fa-solid fa-print me-1"></i>Imprimir
+            </button>
+            @if (!string.IsNullOrEmpty(Model.ExcelHandlerUrl))
+            {
+                <a href="@Model.ExcelHandlerUrl" class="btn btn-success btn-sm">
+                    <i class="fa-solid fa-file-excel me-1"></i>Exportar Excel
+                </a>
+            }
+            @if (!string.IsNullOrEmpty(Model.PdfHandlerUrl))
+            {
+                <a href="@Model.PdfHandlerUrl" class="btn btn-danger btn-sm">
+                    <i class="fa-solid fa-file-pdf me-1"></i>Exportar PDF
+                </a>
+            }
+        </div>
+    </div>
+}
+
+<!-- Cabecera del reporte (visible en impresión) -->
+<div class="report-header">
+    <h4>Diamonds — @Model.Report.Definition.Title</h4>
+    @if (!string.IsNullOrWhiteSpace(Model.Report.Definition.Subtitle))
+    {
+        <div style="font-size:0.9rem;">@Model.Report.Definition.Subtitle</div>
+    }
+    <div class="report-filters">
+        @if (!string.IsNullOrWhiteSpace(Model.Report.Definition.FilterDescription))
+        {
+            <span>Filtros: @Model.Report.Definition.FilterDescription</span>
+        }
+        else
+        {
+            <span>Sin filtros (mostrando todos)</span>
+        }
+    </div>
+    <div class="report-date">
+        Generado: <span class="utc-date"
+            data-utc="@DateTime.UtcNow.ToString("o")Z">@DateTime.UtcNow.ToString("dd/MM/yyyy HH:mm")</span>
+    </div>
+</div>
+
+<!-- Tabla del reporte -->
+<div class="table-responsive">
+    <table class="table report-table mb-0">
+        <thead>
+            <tr>
+                @foreach (var col in Model.Report.Definition.Columns)
+                {
+                    <th class="@(col.Align == ColumnAlign.Right ? "text-end" : "")">@col.Header</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Report.Rows.Any())
+            {
+                @foreach (var row in Model.Report.Rows)
+                {
+                    <tr>
+                        @foreach (var col in Model.Report.Definition.Columns)
+                        {
+                            var val = row.GetValueOrDefault(col.Field);
+                            var formatted = FormatValue(val, col.Format);
+                            <td class="@(col.Align == ColumnAlign.Right ? "text-end" : "")">@formatted</td>
+                        }
+                    </tr>
+                }
+                @if (Model.Report.Totals.Any())
+                {
+                    <tr class="totals-row">
+                        @{ bool isFirst = true; }
+                        @foreach (var col in Model.Report.Definition.Columns)
+                        {
+                            if (isFirst)
+                            {
+                                <td><strong>TOTALES (@Model.Report.TotalRows registros)</strong></td>
+                                isFirst = false;
+                                continue;
+                            }
+                            if (Model.Report.Totals.TryGetValue(col.Field, out var total))
+                            {
+                                var formatted = FormatDecimal(total, col.Format);
+                                <td class="text-end">@formatted</td>
+                            }
+                            else
+                            {
+                                <td></td>
+                            }
+                        }
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="@Model.Report.Definition.Columns.Count"
+                        class="text-center text-muted py-4">
+                        <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                        No se encontraron registros con los filtros aplicados.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Report.Rows.Any())
+{
+    <div class="report-count no-print">
+        <small class="text-muted">
+            @Model.Report.TotalRows registro(s) encontrado(s)
+        </small>
+    </div>
+}
+
+@functions {
+    string FormatValue(object? value, string format)
+    {
+        if (value == null || value == DBNull.Value) return "";
+        if (string.IsNullOrEmpty(format)) return value.ToString() ?? "";
+
+        return value switch
+        {
+            decimal d => d.ToString(format),
+            double dbl => dbl.ToString(format),
+            int i => i.ToString(format),
+            DateTime dt => dt.ToString(format),
+            _ => value.ToString() ?? ""
+        };
+    }
+
+    string FormatDecimal(decimal value, string format)
+    {
+        if (string.IsNullOrEmpty(format)) return value.ToString("N2");
+        return value.ToString(format);
+    }
+}

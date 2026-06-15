@@ -23,12 +23,17 @@
 <div class="card mb-4">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <span><i class="fa-solid fa-magnifying-glass-minus me-2"></i>Piezas Faltantes</span>
+        <div class="d-flex gap-2">
+            <a asp-page="Reporte" class="btn btn-outline-light btn-sm">
+                <i class="fa-solid fa-file-lines me-1"></i>Reporte
+            </a>
         <form method="post" asp-page-handler="ExportarExcel" class="d-inline">
             <input type="hidden" name="Buscar" value="@Model.Buscar" />
             <button type="submit" class="btn btn-success btn-sm" id="btnExportarExcel">
                 <i class="fa-solid fa-file-excel me-1"></i>Exportar Excel
             </button>
         </form>
+        </div>
     </div>
     <div class="card-body">
 

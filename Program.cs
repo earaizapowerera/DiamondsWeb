@@ -4,6 +4,10 @@ using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authentication;
 using PowerEra.UserPortal.Component.Extensions;
+using QuestPDF.Infrastructure;
+
+// QuestPDF: licencia community (gratis para ingresos < $1M USD)
+QuestPDF.Settings.License = LicenseType.Community;
 
 // Forzar cultura es-MX para que los montos muestren $ en vez de ¤
 var culturaMx = new CultureInfo("es-MX");

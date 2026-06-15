@@ -1,5 +1,6 @@
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
+using DiamondsWeb.Services.Reporting;
 
 namespace DiamondsWeb.Extensions;
 
@@ -55,6 +56,9 @@ public static class ServiceCollectionExtensions
 
         // Servicios sin dependencia de connectionString
         services.AddScoped<SppldXmlService>();
+
+        // Framework de reportes genérico (reemplaza ImprimirDB + Crystal Reports del VB6)
+        services.AddScoped(sp => new ReportDataBuilder(connectionString, sp.GetRequiredService<ILogger<ReportDataBuilder>>()));
 
         return services;
     }

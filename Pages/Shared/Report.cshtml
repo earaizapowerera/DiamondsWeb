@@ -1,0 +1,23 @@
+@* Página Razor genérica para reportes que heredan de BaseReportPageModel.
+   Cada reporte concreto crea su propia .cshtml que SOLO tiene @page + @model
+   y referencia esta vista parcial. *@
+@using DiamondsWeb.Models.Reporting
+@model DiamondsWeb.Pages.Shared.BaseReportPageModel
+
+@await Html.PartialAsync("_ReportPartial", Model.PartialModel)
+
+@section Scripts {
+<script>
+    // TomSelect para dropdowns searchable en filtros del reporte
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof TomSelect !== 'undefined') {
+            document.querySelectorAll('.report-select-filter').forEach(function(sel) {
+                new TomSelect(sel, {
+                    allowEmptyOption: true,
+                    sortField: { field: 'text', direction: 'asc' }
+                });
+            });
+        }
+    });
+</script>
+}

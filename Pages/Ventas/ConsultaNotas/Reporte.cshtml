@@ -1,0 +1,20 @@
+@page
+@using DiamondsWeb.Models.Reporting
+@model DiamondsWeb.Pages.Ventas.ConsultaNotas.ReporteModel
+
+@await Html.PartialAsync("_ReportPartial", Model.PartialModel)
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof TomSelect !== 'undefined') {
+            document.querySelectorAll('.report-select-filter').forEach(function(sel) {
+                new TomSelect(sel, {
+                    allowEmptyOption: true,
+                    sortField: { field: 'text', direction: 'asc' }
+                });
+            });
+        }
+    });
+</script>
+}
