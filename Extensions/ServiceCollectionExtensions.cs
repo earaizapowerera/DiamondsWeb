@@ -40,6 +40,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped(sp => new InventoryService(connectionString, sp.GetRequiredService<ILogger<InventoryService>>()));
         services.AddScoped(sp => new OpcionPagoService(connectionString, sp.GetRequiredService<ILogger<OpcionPagoService>>()));
         services.AddScoped(sp => new TiposCambioService(connectionString, sp.GetRequiredService<ILogger<TiposCambioService>>()));
+        services.AddScoped(sp =>
+        {
+            var env = sp.GetRequiredService<IWebHostEnvironment>();
+            var fotosPath = Path.Combine(env.WebRootPath, "fotos-piezas");
+            return new FotoService(connectionString, fotosPath, sp.GetRequiredService<ILogger<FotoService>>());
+        });
 
         // Servicios con constructor especial
         services.AddScoped(sp => new AmlService(

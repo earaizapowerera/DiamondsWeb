@@ -10,8 +10,13 @@ namespace DiamondsWeb.Pages.Piezas;
 public class AltaModel : PageModel
 {
     private readonly PiezaService _svc;
+    private readonly FotoService _fotoSvc;
 
-    public AltaModel(PiezaService svc) => _svc = svc;
+    public AltaModel(PiezaService svc, FotoService fotoSvc)
+    {
+        _svc = svc;
+        _fotoSvc = fotoSvc;
+    }
 
     // Modo edicion
     [BindProperty(SupportsGet = true)] public string? Cb { get; set; }
@@ -24,9 +29,19 @@ public class AltaModel : PageModel
     [BindProperty] public string TabCaracteristica { get; set; } = "Oro";
     [BindProperty] public string TabCosto { get; set; } = "Pieza";
 
-    // Remision actual
+    // Foto
+    public List<PiezaFoto> FotosRecientes { get; set; } = new();
+    public PiezaFoto? FotoActual { get; set; }
+
+    // Remision/Factura actual
     [BindProperty(SupportsGet = true)] public int? IdRemision { get; set; }
+    [BindProperty(SupportsGet = true)] public int? IdFactura { get; set; }
     public Remision? RemisionActual { get; set; }
+    public Factura? FacturaActual { get; set; }
+
+    // Grid de piezas de la remision
+    public List<PiezaResumen> PiezasRemision { get; set; } = new();
+    public RemisionTotales? Totales { get; set; }
 
     // Catalogos
     public List<ProveedorInfo> Proveedores { get; set; } = new();
@@ -80,14 +95,32 @@ public class AltaModel : PageModel
         if (IdRemision.HasValue)
         {
             RemisionActual = await _svc.ObtenerRemisionAsync(IdRemision.Value);
+            PiezasRemision = await _svc.ObtenerPiezasPorRemisionAsync(IdRemision.Value);
+            Totales = await _svc.ObtenerTotalesRemisionAsync(IdRemision.Value);
             if (!EsEdicion)
             {
                 Pieza.IdRemision = IdRemision.Value;
-                // Cargar defaults del proveedor
                 if (RemisionActual != null)
                     await AplicarDefaultsProveedorAsync(RemisionActual.Proveedor);
             }
         }
+
+        if (IdFactura.HasValue || (EsEdicion && Pieza.IdFactura.HasValue))
+        {
+            var idFact = IdFactura ?? Pieza.IdFactura;
+            if (idFact.HasValue)
+                FacturaActual = await _svc.ObtenerFacturaAsync(idFact.Value);
+        }
+
+        // Cargar foto actual (si edicion y tiene ArchivoFoto)
+        if (EsEdicion && !string.IsNullOrEmpty(Pieza.ArchivoFoto))
+        {
+            FotoActual = await _fotoSvc.ObtenerFotoPorNombreAsync(Pieza.ArchivoFoto);
+        }
+
+        // Cargar ultimas 3 fotos moviles del usuario (no vinculadas)
+        var fotoUserId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var fuid) ? fuid : 1;
+        FotosRecientes = await _fotoSvc.ObtenerFotosRecientesAsync(fotoUserId, 3);
     }
 
     public async Task<IActionResult> OnPostGuardarAsync()
@@ -98,9 +131,12 @@ public class AltaModel : PageModel
         RecalcularPrecios();
 
         Pieza.Observaciones = Observaciones;
-        Pieza.IdTienda ??= 1;
-        Pieza.IdLocalizacion ??= 1;
-        Pieza.IdUsuario = 1; // TODO: obtener del claim de auth
+        var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+            : throw new UnauthorizedAccessException("IdUsuario claim not found");
+        var idTienda = int.TryParse(User.FindFirst("IdTienda")?.Value, out var tid) ? tid : 1;
+        Pieza.IdTienda ??= idTienda;
+        Pieza.IdLocalizacion ??= idTienda;
+        Pieza.IdUsuario = idUsuario;
 
         GuardarPiezaResult result;
         if (EsEdicion)
@@ -115,6 +151,12 @@ public class AltaModel : PageModel
 
         if (result.Success)
         {
+            // Vincular foto si se selecciono una
+            if (!string.IsNullOrEmpty(Pieza.ArchivoFoto))
+            {
+                await _fotoSvc.VincularFotoPorNombreAsync(Pieza.ArchivoFoto, result.CodigoBarras!);
+            }
+
             TempData["MensajeExito"] = EsEdicion
                 ? $"Pieza {result.CodigoBarras} actualizada"
                 : $"Pieza {result.CodigoBarras} creada exitosamente";
@@ -186,7 +228,7 @@ public class AltaModel : PageModel
         }
         else
         {
-            Pieza.IdMoneda = 1;
+            Pieza.IdMoneda = 1; // Moneda Nacional (pesos) as default
             Pieza.TCCotizacion = 1;
         }
 
@@ -207,6 +249,53 @@ public class AltaModel : PageModel
         IdEtiqueta = prov.IdTabla;
         TabCaracteristica = prov.CaracteristicaDefault;
         TabCosto = prov.CostoDefault;
+    }
+
+    // ==================== REMISION/FACTURA AL VUELO ====================
+
+    public async Task<IActionResult> OnPostCrearRemisionAsync(
+        int proveedor, string numeroRemision, DateTime? fechaRemision, bool consignacion)
+    {
+        var userId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var u) ? u
+            : throw new UnauthorizedAccessException("IdUsuario claim not found");
+        var tiendaId = int.TryParse(User.FindFirst("IdTienda")?.Value, out var t) ? t : 1;
+        var remision = new Remision
+        {
+            Proveedor = proveedor,
+            NumeroRemision = numeroRemision ?? "S/N",
+            FechaRemision = fechaRemision ?? DateTime.Today,
+            Consignacion = consignacion,
+            IdUsuario = userId,
+            IdTienda = tiendaId,
+            IdLocalizacion = tiendaId
+        };
+        var id = await _svc.CrearRemisionAsync(remision);
+        return new JsonResult(new { success = true, idRemision = id });
+    }
+
+    public async Task<IActionResult> OnPostCrearFacturaAsync(
+        int proveedor, string folioFactura, int idRazonSocial, DateTime? fechaFactura, string? pedimento)
+    {
+    var factUserId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var fu) ? fu
+            : throw new UnauthorizedAccessException("IdUsuario claim not found");
+        var factura = new Factura
+        {
+            Proveedor = proveedor,
+            FolioFactura = folioFactura ?? "",
+            IdRazonSocialProveedor = idRazonSocial,
+            FechaFactura = fechaFactura ?? DateTime.Today,
+            Pedimento = pedimento,
+            IdUsuario = factUserId
+        };
+        var id = await _svc.CrearFacturaAsync(factura);
+        return new JsonResult(new { success = true, idFactura = id });
+    }
+
+    public async Task<IActionResult> OnPostVincularFacturaAsync(int idRemision, int idFactura)
+    {
+        // Actualizar todas las piezas de la remision para vincularlas a la factura
+        await _svc.VincularFacturaARemisionAsync(idRemision, idFactura);
+        return new JsonResult(new { success = true });
     }
 
     // ==================== API ENDPOINTS (JSON) ====================
@@ -243,5 +332,101 @@ public class AltaModel : PageModel
     {
         var rs = await _svc.ObtenerRazonesSocialesAsync(proveedor);
         return new JsonResult(rs);
+    }
+
+    public async Task<IActionResult> OnGetBuscarRemisionesAsync(string? texto)
+    {
+        var remisiones = await _svc.ObtenerRemisionesAsync();
+        if (!string.IsNullOrWhiteSpace(texto))
+        {
+            var t = texto.ToLower();
+            remisiones = remisiones
+                .Where(r => (r.NombreProveedor ?? "").ToLower().Contains(t)
+                         || (r.NumeroRemision ?? "").ToLower().Contains(t)
+                         || r.IdRemision.ToString().Contains(t))
+                .ToList();
+        }
+        return new JsonResult(remisiones.Select(r => new
+        {
+            r.IdRemision,
+            r.NombreProveedor,
+            r.NumeroRemision,
+            fechaRemision = r.FechaRemision?.ToString("dd/MM/yy"),
+            r.Consignacion,
+            r.CantidadPiezas
+        }));
+    }
+
+    public async Task<IActionResult> OnGetBuscarFacturasAsync(string? texto)
+    {
+        var facturas = await _svc.ObtenerFacturasAsync(texto);
+        return new JsonResult(facturas.Select(f => new
+        {
+            f.IdFactura,
+            f.FolioFactura,
+            f.NombreProveedor,
+            fechaFactura = f.FechaFactura?.ToString("dd/MM/yy"),
+            totalBruto = f.TotalBruto?.ToString("N2"),
+            totalNeto = f.TotalNeto?.ToString("N2")
+        }));
+    }
+
+    public async Task<IActionResult> OnGetPiezasRemisionAsync(int idRemision)
+    {
+        var piezas = await _svc.ObtenerPiezasPorRemisionAsync(idRemision);
+        var totales = await _svc.ObtenerTotalesRemisionAsync(idRemision);
+        return new JsonResult(new { piezas, totales });
+    }
+
+    // ==================== FOTOS ====================
+
+    /// <summary>
+    /// Sube una foto desde el navegador web via AJAX.
+    /// </summary>
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> OnPostSubirFotoAsync(IFormFile foto)
+    {
+        if (foto == null || foto.Length == 0)
+            return new JsonResult(new { success = false, error = "No se envio archivo" });
+
+        using var stream = foto.OpenReadStream();
+        var subirUserId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var suid) ? suid : 1;
+        var result = await _fotoSvc.SubirFotoAsync(
+            stream, foto.FileName, foto.ContentType, foto.Length, subirUserId, "web");
+
+        return new JsonResult(new
+        {
+            success = result.Success,
+            url = result.Url,
+            storedFileName = result.StoredFileName,
+            fotoId = result.FotoId,
+            error = result.Error
+        });
+    }
+
+    /// <summary>
+    /// Lista ultimas N fotos moviles no vinculadas (para seleccion en el formulario).
+    /// </summary>
+    public async Task<IActionResult> OnGetFotosRecientesAsync(int count = 3)
+    {
+        var recUserId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var ruid) ? ruid : 1;
+        var fotos = await _fotoSvc.ObtenerFotosRecientesAsync(recUserId, count);
+        return new JsonResult(fotos.Select(f => new
+        {
+            f.Id,
+            f.Url,
+            f.FileName,
+            f.Source,
+            uploadedAt = f.UploadedAt.ToString("yyyy-MM-dd HH:mm")
+        }));
+    }
+
+    /// <summary>
+    /// Elimina una foto.
+    /// </summary>
+    public async Task<IActionResult> OnPostEliminarFotoAsync(int fotoId)
+    {
+        var ok = await _fotoSvc.EliminarFotoAsync(fotoId);
+        return new JsonResult(new { success = ok });
     }
 }

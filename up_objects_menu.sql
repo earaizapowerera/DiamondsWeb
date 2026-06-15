@@ -64,7 +64,8 @@ VALUES
     (NEWID(), @ScreenTypeId, 'Transferencias', '/Inventario/Transferencias', 'fa-solid fa-exchange-alt', 2, @FolderInventario, 1, GETUTCDATE(), GETUTCDATE()),
     (NEWID(), @ScreenTypeId, 'Registro Existencias', '/Inventario/Existencias', 'fa-solid fa-boxes-stacked', 3, @FolderInventario, 1, GETUTCDATE(), GETUTCDATE()),
     (NEWID(), @ViewTypeId, 'Reporte Faltantes', '/Inventario/Faltantes', 'fa-solid fa-magnifying-glass-minus', 4, @FolderInventario, 1, GETUTCDATE(), GETUTCDATE()),
-    (NEWID(), @ScreenTypeId, 'Lotes Repetidas', '/Inventario/LotesRepetidas', 'fa-solid fa-boxes-packing', 5, @FolderInventario, 1, GETUTCDATE(), GETUTCDATE());
+    (NEWID(), @ScreenTypeId, 'Lotes Repetidas', '/Inventario/LotesRepetidas', 'fa-solid fa-boxes-packing', 5, @FolderInventario, 1, GETUTCDATE(), GETUTCDATE()),
+    (NEWID(), @ScreenTypeId, 'Captura de Fotos', '/Fotos/Captura', 'fa-solid fa-camera', 6, @FolderInventario, 1, GETUTCDATE(), GETUTCDATE());
 
 -- ═══════════════════════════════════════════════════════════════
 -- PROCESOS

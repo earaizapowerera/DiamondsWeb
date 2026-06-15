@@ -1,0 +1,180 @@
+/* Diamonds Fotos PWA - Mobile-first styles */
+
+.fotos-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+/* Camera button - large touch target */
+.btn-camera {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 64px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    border-radius: 12px;
+    border: 2px dashed #6f42c1;
+    background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+    color: #6f42c1;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+.btn-camera:hover, .btn-camera:active {
+    background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%);
+    border-style: solid;
+    transform: scale(0.98);
+}
+.btn-camera i { font-size: 1.5rem; }
+
+/* Hidden file input */
+.camera-input { display: none; }
+
+/* Upload progress */
+.upload-progress {
+    display: none;
+    text-align: center;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    margin-top: 1rem;
+}
+.upload-progress.active { display: block; }
+.upload-progress .spinner-border { width: 2rem; height: 2rem; }
+
+/* Photo grid */
+.fotos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+.foto-card {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: #fff;
+}
+.foto-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+}
+.foto-card .foto-info {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.75rem;
+    color: #666;
+}
+.foto-card .btn-delete {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(220,53,69,0.85);
+    color: white;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.foto-card:hover .btn-delete,
+.foto-card:active .btn-delete { opacity: 1; }
+/* En mobile siempre visible */
+@media (hover: none) {
+    .foto-card .btn-delete { opacity: 1; }
+}
+
+/* Status badges */
+.badge-source {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #999;
+}
+.empty-state i { font-size: 3rem; margin-bottom: 1rem; }
+
+/* Offline banner */
+.offline-banner {
+    display: none;
+    background: #ffc107;
+    color: #333;
+    text-align: center;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.offline-banner.active { display: block; }
+
+/* Install banner */
+.install-banner {
+    display: none;
+    background: linear-gradient(135deg, #6f42c1, #8b5cf6);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    align-items: center;
+    gap: 0.75rem;
+}
+.install-banner.active { display: flex; }
+.install-banner .btn-install {
+    background: white;
+    color: #6f42c1;
+    border: none;
+    border-radius: 8px;
+    padding: 0.4rem 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.install-banner .btn-dismiss {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    font-size: 1.25rem;
+}
+
+/* iOS install instructions */
+.ios-instructions {
+    background: #e8f4fd;
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    display: none;
+}
+.ios-instructions.active { display: block; }
+
+/* Toast notification */
+.foto-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #198754;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+.foto-toast.active { opacity: 1; }
