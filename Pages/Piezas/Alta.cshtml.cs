@@ -12,11 +12,13 @@ public class AltaModel : PageModel
 {
     private readonly PiezaService _svc;
     private readonly FotoService _fotoSvc;
+    private readonly LlmService _llmSvc;
 
-    public AltaModel(PiezaService svc, FotoService fotoSvc)
+    public AltaModel(PiezaService svc, FotoService fotoSvc, LlmService llmSvc)
     {
         _svc = svc;
         _fotoSvc = fotoSvc;
+        _llmSvc = llmSvc;
     }
 
     // Modo edicion
@@ -47,6 +49,10 @@ public class AltaModel : PageModel
 
     public string? MensajeExito { get; set; }
     public string? MensajeError { get; set; }
+
+    // Estado interno de la mejora con LLM (se usa entre MejorarDescripcionAutomaticaAsync y OnPostGuardarAsync)
+    private string? _descOriginal;
+    private string? _descMejorada;
 
     private async Task CargarCatalogosAsync()
     {
@@ -123,6 +129,9 @@ public class AltaModel : PageModel
         Pieza.IdLocalizacion ??= idTienda;
         Pieza.IdUsuario = idUsuario;
 
+        // Mejorar descripcion con LLM (correccion ortografica + texto atractivo)
+        await MejorarDescripcionAutomaticaAsync();
+
         GuardarPiezaResult result;
         if (EsEdicion)
         {
@@ -144,6 +153,13 @@ public class AltaModel : PageModel
                 ? $"Pieza {result.CodigoBarras} actualizada"
                 : $"Pieza {result.CodigoBarras} creada exitosamente";
 
+            // Feedback: mostrar la correccion de descripcion si el LLM la cambio
+            if (_descOriginal != null && _descMejorada != null
+                && !string.Equals(_descOriginal, _descMejorada, StringComparison.Ordinal))
+            {
+                TempData["DescCorreccion"] = $"{_descOriginal}|{_descMejorada}";
+            }
+
             // Si tiene remision, regresar al alta para continuar capturando
             if (IdRemision.HasValue && !EsEdicion)
                 return RedirectToPage("Alta", new { IdRemision });
@@ -152,6 +168,39 @@ public class AltaModel : PageModel
 
         MensajeError = result.Error;
         return Page();
+    }
+
+    /// <summary>
+    /// Mejora la descripcion de la pieza automaticamente con LLM antes de guardar.
+    /// Si falla, conserva la descripcion original (degradacion graceful).
+    /// </summary>
+    private async Task MejorarDescripcionAutomaticaAsync()
+    {
+        var descripcionOriginal = Pieza.Descripcion?.Trim() ?? "";
+
+        // Si no hay descripcion ni foto, no hay nada que mejorar
+        if (string.IsNullOrWhiteSpace(descripcionOriginal) && string.IsNullOrWhiteSpace(Pieza.ArchivoFoto))
+            return;
+
+        // Obtener nombre del grupo para dar contexto al LLM
+        var nombreGrupo = Grupos.FirstOrDefault(g => g.IdGrupo == Pieza.IdGrupo)?.Grupo;
+
+        try
+        {
+            var llmResult = await _llmSvc.MejorarDescripcionAsync(
+                descripcionOriginal, Pieza.ArchivoFoto, nombreGrupo);
+
+            if (llmResult.Success && !string.IsNullOrWhiteSpace(llmResult.DescripcionMejorada))
+            {
+                _descOriginal = descripcionOriginal;
+                _descMejorada = llmResult.DescripcionMejorada;
+                Pieza.Descripcion = llmResult.DescripcionMejorada;
+            }
+        }
+        catch
+        {
+            // Si falla el LLM, no bloquear el guardado — errores se loguean dentro de LlmService
+        }
     }
 
     private void RecalcularPrecios()
@@ -312,6 +361,30 @@ public class AltaModel : PageModel
     {
         var ok = await _fotoSvc.EliminarFotoAsync(fotoId);
         return new JsonResult(new { success = ok });
+    }
+
+    // ==================== IA: MEJORAR DESCRIPCION ====================
+
+    /// <summary>
+    /// Envia la descripcion (y opcionalmente la foto) a un LLM para obtener
+    /// una version corregida y mas atractiva.
+    /// </summary>
+    public async Task<IActionResult> OnPostMejorarDescripcionAsync(
+        string? descripcion, string? archivoFoto, string? grupo)
+    {
+        if (string.IsNullOrWhiteSpace(descripcion) && string.IsNullOrWhiteSpace(archivoFoto))
+            return new JsonResult(new { success = false, error = "Escribe una descripcion o adjunta una foto" });
+
+        var result = await _llmSvc.MejorarDescripcionAsync(
+            descripcion ?? "", archivoFoto, grupo);
+
+        return new JsonResult(new
+        {
+            success = result.Success,
+            descripcionMejorada = result.DescripcionMejorada,
+            descripcionOriginal = result.DescripcionOriginal,
+            error = result.Error
+        });
     }
 
     // ==================== BUSQUEDA DE REMISIONES/FACTURAS ====================

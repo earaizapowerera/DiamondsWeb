@@ -53,6 +53,15 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<AmlConfig>(),
             sp.GetRequiredService<ILogger<AmlService>>()));
 
+        // LLM Service (mejora de descripciones con IA)
+        services.AddScoped(sp =>
+        {
+            var env = sp.GetRequiredService<IWebHostEnvironment>();
+            var fotosPath = Path.Combine(env.WebRootPath, "fotos-piezas");
+            var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient("OpenAI");
+            return new LlmService(httpClient, fotosPath, sp.GetRequiredService<ILogger<LlmService>>());
+        });
+
         // Servicios sin dependencia de connectionString
         services.AddScoped<SppldXmlService>();
 

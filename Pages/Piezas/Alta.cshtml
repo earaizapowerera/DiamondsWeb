@@ -10,6 +10,22 @@
 {
 <div class="alert alert-success alert-dismissible fade show" role="alert">
     <i class="fa-solid fa-check-circle me-2"></i>@Model.MensajeExito
+    @{
+        var descCorreccion = TempData["DescCorreccion"] as string;
+        if (!string.IsNullOrEmpty(descCorreccion))
+        {
+            var partes = descCorreccion.Split('|', 2);
+            if (partes.Length == 2)
+            {
+                <div class="mt-1 small">
+                    <i class="fa-solid fa-wand-magic-sparkles me-1 text-info"></i>
+                    <span class="text-muted text-decoration-line-through">@partes[0]</span>
+                    <i class="fa-solid fa-arrow-right mx-1 text-muted"></i>
+                    <strong>@partes[1]</strong>
+                </div>
+            }
+        }
+    }
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 }
@@ -265,8 +281,29 @@
                     <div class="row g-2">
                         <div class="col-md-8">
                             <label class="form-label form-label-sm mb-0">Descripcion <span class="text-danger">*</span></label>
-                            <input type="text" asp-for="Pieza.Descripcion" class="form-control form-control-sm" required maxlength="100"
-                                   placeholder="Descripcion de la pieza..." />
+                            <div class="input-group input-group-sm">
+                                <input type="text" asp-for="Pieza.Descripcion" class="form-control form-control-sm" required maxlength="100"
+                                       id="descripcionPieza" placeholder="Descripcion de la pieza..." />
+                                <button type="button" class="btn btn-outline-info" id="btnMejorarDesc"
+                                        onclick="mejorarDescripcion()" title="Mejorar con IA: corrige ortografia y hace la descripcion mas atractiva">
+                                    <i class="fa-solid fa-wand-magic-sparkles" id="iconMejorar"></i>
+                                    <span class="spinner-border spinner-border-sm d-none" id="spinnerMejorar"></span>
+                                </button>
+                            </div>
+                            <div id="llmSugerencia" class="d-none mt-1">
+                                <div class="alert alert-info alert-sm py-1 px-2 mb-0 d-flex align-items-center gap-2">
+                                    <small class="flex-grow-1">
+                                        <i class="fa-solid fa-lightbulb me-1"></i>
+                                        Sugerencia: <strong id="textoSugerencia"></strong>
+                                    </small>
+                                    <button type="button" class="btn btn-success btn-sm py-0 px-1" onclick="aceptarSugerencia()" title="Aceptar">
+                                        <i class="fa-solid fa-check"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-1" onclick="rechazarSugerencia()" title="Rechazar">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label form-label-sm mb-0">Grupo <span class="text-danger">*</span></label>
@@ -772,14 +809,18 @@
             <div class="d-flex gap-2">
                 @if (Model.EsEdicion)
                 {
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fa-solid fa-save me-1"></i>Guardar Cambios
+                    <button type="submit" class="btn btn-primary" id="btnGuardar">
+                        <i class="fa-solid fa-save me-1" id="iconGuardar"></i>
+                        <span class="spinner-border spinner-border-sm d-none me-1" id="spinnerGuardar"></span>
+                        <span id="textoGuardar">Guardar Cambios</span>
                     </button>
                 }
                 else
                 {
-                    <button type="submit" class="btn btn-success">
-                        <i class="fa-solid fa-check me-1"></i>Registrar Pieza (F12)
+                    <button type="submit" class="btn btn-success" id="btnGuardar">
+                        <i class="fa-solid fa-check me-1" id="iconGuardar"></i>
+                        <span class="spinner-border spinner-border-sm d-none me-1" id="spinnerGuardar"></span>
+                        <span id="textoGuardar">Registrar Pieza (F12)</span>
                     </button>
                 }
             </div>
@@ -886,6 +927,7 @@ else if (Model.RemisionActual == null && !Model.EsEdicion)
 
 @section Scripts {
 <script src="/js/piezas.js?v=20260615"></script>
+<script src="/js/piezas-fotos.js?v=20260615"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Searchable dropdowns
@@ -908,6 +950,23 @@ document.addEventListener('DOMContentLoaded', function() {
     var hidProv = document.getElementById('hidProveedorRemision');
     if (hidProv && hidProv.value) {
         cargarRazonesSociales(hidProv.value);
+    }
+
+    // Spinner al guardar (la mejora con IA tarda unos segundos)
+    var formPieza = document.getElementById('formPieza');
+    if (formPieza) {
+        formPieza.addEventListener('submit', function() {
+            var btn = document.getElementById('btnGuardar');
+            var icon = document.getElementById('iconGuardar');
+            var spinner = document.getElementById('spinnerGuardar');
+            var texto = document.getElementById('textoGuardar');
+            if (btn && icon && spinner && texto) {
+                btn.disabled = true;
+                icon.classList.add('d-none');
+                spinner.classList.remove('d-none');
+                texto.textContent = 'Guardando y mejorando descripcion...';
+            }
+        });
     }
 
     // Atajos de teclado

@@ -41,6 +41,14 @@ builder.Services.AddSingleton(sppldConfig);
 // Claims transformation: maps UserPortal user → Diamonds IdUsuario/IdTienda
 builder.Services.AddScoped<IClaimsTransformation, DiamondsClaimsTransformation>();
 
+// HttpClient para OpenAI (usado por LlmService para mejorar descripciones con IA)
+var openAiApiKey = builder.Configuration["OpenAi:ApiKey"] ?? "";
+builder.Services.AddHttpClient("OpenAI", client =>
+{
+    client.DefaultRequestHeaders.Add("Authorization", $"Bearer {openAiApiKey}");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 // Todos los servicios de Diamonds (30 servicios con patrón estándar + AML + SPPLD)
 var diamondsConnStr = builder.Configuration.GetConnectionString("DiamondsDb")!;
 builder.Services.AddDiamondsServices(diamondsConnStr);
