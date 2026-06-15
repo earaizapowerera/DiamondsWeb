@@ -58,8 +58,8 @@ public class AmlService
             cfg.ValorUMA, cfg.MontoIdentificacion);
 
         // Reforma LFPIORPI 16-Jul-2025 (vigencia 17-Jul-2025):
-        // - Antes de la reforma: solo se reportan operaciones NO pagadas en efectivo (Pesos).
-        //   Excluir notas donde Pesos (IdOpcionPago=6) > 50% del total.
+        // - Antes de la reforma: solo se reportan operaciones en EFECTIVO (Pesos/IdOpcionPago=6).
+        //   Solo incluir notas donde Pesos > 50% del total.
         // - Desde la reforma: se reportan TODAS las operaciones sin importar forma de pago.
         // Cada transacción se evalúa bajo las reglas vigentes a su fecha (no-retroactividad Art. 14 CPEUM).
         var sql = @"
@@ -91,8 +91,8 @@ public class AmlService
                       -- Post-reforma (17-Jul-2025): incluir TODAS las formas de pago
                       bn.FechaBaja >= '2025-07-17'
                       OR
-                      -- Pre-reforma: excluir notas donde Pesos (IdOpcionPago=6) > 50%
-                      bn.IdNota NOT IN (
+                      -- Pre-reforma: SOLO contar notas pagadas en efectivo (Pesos/IdOpcionPago=6 > 50%)
+                      bn.IdNota IN (
                           SELECT pn.IdNota
                           FROM BAJASPAGOSNOTAS pn
                           GROUP BY pn.IdNota
@@ -191,8 +191,8 @@ public class AmlService
                   -- Post-reforma (17-Jul-2025): incluir TODAS las formas de pago
                   bn.FechaBaja >= '2025-07-17'
                   OR
-                  -- Pre-reforma: excluir notas donde Pesos (IdOpcionPago=6) > 50%
-                  bn.IdNota NOT IN (
+                  -- Pre-reforma: SOLO contar notas pagadas en efectivo (Pesos/IdOpcionPago=6 > 50%)
+                  bn.IdNota IN (
                       SELECT pn.IdNota
                       FROM BAJASPAGOSNOTAS pn
                       GROUP BY pn.IdNota
@@ -277,8 +277,8 @@ public class AmlService
                       -- Post-reforma (17-Jul-2025): incluir TODAS las formas de pago
                       bn.FechaBaja >= '2025-07-17'
                       OR
-                      -- Pre-reforma: excluir notas donde Pesos (IdOpcionPago=6) > 50%
-                      bn.IdNota NOT IN (
+                      -- Pre-reforma: SOLO contar notas pagadas en efectivo (Pesos/IdOpcionPago=6 > 50%)
+                      bn.IdNota IN (
                           SELECT pn.IdNota
                           FROM BAJASPAGOSNOTAS pn
                           GROUP BY pn.IdNota
