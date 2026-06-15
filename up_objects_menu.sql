@@ -64,7 +64,8 @@ VALUES
     (NEWID(), @ScreenTypeId, 'Transferencias', '/Inventario/Transferencias', 'fa-solid fa-exchange-alt', 2, @FolderInventario, 1, GETUTCDATE(), GETUTCDATE()),
     (NEWID(), @ScreenTypeId, 'Registro Existencias', '/Inventario/Existencias', 'fa-solid fa-boxes-stacked', 3, @FolderInventario, 1, GETUTCDATE(), GETUTCDATE()),
     (NEWID(), @ViewTypeId, 'Reporte Faltantes', '/Inventario/Faltantes', 'fa-solid fa-magnifying-glass-minus', 4, @FolderInventario, 1, GETUTCDATE(), GETUTCDATE()),
-    (NEWID(), @ScreenTypeId, 'Lotes Repetidas', '/Inventario/LotesRepetidas', 'fa-solid fa-boxes-packing', 5, @FolderInventario, 1, GETUTCDATE(), GETUTCDATE());
+    (NEWID(), @ScreenTypeId, 'Lotes Repetidas', '/Inventario/LotesRepetidas', 'fa-solid fa-boxes-packing', 5, @FolderInventario, 1, GETUTCDATE(), GETUTCDATE()),
+    (NEWID(), @ScreenTypeId, 'Visor Fotografías / CBO', '/Inventario/VisorFotografias', 'fa-solid fa-camera', 6, @FolderInventario, 1, GETUTCDATE(), GETUTCDATE());
 
 -- ═══════════════════════════════════════════════════════════════
 -- PROCESOS
@@ -90,6 +91,6 @@ VALUES
     (NEWID(), @ScreenTypeId, 'Diseño Etiquetas', '/Configuracion/DisenioEtiquetas', 'fa-solid fa-tag', 6, @FolderConfig, 1, GETUTCDATE(), GETUTCDATE());
 
 -- ═══════════════════════════════════════════════════════════════
--- RESUMEN: 5 carpetas + 33 pantallas = 38 objetos de menú
+-- RESUMEN: 5 carpetas + 34 pantallas = 39 objetos de menú
 -- ═══════════════════════════════════════════════════════════════
 SELECT 'Menu objects created: ' + CAST(COUNT(*) AS VARCHAR) + ' items' FROM dbo.up_objects WHERE created_at >= DATEADD(MINUTE, -5, GETUTCDATE());

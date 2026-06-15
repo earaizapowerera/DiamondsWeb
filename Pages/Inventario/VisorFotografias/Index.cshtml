@@ -1,0 +1,233 @@
+@page
+@model DiamondsWeb.Pages.Inventario.VisorFotografias.IndexModel
+@{
+    ViewData["Title"] = "Visor de Fotografías / CBO";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<div id="alertContainer"></div>
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-camera me-2"></i>Visor de Fotografías / CBO</span>
+        <span class="badge bg-light text-dark">
+            <i class="fa-solid fa-eye me-1"></i>Visibles: <span id="contadorVisibles">@Model.TotalVisibles</span> / @Model.TotalPiezas
+        </span>
+    </div>
+    <div class="card-body">
+        <!-- Filtro y acciones -->
+        <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-5">
+                <label class="form-label"><small>Buscar</small></label>
+                <form method="get" class="d-flex gap-2">
+                    <input type="text" class="form-control form-control-sm" name="Buscar"
+                           value="@Model.Buscar" placeholder="Código, descripción, grupo o modelo..." />
+                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                        <i class="fa-solid fa-search"></i>
+                    </button>
+                    @if (!string.IsNullOrEmpty(Model.Buscar))
+                    {
+                        <a href="?Buscar=" class="btn btn-outline-secondary btn-sm" title="Limpiar filtro">
+                            <i class="fa-solid fa-times"></i>
+                        </a>
+                    }
+                </form>
+            </div>
+            <div class="col-md-7 text-end">
+                <button type="button" class="btn btn-success btn-sm" id="btnOneAll" title="1 a Todos">
+                    <i class="fa-solid fa-eye me-1"></i>1 a Todos
+                </button>
+                <button type="button" class="btn btn-warning btn-sm" id="btnZeroAll" title="0 a Todos">
+                    <i class="fa-solid fa-eye-slash me-1"></i>0 a Todos
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnGuardar" title="Guardar cambios">
+                    <i class="fa-solid fa-save me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+            <table class="table table-hover table-striped table-sm mb-0" id="tablaCbo">
+                <thead class="table-dark" style="position: sticky; top: 0; z-index: 1;">
+                    <tr>
+                        <th style="width: 80px;" class="text-center">Visible</th>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th>Grupo</th>
+                        <th>Kilates</th>
+                        <th>Modelo</th>
+                        <th class="text-end">Precio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Piezas.Any())
+                    {
+                        @foreach (var p in Model.Piezas)
+                        {
+                            <tr>
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input cbo-check"
+                                           data-cb="@p.Cb"
+                                           @(p.Visible == 1 ? "checked" : "") />
+                                </td>
+                                <td><code>@p.CodigoBarras</code></td>
+                                <td>@p.Descripcion</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(p.Grupo))
+                                    {
+                                        <span class="badge bg-secondary">@p.Grupo</span>
+                                    }
+                                </td>
+                                <td>@p.Kilates</td>
+                                <td>@p.Modelo</td>
+                                <td class="text-end">@p.Precio.ToString("C0")</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron piezas.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                || document.querySelector('meta[name="__RequestVerificationToken"]')?.content
+                || '';
+
+    function actualizarContador() {
+        const checks = document.querySelectorAll('.cbo-check');
+        const visibles = Array.from(checks).filter(c => c.checked).length;
+        document.getElementById('contadorVisibles').textContent = visibles;
+    }
+
+    function mostrarAlerta(tipo, mensaje) {
+        const container = document.getElementById('alertContainer');
+        const icon = tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+        container.innerHTML = `<div class="alert alert-${tipo} alert-dismissible fade show">
+            <i class="fa-solid ${icon} me-2"></i>${mensaje}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+        setTimeout(() => { container.innerHTML = ''; }, 5000);
+    }
+
+    // Actualizar contador cuando se cambia un checkbox
+    document.querySelectorAll('.cbo-check').forEach(function (cb) {
+        cb.addEventListener('change', actualizarContador);
+    });
+
+    // Guardar
+    document.getElementById('btnGuardar').addEventListener('click', async function () {
+        const checks = document.querySelectorAll('.cbo-check:checked');
+        const codigos = Array.from(checks).map(c => c.dataset.cb);
+
+        if (!confirm('¿Guardar los cambios de visibilidad?')) return;
+
+        this.disabled = true;
+        this.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Guardando...';
+
+        try {
+            const resp = await fetch('?handler=Guardar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({ codigosVisibles: codigos })
+            });
+            const data = await resp.json();
+            mostrarAlerta(data.success ? 'success' : 'danger', data.message);
+        } catch (err) {
+            mostrarAlerta('danger', 'Error de comunicación: ' + err.message);
+        } finally {
+            this.disabled = false;
+            this.innerHTML = '<i class="fa-solid fa-save me-1"></i>Guardar';
+        }
+    });
+
+    // 1 a Todos
+    document.getElementById('btnOneAll').addEventListener('click', async function () {
+        if (!confirm('¿Está seguro de poner 1 a TODOS los registros en esta consulta?')) return;
+
+        this.disabled = true;
+        const buscar = new URLSearchParams(window.location.search).get('Buscar') || '';
+
+        try {
+            const resp = await fetch('?handler=EstablecerTodos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({ visible: true, buscar: buscar })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                document.querySelectorAll('.cbo-check').forEach(c => c.checked = true);
+                actualizarContador();
+            }
+            mostrarAlerta(data.success ? 'success' : 'danger', data.message);
+        } catch (err) {
+            mostrarAlerta('danger', 'Error: ' + err.message);
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+    // 0 a Todos
+    document.getElementById('btnZeroAll').addEventListener('click', async function () {
+        if (!confirm('¿Está seguro de poner 0 a TODOS los registros en esta consulta?')) return;
+
+        this.disabled = true;
+        const buscar = new URLSearchParams(window.location.search).get('Buscar') || '';
+
+        try {
+            const resp = await fetch('?handler=EstablecerTodos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({ visible: false, buscar: buscar })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                document.querySelectorAll('.cbo-check').forEach(c => c.checked = false);
+                actualizarContador();
+            }
+            mostrarAlerta(data.success ? 'success' : 'danger', data.message);
+        } catch (err) {
+            mostrarAlerta('danger', 'Error: ' + err.message);
+        } finally {
+            this.disabled = false;
+        }
+    });
+});
+</script>
+}
