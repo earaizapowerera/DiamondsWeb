@@ -33,6 +33,9 @@ public class AltaModel : PageModel
     // Remision actual
     [BindProperty(SupportsGet = true)] public int? IdRemision { get; set; }
     public Remision? RemisionActual { get; set; }
+    public Factura? FacturaActual { get; set; }
+    public List<PiezaRemision> PiezasRemision { get; set; } = new();
+    public RemisionTotales? Totales { get; set; }
 
     // Foto
     public List<PiezaFoto> FotosRecientes { get; set; } = new();
