@@ -1,0 +1,207 @@
+@page
+@model DiamondsWeb.Pages.Ventas.CorteDeCaja.IndexModel
+@{
+    ViewData["Title"] = "Corte de Caja";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Estado Actual del Corte -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-scissors me-2"></i>Corte de Caja</span>
+        <span class="badge bg-light text-dark">
+            Último corte: @(Model.FechaUltimoCorte?.ToString("dd/MMM/yyyy HH:mm") ?? "Sin registro")
+        </span>
+    </div>
+    <div class="card-body">
+        <!-- Advertencia VB6 original -->
+        <div class="alert alert-warning mb-4">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i>
+            <strong>Advertencia:</strong> Después de realizar el corte, ya no se podrán modificar ni cancelar
+            notas de venta ni devoluciones a proveedor del período cerrado.
+        </div>
+
+        <!-- Resumen del período actual -->
+        <h6 class="text-muted mb-3">
+            <i class="fa-solid fa-chart-bar me-1"></i>
+            Resumen de ventas desde el último corte
+        </h6>
+        <div class="row mb-4">
+            <div class="col-md-3 col-6 mb-2">
+                <div class="card border-info h-100">
+                    <div class="card-body text-center py-2">
+                        <small class="text-muted">Notas</small>
+                        <h4 class="mb-0 text-info">@Model.Resumen.TotalNotas</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-2">
+                <div class="card border-primary h-100">
+                    <div class="card-body text-center py-2">
+                        <small class="text-muted">Bruto</small>
+                        <h4 class="mb-0 text-primary">@Model.Resumen.TotalBruto.ToString("C2")</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-2">
+                <div class="card border-warning h-100">
+                    <div class="card-body text-center py-2">
+                        <small class="text-muted">Descuentos</small>
+                        <h4 class="mb-0 text-warning">@Model.Resumen.TotalDescuento.ToString("C2")</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-2">
+                <div class="card border-success h-100">
+                    <div class="card-body text-center py-2">
+                        <small class="text-muted">Total Venta</small>
+                        <h4 class="mb-0 text-success">@Model.Resumen.TotalVenta.ToString("C2")</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Desglose por forma de pago -->
+        @if (Model.VentasPorFormaPago.Any())
+        {
+        <h6 class="text-muted mb-3">
+            <i class="fa-solid fa-credit-card me-1"></i>
+            Desglose por forma de pago
+        </h6>
+        <div class="table-responsive mb-4">
+            <table class="table table-sm table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Forma de Pago</th>
+                        <th class="text-center">Notas</th>
+                        <th class="text-end">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var fp in Model.VentasPorFormaPago)
+                    {
+                    <tr>
+                        <td>@fp.FormaPago</td>
+                        <td class="text-center">@fp.CantidadNotas</td>
+                        <td class="text-end">@fp.Total.ToString("C2")</td>
+                    </tr>
+                    }
+                </tbody>
+                <tfoot class="table-secondary">
+                    <tr>
+                        <th>Total</th>
+                        <th class="text-center">@Model.VentasPorFormaPago.Sum(v => v.CantidadNotas)</th>
+                        <th class="text-end">@Model.VentasPorFormaPago.Sum(v => v.Total).ToString("C2")</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        }
+
+        <!-- Botón de Corte -->
+        <div class="border-top pt-3">
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalCorte">
+                <i class="fa-solid fa-scissors me-1"></i>Realizar Corte de Caja
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Historial de Cortes -->
+<div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+        <i class="fa-solid fa-clock-rotate-left me-2"></i>Historial de Cortes
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Fecha Corte</th>
+                        <th>Período Desde</th>
+                        <th>Usuario</th>
+                        <th class="text-center">Notas</th>
+                        <th class="text-end">Total Ventas</th>
+                        <th>Comentario</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Historial.Any())
+                    {
+                        @foreach (var h in Model.Historial)
+                        {
+                        <tr>
+                            <td>@h.Id</td>
+                            <td>@h.FechaCorte.ToString("dd/MMM/yyyy HH:mm")</td>
+                            <td>@(h.FechaCorteAnterior?.ToString("dd/MMM/yyyy HH:mm") ?? "—")</td>
+                            <td>@h.NombreUsuario</td>
+                            <td class="text-center">@h.TotalNotas</td>
+                            <td class="text-end">@h.TotalVentas.ToString("C2")</td>
+                            <td>@(h.Comentario ?? "—")</td>
+                        </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-clock-rotate-left fa-2x mb-2 d-block"></i>
+                                No hay cortes registrados en el historial.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación -->
+<div class="modal fade" id="modalCorte" tabindex="-1" aria-labelledby="modalCorteLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="RealizarCorte">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="modalCorteLabel">
+                        <i class="fa-solid fa-scissors me-2"></i>Confirmar Corte de Caja
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                        <strong>Esta acción no se puede deshacer.</strong><br />
+                        Se cerrará el período actual con <strong>@Model.Resumen.TotalNotas notas</strong>
+                        por un total de <strong>@Model.Resumen.TotalVenta.ToString("C2")</strong>.
+                    </div>
+                    <div class="mb-3">
+                        <label for="comentario" class="form-label">Comentario (opcional)</label>
+                        <input type="text" class="form-control" id="comentario" name="comentario"
+                               maxlength="255" placeholder="Ej: Cierre de turno vespertino" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa-solid fa-scissors me-1"></i>Confirmar Corte
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
