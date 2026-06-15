@@ -57,9 +57,11 @@ public class AmlService
             mes, anio, fechaDesde.ToString("yyyy-MM-dd"), fechaHasta.ToString("yyyy-MM-dd"),
             cfg.ValorUMA, cfg.MontoIdentificacion);
 
-        // Excluir notas pagadas 100% en Pesos.
-        // Para notas mixtas (Pesos + otra forma), incluir solo si Pesos <= 50% del total.
-        // IdOpcionPago=6 es "Pesos" en OPCIONESPAGO.
+        // Reforma LFPIORPI 16-Jul-2025 (vigencia 17-Jul-2025):
+        // - Antes de la reforma: solo se reportan operaciones NO pagadas en efectivo (Pesos).
+        //   Excluir notas donde Pesos (IdOpcionPago=6) > 50% del total.
+        // - Desde la reforma: se reportan TODAS las operaciones sin importar forma de pago.
+        // Cada transacción se evalúa bajo las reglas vigentes a su fecha (no-retroactividad Art. 14 CPEUM).
         var sql = @"
             SELECT TOP 100 ca.NombreCliente, ca.RFC, ca.Telefonos,
                    ca.TotalAcumulado, ca.NumeroOperaciones,
@@ -85,12 +87,18 @@ public class AmlService
                   AND bn.FechaBaja <= @FechaHasta
                   AND bn.NombreCliente IS NOT NULL
                   AND LTRIM(RTRIM(bn.NombreCliente)) <> ''
-                  AND bn.IdNota NOT IN (
-                      SELECT pn.IdNota
-                      FROM BAJASPAGOSNOTAS pn
-                      GROUP BY pn.IdNota
-                      HAVING ISNULL(SUM(CASE WHEN pn.IdOpcionPago = 6 THEN pn.Importe ELSE 0 END), 0)
-                             > SUM(pn.Importe) * 0.5
+                  AND (
+                      -- Post-reforma (17-Jul-2025): incluir TODAS las formas de pago
+                      bn.FechaBaja >= '2025-07-17'
+                      OR
+                      -- Pre-reforma: excluir notas donde Pesos (IdOpcionPago=6) > 50%
+                      bn.IdNota NOT IN (
+                          SELECT pn.IdNota
+                          FROM BAJASPAGOSNOTAS pn
+                          GROUP BY pn.IdNota
+                          HAVING ISNULL(SUM(CASE WHEN pn.IdOpcionPago = 6 THEN pn.Importe ELSE 0 END), 0)
+                                 > SUM(pn.Importe) * 0.5
+                      )
                   )
                   AND (@BuscarCliente IS NULL OR
                        COALESCE(h.NombreCanonical, bn.NombreCliente) LIKE '%' + @BuscarCliente + '%' OR
@@ -160,7 +168,8 @@ public class AmlService
         var (fechaDesde, fechaHasta) = CalcularPeriodo(mes, anio);
 
         // Buscar por nombre exacto O por cualquier variante homologada al nombre canónico
-        // Excluir notas donde Pesos (IdOpcionPago=6) > 50% del total
+        // Reforma LFPIORPI 17-Jul-2025: post-reforma incluir todas las formas de pago;
+        // pre-reforma excluir notas donde Pesos > 50%
         var sql = @"
             SELECT TOP 500
                 bn.IdNota,
@@ -178,12 +187,18 @@ public class AmlService
                        WHERE NombreCanonical = @NombreCliente AND Aprobado = 1))
               AND bn.FechaBaja >= @FechaDesde
               AND bn.FechaBaja <= @FechaHasta
-              AND bn.IdNota NOT IN (
-                  SELECT pn.IdNota
-                  FROM BAJASPAGOSNOTAS pn
-                  GROUP BY pn.IdNota
-                  HAVING ISNULL(SUM(CASE WHEN pn.IdOpcionPago = 6 THEN pn.Importe ELSE 0 END), 0)
-                         > SUM(pn.Importe) * 0.5
+              AND (
+                  -- Post-reforma (17-Jul-2025): incluir TODAS las formas de pago
+                  bn.FechaBaja >= '2025-07-17'
+                  OR
+                  -- Pre-reforma: excluir notas donde Pesos (IdOpcionPago=6) > 50%
+                  bn.IdNota NOT IN (
+                      SELECT pn.IdNota
+                      FROM BAJASPAGOSNOTAS pn
+                      GROUP BY pn.IdNota
+                      HAVING ISNULL(SUM(CASE WHEN pn.IdOpcionPago = 6 THEN pn.Importe ELSE 0 END), 0)
+                             > SUM(pn.Importe) * 0.5
+                  )
               )
             GROUP BY bn.IdNota, bn.NombreCliente, bn.RFC, bn.Telefonos, bn.FechaBaja, bn.FormaPago
             ORDER BY bn.FechaBaja DESC";
@@ -258,12 +273,18 @@ public class AmlService
                   AND bn.FechaBaja <= @FechaHasta
                   AND bn.NombreCliente IS NOT NULL
                   AND LTRIM(RTRIM(bn.NombreCliente)) <> ''
-                  AND bn.IdNota NOT IN (
-                      SELECT pn.IdNota
-                      FROM BAJASPAGOSNOTAS pn
-                      GROUP BY pn.IdNota
-                      HAVING ISNULL(SUM(CASE WHEN pn.IdOpcionPago = 6 THEN pn.Importe ELSE 0 END), 0)
-                             > SUM(pn.Importe) * 0.5
+                  AND (
+                      -- Post-reforma (17-Jul-2025): incluir TODAS las formas de pago
+                      bn.FechaBaja >= '2025-07-17'
+                      OR
+                      -- Pre-reforma: excluir notas donde Pesos (IdOpcionPago=6) > 50%
+                      bn.IdNota NOT IN (
+                          SELECT pn.IdNota
+                          FROM BAJASPAGOSNOTAS pn
+                          GROUP BY pn.IdNota
+                          HAVING ISNULL(SUM(CASE WHEN pn.IdOpcionPago = 6 THEN pn.Importe ELSE 0 END), 0)
+                                 > SUM(pn.Importe) * 0.5
+                      )
                   )
                 GROUP BY COALESCE(h.NombreCanonical, bn.NombreCliente)
             ) sub";
