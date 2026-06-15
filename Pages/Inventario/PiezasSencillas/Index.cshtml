@@ -23,9 +23,11 @@
 <div class="card mb-4 shadow-sm">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <span><i class="fa-solid fa-ring me-2"></i>Piezas Sencillas</span>
-        <a asp-page="Detalle" class="btn btn-light btn-sm">
-            <i class="fa-solid fa-plus me-1"></i>Nueva Pieza
-        </a>
+        <div class="d-flex gap-2" id="toolbar-inv-piezas">
+            <a asp-page="Detalle" class="btn btn-light btn-sm">
+                <i class="fa-solid fa-plus me-1"></i>Nueva Pieza
+            </a>
+        </div>
     </div>
     <div class="card-body">
         <form method="get" class="row g-3 align-items-end mb-4">
@@ -68,16 +70,16 @@
 
         <!-- Tabla -->
         <div class="table-responsive">
-            <table class="table table-hover table-striped table-sm mb-0">
+            <table class="table table-hover table-striped table-sm mb-0" id="tblInvPiezas">
                 <thead class="table-dark">
                     <tr>
-                        <th>Codigo</th>
-                        <th>Descripcion</th>
-                        <th>Grupo</th>
-                        <th>Proveedor</th>
-                        <th class="text-end">Precio</th>
-                        <th class="text-center">Status</th>
-                        <th>Fecha</th>
+                        <th data-col="CodigoBarras">Codigo</th>
+                        <th data-col="Descripcion">Descripcion</th>
+                        <th data-col="Grupo">Grupo</th>
+                        <th data-col="Proveedor">Proveedor</th>
+                        <th data-col="Precio" class="text-end">Precio</th>
+                        <th data-col="Status" class="text-center">Status</th>
+                        <th data-col="Fecha">Fecha</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
@@ -132,3 +134,19 @@
         </div>
     </div>
 </div>
+
+<link rel="stylesheet" href="/css/column-config.css?v=20260615" />
+
+@section Scripts {
+<script src="/js/column-config.js?v=20260615"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initColumnConfig({
+        tableId: 'tblInvPiezas',
+        vista: 'vPiezasInventario',
+        storageKey: 'colcfg-inv-piezas',
+        toolbar: document.getElementById('toolbar-inv-piezas')
+    });
+});
+</script>
+}

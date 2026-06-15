@@ -1,0 +1,55 @@
+/* column-config.css — Estilos para el módulo de columnas configurables */
+
+.colcfg-offcanvas {
+    width: 300px !important;
+}
+
+.colcfg-offcanvas .offcanvas-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid var(--bs-border-color);
+    padding: 0.75rem 1rem;
+}
+
+.colcfg-offcanvas .offcanvas-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0;
+}
+
+.colcfg-section {
+    background-color: #fafbfc;
+}
+
+.colcfg-checklist {
+    max-height: calc(100vh - 250px);
+    overflow-y: auto;
+}
+
+.colcfg-check-item {
+    padding: 0.4rem 0;
+    border-bottom: 1px solid #f0f0f0;
+    margin: 0;
+}
+
+.colcfg-check-item:last-child {
+    border-bottom: none;
+}
+
+.colcfg-check-item .form-check-label {
+    font-size: 0.875rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.colcfg-check-item .form-check-input {
+    cursor: pointer;
+}
+
+.colcfg-check-item .form-check-input:checked + .form-check-label {
+    font-weight: 500;
+}
+
+/* Toast container z-index override para offcanvas */
+#colcfg-toast-container {
+    z-index: 1090 !important;
+}
