@@ -45,6 +45,11 @@ builder.Services.AddScoped<IClaimsTransformation, DiamondsClaimsTransformation>(
 var diamondsConnStr = builder.Configuration.GetConnectionString("DiamondsDb")!;
 builder.Services.AddDiamondsServices(diamondsConnStr);
 
+// Servicio keyed para Consulta de Bajas Central (conecta a BD host/central)
+var hostConnStr = builder.Configuration.GetConnectionString("DiamondsHostDb") ?? diamondsConnStr;
+builder.Services.AddKeyedScoped<BajasService>("central", (sp, _) =>
+    new BajasService(hostConnStr, sp.GetRequiredService<ILogger<BajasService>>()));
+
 var app = builder.Build();
 
 // Middleware
