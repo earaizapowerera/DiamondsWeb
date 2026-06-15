@@ -1,3 +1,4 @@
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -58,7 +59,7 @@ public class IndexModel : PageModel
                 return RedirectToPage();
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = User.GetRequiredIdUsuario();
             await _catalogService.CrearTablaJerarquiaAsync(NuevaTabla.Trim(), idUsuario);
             TempData["Success"] = "Tabla creada exitosamente.";
         }

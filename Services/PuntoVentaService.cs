@@ -15,9 +15,6 @@ public class PuntoVentaService
     private readonly string _connectionString;
     private readonly ILogger<PuntoVentaService> _logger;
 
-    // IdTienda fijo = 1 (tienda local, igual que el legacy)
-    private const int IdTienda = 1;
-
     public PuntoVentaService(string connectionString, ILogger<PuntoVentaService> logger)
     {
         _connectionString = connectionString;
@@ -68,7 +65,9 @@ public class PuntoVentaService
     /// Crea nueva sesión de venta (inserta en Notas con counter).
     /// Equivale a: txtUsuario_LostFocus en el VB6.
     /// </summary>
-    public async Task<NotaSesion> CrearSesionAsync(CrearSesionRequest req)
+    /// <param name="req">Datos de la sesión a crear.</param>
+    /// <param name="idTienda">IdTienda del usuario autenticado (obtenido del claim en la page).</param>
+    public async Task<NotaSesion> CrearSesionAsync(CrearSesionRequest req, int idTienda)
     {
         using var db = CreateConnection();
         db.Open();
@@ -95,7 +94,7 @@ public class PuntoVentaService
             await db.ExecuteAsync(
                 "UPDATE Contador SET Nota = Nota + 1", transaction: tx);
 
-            var idNota = IdTienda * 10000000 + nota; // formato: {IdTienda}{Nota}
+            var idNota = idTienda * 10000000 + nota; // formato: {IdTienda}{Nota}
             var fechaBaja = req.FechaBaja ?? DateTime.UtcNow;
 
             await db.ExecuteAsync(
@@ -106,7 +105,7 @@ public class PuntoVentaService
                 new
                 {
                     IdNota = idNota,
-                    IdTienda,
+                    IdTienda = idTienda,
                     IdUsuario = req.IdUsuario,
                     IdVendedor = req.IdUsuario, // vendedor = usuario por default
                     FechaBaja = fechaBaja

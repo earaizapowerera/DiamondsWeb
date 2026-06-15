@@ -256,6 +256,7 @@ public class SalesService
         using var conn = CreateConnection();
         var nota = await conn.ExecuteScalarAsync<int>("SELECT ISNULL(Nota,0)+1 FROM contador");
         await conn.ExecuteAsync("UPDATE contador SET Nota = Nota + 1");
+        // IdTienda is queried from DB (first store); acceptable fallback for legacy POS flow
         var idTienda = await conn.ExecuteScalarAsync<int?>("SELECT TOP 1 IdTienda FROM Tiendas") ?? 1;
         var idNota = $"{idTienda}{nota:D6}";
         return idNota;

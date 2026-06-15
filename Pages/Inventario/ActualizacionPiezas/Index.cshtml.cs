@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 
@@ -129,12 +130,12 @@ public class IndexModel : PageModel
     {
         try
         {
-            var idUsuario = int.TryParse(
-                User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = User.GetRequiredIdUsuario();
+            var idTienda = User.GetIdTienda();
 
             var idFactura = await _service.CrearFacturaAsync(
                 NuevaFolioFactura, NuevaProveedor, NuevaIdRazonSocial,
-                NuevaFechaFactura, idUsuario, 1); // IdTienda = 1 default
+                NuevaFechaFactura, idUsuario, idTienda);
 
             TempData["Success"] = $"Factura creada con ID {idFactura}.";
 

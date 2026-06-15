@@ -1,3 +1,4 @@
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -80,7 +81,7 @@ public class IndexModel : PageModel
                 return RedirectToPage();
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = User.GetRequiredIdUsuario();
             await _catalogService.CrearOpcionPagoAsync(NuevoNombre.Trim(), NuevoIdMoneda, NuevoIdLogo, NuevoActivo, idUsuario);
             TempData["Success"] = "Opcion de pago creada exitosamente.";
         }
@@ -103,7 +104,7 @@ public class IndexModel : PageModel
                 return RedirectToPage();
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = User.GetRequiredIdUsuario();
             await _catalogService.ActualizarOpcionPagoAsync(EditId.Value, EditNombre.Trim(), EditIdMoneda, EditIdLogo, EditActivo, idUsuario);
             TempData["Success"] = "Opcion de pago actualizada exitosamente.";
         }

@@ -1,3 +1,4 @@
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -63,7 +64,7 @@ public class RazonesSocialesModel : PageModel
             Colonia = colonia?.Trim(),
             Municipio = municipio?.Trim(),
             Estado = estado?.Trim(),
-            IdUsuario = 1 // usuario por defecto
+            IdUsuario = User.GetRequiredIdUsuario()
         };
 
         try

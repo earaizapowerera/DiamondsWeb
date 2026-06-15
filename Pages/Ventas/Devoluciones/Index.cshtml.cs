@@ -1,3 +1,4 @@
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -55,7 +56,7 @@ public class IndexModel : PageModel
                 return RedirectToPage();
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = User.GetRequiredIdUsuario();
             var resultado = await _salesService.CrearDevolucionAsync(NuevoCodigoBarras.Trim(), NuevoMotivo.Trim(), idUsuario);
 
             if (resultado == "Pieza no encontrada")

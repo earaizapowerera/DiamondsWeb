@@ -1,9 +1,9 @@
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using System.Security.Claims;
 
 namespace DiamondsWeb.Pages.Procesos.ActualizacionFacturas;
 
@@ -44,9 +44,7 @@ public class IndexModel : PageModel
     // ── Helpers de autenticación ──
     private int ObtenerIdUsuario()
     {
-        var claim = User.FindFirst("IdUsuario")?.Value
-                    ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        return int.TryParse(claim, out var id) ? id : 1;
+        return User.GetRequiredIdUsuario();
     }
 
     /// <summary>

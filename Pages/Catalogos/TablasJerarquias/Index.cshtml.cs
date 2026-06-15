@@ -1,3 +1,4 @@
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -66,7 +67,7 @@ public class IndexModel : PageModel
                 TempData["Error"] = "La descripcion es requerida.";
                 return RedirectToPage(new { SelId });
             }
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = User.GetRequiredIdUsuario();
             var newId = await _catalogService.CrearTablaJerarquiaAsync(NuevaDescripcion.Trim(), idUsuario);
             TempData["Success"] = "Tabla creada exitosamente.";
             return RedirectToPage(new { SelId = newId });
@@ -88,7 +89,7 @@ public class IndexModel : PageModel
                 TempData["Error"] = "Datos incompletos para editar.";
                 return RedirectToPage(new { SelId });
             }
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = User.GetRequiredIdUsuario();
             await _catalogService.ActualizarTablaJerarquiaAsync(EditTablaId.Value, EditDescripcion.Trim(), idUsuario);
             TempData["Success"] = "Tabla actualizada exitosamente.";
         }

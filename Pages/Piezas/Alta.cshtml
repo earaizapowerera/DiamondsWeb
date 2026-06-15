@@ -55,8 +55,8 @@
     <input type="hidden" asp-for="IdRemision" />
     <input type="hidden" asp-for="Pieza.IdRemision" />
     <input type="hidden" asp-for="Pieza.IdFactura" />
-    <input type="hidden" asp-for="Pieza.IdTienda" value="1" />
-    <input type="hidden" asp-for="Pieza.IdLocalizacion" value="1" />
+    <input type="hidden" asp-for="Pieza.IdTienda" value="@(User.FindFirst("IdTienda")?.Value ?? "1")" />
+    <input type="hidden" asp-for="Pieza.IdLocalizacion" value="@(User.FindFirst("IdTienda")?.Value ?? "1")" />
     <input type="hidden" asp-for="TabCaracteristica" id="hidTabCaracteristica" />
     <input type="hidden" asp-for="TabCosto" id="hidTabCosto" />
 

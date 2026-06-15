@@ -296,10 +296,12 @@ public class PiezaService
             using var tx = db.BeginTransaction();
 
             // Generar codigo de barras
+            // Fallback to 1 is a safety net; callers (Alta.cshtml.cs) should set IdTienda from User claim
             var codigoBarras = await GenerarCodigoBarrasAsync(db, tx, pieza.IdTienda ?? 1);
             pieza.CodigoBarras = codigoBarras;
 
             // Insertar etiqueta
+            // Fallbacks to 1 are safety nets; callers should set IdTienda/IdLocalizacion from User claim
             var sqlEtiqueta = @"INSERT INTO Etiquetas (CodigoBarras, IdLocalizacion, IdTienda, FechaCaptura, IdUsuario, FechaUltEdicion, Precio, IdTabla)
                                  VALUES (@CodigoBarras, @IdLocalizacion, @IdTienda, GETUTCDATE(), @IdUsuario, GETUTCDATE(), @Precio, @IdTabla)";
             await db.ExecuteAsync(sqlEtiqueta, new

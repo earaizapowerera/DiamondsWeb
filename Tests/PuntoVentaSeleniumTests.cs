@@ -14,12 +14,12 @@ namespace DiamondsWeb.Tests;
 /// </summary>
 public class PuntoVentaSeleniumTests : IDisposable
 {
-    private const string BaseUrl = "https://diamonds.dev.powerera.com";
-    private const string LoginUser = "admin";
-    private const string LoginPass = "admin";
+    private static readonly string BaseUrl = Environment.GetEnvironmentVariable("DIAMONDS_TEST_URL") ?? "https://diamonds.dev.powerera.com";
+    private static readonly string LoginUser = Environment.GetEnvironmentVariable("DIAMONDS_TEST_USER") ?? "admin";
+    private static readonly string LoginPass = Environment.GetEnvironmentVariable("DIAMONDS_TEST_PASS") ?? "admin";
     private const string CodigoPiezaSencilla = "000270";
     private const string CodigoPiezaRepetida = "003946";
-    private const int IdUsuarioDiamonds = 1;
+    private static readonly int IdUsuarioDiamonds = int.TryParse(Environment.GetEnvironmentVariable("DIAMONDS_TEST_USERID"), out var id) ? id : 1;
 
     private readonly IWebDriver _driver;
     private readonly WebDriverWait _wait;

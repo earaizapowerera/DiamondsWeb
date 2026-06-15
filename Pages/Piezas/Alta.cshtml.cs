@@ -1,3 +1,4 @@
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -98,9 +99,9 @@ public class AltaModel : PageModel
         RecalcularPrecios();
 
         Pieza.Observaciones = Observaciones;
-        Pieza.IdTienda ??= 1;
-        Pieza.IdLocalizacion ??= 1;
-        Pieza.IdUsuario = 1; // TODO: obtener del claim de auth
+        Pieza.IdTienda ??= User.GetIdTienda();
+        Pieza.IdLocalizacion ??= User.GetIdTienda();
+        Pieza.IdUsuario = User.GetRequiredIdUsuario();
 
         GuardarPiezaResult result;
         if (EsEdicion)

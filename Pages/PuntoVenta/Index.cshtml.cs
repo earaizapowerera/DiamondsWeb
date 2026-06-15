@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 
@@ -67,7 +68,7 @@ public class IndexModel : PageModel
     {
         try
         {
-            var sesion = await _pos.CrearSesionAsync(req);
+            var sesion = await _pos.CrearSesionAsync(req, User.GetIdTienda());
             return new JsonResult(new { ok = true, sesion });
         }
         catch (InvalidOperationException ex)

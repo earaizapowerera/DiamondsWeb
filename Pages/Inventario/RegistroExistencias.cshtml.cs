@@ -1,3 +1,4 @@
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -40,7 +41,7 @@ public class RegistroExistenciasModel : PageModel
 
     private int ObtenerIdUsuario()
     {
-        return int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+        return User.GetRequiredIdUsuario();
     }
 
     /// <summary>

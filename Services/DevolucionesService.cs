@@ -84,7 +84,7 @@ public class DevolucionesService
     /// y registra en piezasreestablecidas.
     /// </summary>
     public async Task<ResultadoReestablecimiento> ReestablecerPiezaAsync(
-        string codigoBarras, int idTienda, string usuario)
+        string codigoBarras, int idTienda, string usuario, int idUsuario = 0)
     {
         try
         {
@@ -122,7 +122,7 @@ public class DevolucionesService
                 {
                     CodigoBarras = codigoBarras,
                     Motivo = "DevCli",
-                    IdUsuario = 1,  // Admin del sistema Diamonds
+                    IdUsuario = idUsuario > 0 ? idUsuario : 1,  // Se recibe del claim; fallback a 1 solo si no se envía
                     IdTienda = idTienda
                 },
                 commandType: CommandType.StoredProcedure);

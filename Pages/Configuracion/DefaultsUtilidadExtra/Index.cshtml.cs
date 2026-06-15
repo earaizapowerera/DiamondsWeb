@@ -1,3 +1,4 @@
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -59,7 +60,7 @@ public class IndexModel : PageModel
                 return RedirectToPage();
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = User.GetRequiredIdUsuario();
             await _catalogService.CrearDefaultUtilidadExtraAsync(NuevoUtilidadExtra, idUsuario);
             TempData["Success"] = "Default utilidad extra creado exitosamente.";
         }
@@ -82,7 +83,7 @@ public class IndexModel : PageModel
                 return RedirectToPage();
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = User.GetRequiredIdUsuario();
             await _catalogService.ActualizarDefaultUtilidadExtraAsync(EditId.Value, EditUtilidadExtra.Value, idUsuario);
             TempData["Success"] = "Default utilidad extra actualizado exitosamente.";
         }

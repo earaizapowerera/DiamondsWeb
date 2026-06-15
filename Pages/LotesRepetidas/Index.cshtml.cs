@@ -1,3 +1,4 @@
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -12,8 +13,8 @@ public class IndexModel : PageModel
     private readonly LotesRepetidasService _service;
     private readonly ILogger<IndexModel> _logger;
 
-    // IdTienda hardcodeado como en VB6 (tienda local = 1)
-    private const int IdTienda = 1;
+    // IdTienda del usuario autenticado (antes hardcodeado a 1 como en VB6)
+    private int IdTienda => User.GetIdTienda();
 
     public IndexModel(LotesRepetidasService service, ILogger<IndexModel> logger)
     {

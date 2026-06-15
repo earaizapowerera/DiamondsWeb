@@ -1,3 +1,4 @@
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -83,7 +84,8 @@ public class IndexModel : PageModel
             "Solicitud de reestablecimiento: CB={CB}, Tienda={Tienda}, Usuario={Usuario}",
             codigoBarras, idTienda, usuario);
 
-        var resultado = await _service.ReestablecerPiezaAsync(codigoBarras, idTienda, usuario);
+        var idUsuario = User.GetRequiredIdUsuario();
+        var resultado = await _service.ReestablecerPiezaAsync(codigoBarras, idTienda, usuario, idUsuario);
 
         if (resultado.Exito)
         {

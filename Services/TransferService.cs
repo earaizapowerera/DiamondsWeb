@@ -389,12 +389,17 @@ public class TransferService
             if (!int.TryParse(idLoteStr, out var idLote))
                 idLote = idTiendaOrigen * 100000 + nuevoLote; // fallback seguro
 
+            // Obtener IdMoneda del catálogo de la pieza (en vez de hardcodear 1=MXN)
+            var idMoneda = await conn.ExecuteScalarAsync<int?>(
+                "SELECT TOP 1 IdMoneda FROM catalogorepetidas WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx) ?? 1; // fallback a MXN si no tiene moneda
+
             // Crear lote en tránsito
             await conn.ExecuteAsync(@"
                 INSERT INTO lotesrepetidas (IdLote, CodigoBarras, Cantidad, IdMoneda, IdUsuario, IdTienda, IdLocalizacion)
-                VALUES (@IdLote, @CB, @Cantidad, 1, @Usuario, @Tienda, @Loc)",
+                VALUES (@IdLote, @CB, @Cantidad, @IdMoneda, @Usuario, @Tienda, @Loc)",
                 new { IdLote = idLote, CB = codigoBarras, Cantidad = cantidad,
-                    Usuario = idUsuario, Tienda = idTiendaOrigen, Loc = locTransito.Value }, tx);
+                    IdMoneda = idMoneda, Usuario = idUsuario, Tienda = idTiendaOrigen, Loc = locTransito.Value }, tx);
 
             // Log de transferencia
             await conn.ExecuteAsync(@"

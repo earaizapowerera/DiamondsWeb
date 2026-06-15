@@ -1,3 +1,4 @@
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -57,7 +58,7 @@ public class IndexModel : PageModel
         if (string.IsNullOrWhiteSpace(request?.CodigoBarras))
             return new JsonResult(new EscaneoResult { Success = false, Message = "Codigo vacio" });
 
-        var userId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+        var userId = User.GetRequiredIdUsuario();
         var result = await _service.RegistrarEscaneoAsync(request.CodigoBarras, userId);
         return new JsonResult(result);
     }
@@ -68,7 +69,7 @@ public class IndexModel : PageModel
         if (string.IsNullOrWhiteSpace(request?.CodigoBarras))
             return new JsonResult(new { success = false });
 
-        var userId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+        var userId = User.GetRequiredIdUsuario();
         var ok = await _service.RegistrarSobranteAsync(
             request.CodigoBarras, request.Descripcion, request.Precio, userId);
 
@@ -80,7 +81,7 @@ public class IndexModel : PageModel
     {
         try
         {
-            var userId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var userId = User.GetRequiredIdUsuario();
             var msg = await _service.IniciarInventarioAsync(userId);
             TempData["Success"] = msg;
         }

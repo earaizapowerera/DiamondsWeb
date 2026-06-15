@@ -1,3 +1,4 @@
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -70,7 +71,7 @@ public class IndexModel : PageModel
                 return RedirectToPage(new { CodigoBarras });
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = User.GetRequiredIdUsuario();
             var resultado = await _inventoryService.CambiarStatusPiezaAsync(CodigoBarras.Trim(), NuevoStatus, idUsuario);
             TempData["Success"] = resultado;
         }
