@@ -46,12 +46,55 @@ public class IndexModel : PageModel
         }
     }
 
-    public async Task<IActionResult> OnPostEliminarAsync(string codigoBarras, int? idRemision)
+    /// <summary>
+    /// AJAX: Verifica permisos de eliminacion para una pieza.
+    /// Retorna JSON con el resultado del chequeo de permisos.
+    /// </summary>
+    public async Task<IActionResult> OnGetVerificarPermisoEliminarAsync(string codigoBarras)
     {
-        var ok = await _svc.EliminarPiezaAsync(codigoBarras, 1);
-        TempData["MensajeExito"] = ok
-            ? $"Pieza {codigoBarras} eliminada correctamente"
-            : $"Error al eliminar pieza {codigoBarras}";
-        return RedirectToPage(new { IdRemision = idRemision });
+        if (string.IsNullOrWhiteSpace(codigoBarras))
+            return new JsonResult(new { success = false, error = "Codigo de barras requerido." });
+
+        var idUsuario = ObtenerIdUsuario();
+        var resultado = await _svc.VerificarPermisoEliminarAsync(codigoBarras, idUsuario);
+        return new JsonResult(resultado);
+    }
+
+    /// <summary>
+    /// AJAX: Elimina una pieza con validacion de permisos.
+    /// Si requiere autorizacion, valida credenciales de supervisor.
+    /// </summary>
+    public async Task<IActionResult> OnPostEliminarConPermisoAsync(
+        [FromBody] EliminarPiezaRequest request)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.CodigoBarras))
+            return new JsonResult(new EliminarPiezaResult
+            {
+                Success = false,
+                Error = "Codigo de barras requerido."
+            });
+
+        var idUsuario = ObtenerIdUsuario();
+        var idTienda = ObtenerIdTienda();
+
+        var resultado = await _svc.EliminarPiezaConPermisoAsync(
+            request.CodigoBarras,
+            idUsuario,
+            idTienda,
+            request.Motivo,
+            request.SupervisorNombre,
+            request.SupervisorPassword);
+
+        return new JsonResult(resultado);
+    }
+
+    private int ObtenerIdUsuario()
+    {
+        return int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+    }
+
+    private int ObtenerIdTienda()
+    {
+        return int.TryParse(User.FindFirst("IdTienda")?.Value, out var tid) ? tid : 1;
     }
 }

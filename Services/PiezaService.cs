@@ -420,50 +420,193 @@ public class PiezaService
         }
     }
 
-    public async Task<bool> EliminarPiezaAsync(string codigoBarras, int userId)
+    // ==================== ELIMINACION CON PERMISOS ====================
+    // Migrado de EliminarPieza() en frmSencillas.frm (VB6, lineas 3449-3509)
+    // y frmPermisoCancelar.frm para autorizacion de supervisor.
+
+    /// <summary>
+    /// Verifica si el usuario tiene permiso para eliminar la pieza.
+    /// Logica VB6:
+    ///   1) Si etiqueta fue impresa (etiquetasimpresas) → requiere autorizacion
+    ///   2) Si menos de 2 horas desde FechaCaptura → puede eliminar libre
+    ///   3) Si 2+ horas → requiere autorizacion
+    ///   4) Supervisores (PermisoUsuarios=1) siempre pueden
+    ///   5) Pre-autorizacion en permisocancelar tambien permite
+    /// </summary>
+    public async Task<PermisoEliminarResult> VerificarPermisoEliminarAsync(string codigoBarras, int userId)
+    {
+        using var db = CreateConnection();
+
+        var pieza = await db.QueryFirstOrDefaultAsync<dynamic>(
+            "SELECT TOP 1 CodigoBarras, Descripcion, FechaCaptura FROM Piezas WHERE CodigoBarras = @CB",
+            new { CB = codigoBarras });
+
+        if (pieza == null)
+            return new PermisoEliminarResult
+            {
+                CodigoBarras = codigoBarras,
+                MotivoRequerimiento = "La pieza no existe."
+            };
+
+        var result = new PermisoEliminarResult
+        {
+            CodigoBarras = (string)pieza.CodigoBarras,
+            Descripcion = (string?)pieza.Descripcion,
+            FechaCaptura = (DateTime?)pieza.FechaCaptura,
+        };
+
+        // Gate 1: etiqueta ya impresa
+        var etiquetaCount = await db.QuerySingleAsync<int>(
+            "SELECT TOP 1 COUNT(*) FROM etiquetasimpresas WHERE codigobarras = @CB",
+            new { CB = codigoBarras });
+        result.EtiquetaImpresa = etiquetaCount > 0;
+
+        // Gate 2: ventana de 2 horas
+        if (pieza.FechaCaptura != null)
+        {
+            var horas = (DateTime.UtcNow - (DateTime)pieza.FechaCaptura).TotalHours;
+            result.DentroDeVentana = horas < 2;
+        }
+
+        // Gate 3: usuario supervisor
+        var permisoUsuarios = await db.QueryFirstOrDefaultAsync<bool?>(
+            "SELECT TOP 1 CAST(PermisoUsuarios AS BIT) FROM Usuarios WHERE IdUsuario = @Id",
+            new { Id = userId });
+        result.EsSupervisor = permisoUsuarios == true;
+
+        // Gate 4: pre-autorizacion existente
+        var preAuthCount = await db.QuerySingleAsync<int>(
+            "SELECT TOP 1 COUNT(*) FROM permisocancelar WHERE codigobarras = @CB",
+            new { CB = codigoBarras });
+        result.PreAutorizado = preAuthCount > 0;
+
+        // Determinar resultado
+        if (!result.EtiquetaImpresa && result.DentroDeVentana)
+        {
+            // Dentro de ventana y sin etiqueta impresa → libre
+            result.PuedeEliminar = true;
+            result.RequiereAutorizacion = false;
+        }
+        else if (result.EsSupervisor || result.PreAutorizado)
+        {
+            // Supervisor o pre-autorizado → libre
+            result.PuedeEliminar = true;
+            result.RequiereAutorizacion = false;
+        }
+        else
+        {
+            // Requiere autorizacion de supervisor
+            result.PuedeEliminar = false;
+            result.RequiereAutorizacion = true;
+            result.MotivoRequerimiento = result.EtiquetaImpresa
+                ? "La etiqueta de esta pieza ya fue impresa. Se requiere autorizacion de supervisor."
+                : "Han pasado mas de 2 horas desde la captura. Se requiere autorizacion de supervisor.";
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Elimina una pieza con control de permisos completo.
+    /// Si requiere autorizacion, valida credenciales de supervisor y registra en permisocancelar.
+    /// Archiva en PiezasCanceladas, registra en bitacora, limpia replicacion.
+    /// </summary>
+    public async Task<EliminarPiezaResult> EliminarPiezaConPermisoAsync(
+        string codigoBarras, int userId, int idTienda, string? motivo,
+        string? supervisorNombre = null, string? supervisorPassword = null)
     {
         try
         {
+            var permiso = await VerificarPermisoEliminarAsync(codigoBarras, userId);
+
+            if (permiso.MotivoRequerimiento == "La pieza no existe.")
+                return new EliminarPiezaResult { Success = false, Error = "La pieza no existe." };
+
+            // Si requiere autorizacion, validar supervisor
+            if (permiso.RequiereAutorizacion)
+            {
+                if (string.IsNullOrWhiteSpace(supervisorNombre) || string.IsNullOrWhiteSpace(supervisorPassword))
+                    return new EliminarPiezaResult { Success = false, Error = "Se requiere autorizacion de supervisor." };
+
+                using var dbAuth = CreateConnection();
+                var supervisor = await dbAuth.QueryFirstOrDefaultAsync<dynamic>(
+                    "SELECT TOP 1 IdUsuario, PermisoUsuarios FROM Usuarios WHERE Nombre = @Nombre AND Password = @Password",
+                    new { Nombre = supervisorNombre, Password = supervisorPassword });
+
+                if (supervisor == null)
+                    return new EliminarPiezaResult { Success = false, Error = "Credenciales de supervisor invalidas o sin permisos." };
+
+                bool tienePermiso = (bool)supervisor!.PermisoUsuarios;
+                if (!tienePermiso)
+                    return new EliminarPiezaResult { Success = false, Error = "El usuario no tiene permisos de supervisor." };
+
+                // Registrar pre-autorizacion
+                int supervisorId = (int)supervisor!.IdUsuario;
+                await dbAuth.ExecuteAsync(
+                    @"INSERT INTO permisocancelar (CodigoBarras, IdUsuarioAutorizador, FechaAutorizacion, Motivo)
+                      VALUES (@CB, @SuperId, GETUTCDATE(), @Motivo)",
+                    new { CB = codigoBarras, SuperId = supervisorId, Motivo = motivo });
+            }
+
+            // Ejecutar eliminacion
             using var db = CreateConnection();
             db.Open();
             using var tx = db.BeginTransaction();
 
-            // Copiar a PiezasCanceladas para auditoria
+            // 1. Archivar en PiezasCanceladas (SELECT * + FechaBorrado + IdUsuarioBorrado)
             await db.ExecuteAsync(
-                @"INSERT INTO PiezasCanceladas (CodigoBarras, Descripcion, IdRemision, IdFactura, IdGrupo,
-                  CBPieza, DescPieza, CNPieza, Peso, PrecioGramo, CBPeso, DescPeso, CNPeso,
-                  CBManoObra, DescManoObra, CNManoObra, CBTotal, CNTotal, Precio,
-                  FechaCaptura, IdUsuario, FechaUltEdicion)
-                  SELECT CodigoBarras, Descripcion, IdRemision, IdFactura, IdGrupo,
-                  CBPieza, DescPieza, CNPieza, Peso, PrecioGramo, CBPeso, DescPeso, CNPeso,
-                  CBManoObra, DescManoObra, CNManoObra, CBTotal, CNTotal, Precio,
-                  FechaCaptura, @UserId, GETUTCDATE()
+                @"INSERT INTO PiezasCanceladas
+                  SELECT Piezas.*, GETUTCDATE() AS FechaBorrado, @UserId AS IdUsuarioBorrado
                   FROM Piezas WHERE CodigoBarras = @CB",
                 new { CB = codigoBarras, UserId = userId }, tx);
 
-            // Eliminar observaciones
-            await db.ExecuteAsync(
-                "DELETE FROM Observaciones WHERE CodigoBarras = @CB",
-                new { CB = codigoBarras }, tx);
-
-            // Eliminar etiqueta
-            await db.ExecuteAsync(
-                "DELETE FROM Etiquetas WHERE CodigoBarras = @CB",
-                new { CB = codigoBarras }, tx);
-
-            // Eliminar pieza
+            // 2. Eliminar de Piezas
             await db.ExecuteAsync(
                 "DELETE FROM Piezas WHERE CodigoBarras = @CB",
                 new { CB = codigoBarras }, tx);
 
+            // 3. Si no quedan mas piezas con este codigo, eliminar etiqueta
+            var remaining = await db.QuerySingleAsync<int>(
+                "SELECT TOP 1 COUNT(*) FROM Piezas WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+            if (remaining == 0)
+                await db.ExecuteAsync("DELETE FROM Etiquetas WHERE CodigoBarras = @CB",
+                    new { CB = codigoBarras }, tx);
+
+            // 4. Eliminar observaciones
+            await db.ExecuteAsync(
+                "DELETE FROM Observaciones WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+
+            // 5. Registrar en bitacora
+            await db.ExecuteAsync(
+                @"INSERT INTO bitacoraimpresionpiezas (CodigoBarras, FechaImpresion, idusuario)
+                  VALUES (@CB, GETUTCDATE(), @UserId)",
+                new { CB = codigoBarras, UserId = userId }, tx);
+
+            // 6. Reset replicacion (ultimosmovimientos)
+            await db.ExecuteAsync(
+                @"DELETE FROM ultimosmovimientos WHERE idtienda = @IdTienda
+                    AND (tabla = 'PiezasCanceladas' OR tabla = 'Piezas');
+                  INSERT INTO ultimosmovimientos (idtienda, tabla) VALUES (@IdTienda, 'Piezas');
+                  INSERT INTO ultimosmovimientos (idtienda, tabla) VALUES (@IdTienda, 'PiezasCanceladas')",
+                new { IdTienda = idTienda }, tx);
+
             tx.Commit();
-            _logger.LogInformation("Pieza eliminada: {CB} por usuario {User}", codigoBarras, userId);
-            return true;
+            _logger.LogInformation(
+                "Pieza eliminada: {CB} por usuario {User}, motivo: {Motivo}",
+                codigoBarras, userId, motivo ?? "(sin motivo)");
+
+            return new EliminarPiezaResult
+            {
+                Success = true,
+                Mensaje = $"Pieza {codigoBarras} eliminada correctamente."
+            };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al eliminar pieza: {CB}", codigoBarras);
-            return false;
+            return new EliminarPiezaResult { Success = false, Error = ex.Message };
         }
     }
 
