@@ -164,7 +164,7 @@ public class LotesRepetidasService
     /// Crea una nueva remisión. Genera IdRemision con el contador.
     /// </summary>
     public async Task<int> CrearRemisionAsync(int proveedor, string? numRemision,
-        DateTime fechaRemision, bool consignacion, int idTienda)
+        DateTime fechaRemision, bool consignacion, int idTienda, int idUsuario)
     {
         using var db = CreateConnection();
         db.Open();
@@ -184,7 +184,7 @@ public class LotesRepetidasService
                 @"INSERT INTO Remisiones (IdRemision, Proveedor, Remision, FechaRemision,
                     Consignacion, IdUsuario, FechaCaptura, FechaUltEdicion, IdTienda, IdLocalizacion)
                   VALUES (@IdRemision, @Proveedor, @Remision, @FechaRemision,
-                    @Consignacion, 1, GETUTCDATE(), GETUTCDATE(), @IdTienda, @IdTienda)",
+                    @Consignacion, @IdUsuario, GETUTCDATE(), GETUTCDATE(), @IdTienda, @IdTienda)",
                 new
                 {
                     IdRemision = idRemision,
@@ -192,6 +192,7 @@ public class LotesRepetidasService
                     Remision = numRemision,
                     FechaRemision = fechaRemision,
                     Consignacion = consignacion,
+                    IdUsuario = idUsuario,
                     IdTienda = idTienda
                 }, transaction: tx);
 
@@ -246,7 +247,7 @@ public class LotesRepetidasService
     /// Crea una nueva pieza en el lote. Genera IdLote con el contador.
     /// Fórmula de precio: CostoNeto × Utilidad × UtilidadExtra × Impuesto / Divisor × TCCotizacion
     /// </summary>
-    public async Task<int> CrearPiezaEnLoteAsync(CrearLoteRepetidaRequest req, int idTienda)
+    public async Task<int> CrearPiezaEnLoteAsync(CrearLoteRepetidaRequest req, int idTienda, int idUsuario)
     {
         using var db = CreateConnection();
         db.Open();
@@ -279,7 +280,7 @@ public class LotesRepetidasService
                   VALUES
                     (@IdLote, @CodigoBarras, @IdRemision, @IdFactura, @Cantidad, @Peso,
                      @PrecioGramo, @CostoBruto, @Descuento, @CostoNeto, @IdMoneda,
-                     GETUTCDATE(), GETUTCDATE(), 1, @IdTienda, @IdTienda,
+                     GETUTCDATE(), GETUTCDATE(), @IdUsuario, @IdTienda, @IdTienda,
                      @TCCosto, @TCCotizacion)",
                 new
                 {
@@ -294,6 +295,7 @@ public class LotesRepetidasService
                     req.Descuento,
                     req.CostoNeto,
                     req.IdMoneda,
+                    IdUsuario = idUsuario,
                     IdTienda = idTienda,
                     req.TCCosto,
                     req.TCCotizacion

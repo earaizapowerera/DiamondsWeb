@@ -68,8 +68,9 @@ public class IndexModel : PageModel
                 return Page();
             }
 
-            // IdUsuario hardcoded a 1 (admin) — en el legacy VB6 usaba IdUsuario global
-            await _service.CreateAsync(IdMoneda, TipoCambioCotizacion, TipoCambioVenta, 1);
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
+            await _service.CreateAsync(IdMoneda, TipoCambioCotizacion, TipoCambioVenta, idUsuario);
             SuccessMessage = "Tipo de cambio registrado correctamente.";
         }
         catch (Exception ex)

@@ -4,7 +4,7 @@
     ViewData["Title"] = Model.EsEdicion ? $"Editar Pieza {Model.Cb}" : "Alta de Pieza";
 }
 
-<link rel="stylesheet" href="/css/piezas.css?v=20260609" />
+<link rel="stylesheet" href="/css/piezas.css?v=20260615" />
 
 @if (!string.IsNullOrEmpty(Model.MensajeExito))
 {
@@ -490,6 +490,63 @@
                 </div>
             </div>
 
+            <!-- Foto de la pieza -->
+            <div class="card mb-3">
+                <div class="card-header py-2">
+                    <i class="fa-solid fa-camera me-1"></i>Foto
+                </div>
+                <div class="card-body py-2">
+                    <input type="hidden" asp-for="Pieza.ArchivoFoto" id="hidArchivoFoto" />
+
+                    <!-- Preview de foto actual -->
+                    <div id="fotoPreview" class="text-center mb-2 @(Model.FotoActual != null ? "" : "d-none")">
+                        <div class="position-relative d-inline-block">
+                            <img id="imgPreview" src="@(Model.FotoActual?.Url ?? "")"
+                                 alt="Foto de la pieza" class="foto-preview rounded border" />
+                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 foto-remove-btn"
+                                    onclick="quitarFoto()" title="Quitar foto">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Subir desde navegador -->
+                    <div id="fotoUploadArea" class="@(Model.FotoActual != null ? "d-none" : "")">
+                        <div class="foto-dropzone" id="fotoDropzone" onclick="document.getElementById('inputFoto').click()">
+                            <i class="fa-solid fa-cloud-arrow-up fa-2x text-muted mb-1"></i>
+                            <small class="text-muted d-block">Click o arrastra una foto</small>
+                            <small class="text-muted opacity-50">JPG, PNG, WebP (max 10MB)</small>
+                        </div>
+                        <input type="file" id="inputFoto" accept="image/*" class="d-none" onchange="subirFoto(this)" />
+                    </div>
+
+                    <!-- Spinner de carga -->
+                    <div id="fotoLoading" class="text-center py-2 d-none">
+                        <i class="fa-solid fa-spinner fa-spin me-1"></i>
+                        <small>Subiendo foto...</small>
+                    </div>
+
+                    <!-- Fotos recientes del movil -->
+                    @if (Model.FotosRecientes.Count > 0)
+                    {
+                    <div class="mt-2 pt-2 border-top" id="fotosMovil">
+                        <small class="text-muted d-block mb-1">
+                            <i class="fa-solid fa-mobile-screen me-1"></i>Fotos recientes (movil)
+                        </small>
+                        <div class="d-flex gap-2 flex-wrap">
+                            @foreach (var f in Model.FotosRecientes)
+                            {
+                            <div class="foto-thumb-wrap" onclick="seleccionarFotoMovil('@f.StoredFileName', '@f.Url')">
+                                <img src="@f.Url" alt="@f.FileName" class="foto-thumb rounded border"
+                                     title="@f.FileName - @f.UploadedAt.ToString("dd/MM HH:mm")" />
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+                </div>
+            </div>
+
             <!-- Formula visible -->
             <div class="card mb-3 border-info">
                 <div class="card-body py-2">
@@ -538,7 +595,7 @@
 </form>
 
 @section Scripts {
-<script src="/js/piezas.js?v=20260609"></script>
+<script src="/js/piezas.js?v=20260615"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Searchable dropdowns

@@ -49,7 +49,8 @@ public class MonedasModel : PageModel
 
         try
         {
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
 
             if (idMoneda > 0)
             {

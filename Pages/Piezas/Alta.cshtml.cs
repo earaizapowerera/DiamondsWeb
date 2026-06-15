@@ -10,8 +10,13 @@ namespace DiamondsWeb.Pages.Piezas;
 public class AltaModel : PageModel
 {
     private readonly PiezaService _svc;
+    private readonly FotoService _fotoSvc;
 
-    public AltaModel(PiezaService svc) => _svc = svc;
+    public AltaModel(PiezaService svc, FotoService fotoSvc)
+    {
+        _svc = svc;
+        _fotoSvc = fotoSvc;
+    }
 
     // Modo edicion
     [BindProperty(SupportsGet = true)] public string? Cb { get; set; }
@@ -27,6 +32,10 @@ public class AltaModel : PageModel
     // Remision actual
     [BindProperty(SupportsGet = true)] public int? IdRemision { get; set; }
     public Remision? RemisionActual { get; set; }
+
+    // Foto
+    public List<PiezaFoto> FotosRecientes { get; set; } = new();
+    public PiezaFoto? FotoActual { get; set; }
 
     // Catalogos
     public List<ProveedorInfo> Proveedores { get; set; } = new();
@@ -88,6 +97,13 @@ public class AltaModel : PageModel
                     await AplicarDefaultsProveedorAsync(RemisionActual.Proveedor);
             }
         }
+
+        // Cargar foto actual (si edicion y tiene ArchivoFoto)
+        if (EsEdicion && !string.IsNullOrEmpty(Pieza.ArchivoFoto))
+            FotoActual = await _fotoSvc.ObtenerFotoPorNombreAsync(Pieza.ArchivoFoto);
+
+        // Cargar ultimas 3 fotos moviles no vinculadas
+        FotosRecientes = await _fotoSvc.ObtenerFotosRecientesAsync(1, 3, "mobile"); // TODO: userId from claims
     }
 
     public async Task<IActionResult> OnPostGuardarAsync()
@@ -97,10 +113,13 @@ public class AltaModel : PageModel
         // Recalcular server-side por seguridad
         RecalcularPrecios();
 
+        var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+            : throw new UnauthorizedAccessException("IdUsuario claim not found");
+        var idTienda = int.TryParse(User.FindFirst("IdTienda")?.Value, out var tid) ? tid : 1;
         Pieza.Observaciones = Observaciones;
-        Pieza.IdTienda ??= 1;
-        Pieza.IdLocalizacion ??= 1;
-        Pieza.IdUsuario = 1; // TODO: obtener del claim de auth
+        Pieza.IdTienda ??= idTienda;
+        Pieza.IdLocalizacion ??= idTienda;
+        Pieza.IdUsuario = idUsuario;
 
         GuardarPiezaResult result;
         if (EsEdicion)
@@ -115,6 +134,10 @@ public class AltaModel : PageModel
 
         if (result.Success)
         {
+            // Vincular foto si se selecciono una
+            if (!string.IsNullOrEmpty(Pieza.ArchivoFoto))
+                await _fotoSvc.VincularFotoPorNombreAsync(Pieza.ArchivoFoto, result.CodigoBarras!);
+
             TempData["MensajeExito"] = EsEdicion
                 ? $"Pieza {result.CodigoBarras} actualizada"
                 : $"Pieza {result.CodigoBarras} creada exitosamente";
@@ -243,5 +266,96 @@ public class AltaModel : PageModel
     {
         var rs = await _svc.ObtenerRazonesSocialesAsync(proveedor);
         return new JsonResult(rs);
+    }
+
+    // ==================== FOTOS ====================
+
+    /// <summary>Sube una foto desde el navegador web via AJAX.</summary>
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> OnPostSubirFotoAsync(IFormFile foto)
+    {
+        if (foto == null || foto.Length == 0)
+            return new JsonResult(new { success = false, error = "No se envio archivo" });
+
+        using var stream = foto.OpenReadStream();
+        var fotoUserId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var fu) ? fu
+            : throw new UnauthorizedAccessException("IdUsuario claim not found");
+        var result = await _fotoSvc.SubirFotoAsync(
+            stream, foto.FileName, foto.ContentType, foto.Length, fotoUserId, "web");
+
+        return new JsonResult(new
+        {
+            success = result.Success,
+            url = result.Url,
+            storedFileName = result.StoredFileName,
+            fotoId = result.FotoId,
+            error = result.Error
+        });
+    }
+
+    /// <summary>Lista ultimas N fotos moviles no vinculadas.</summary>
+    public async Task<IActionResult> OnGetFotosRecientesAsync(int count = 3)
+    {
+        var recUserId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var ru) ? ru
+            : throw new UnauthorizedAccessException("IdUsuario claim not found");
+        var fotos = await _fotoSvc.ObtenerFotosRecientesAsync(recUserId, count, "mobile");
+        return new JsonResult(fotos.Select(f => new
+        {
+            f.Id, f.Url, f.FileName, f.Source,
+            uploadedAt = f.UploadedAt.ToString("yyyy-MM-dd HH:mm")
+        }));
+    }
+
+    /// <summary>Elimina una foto.</summary>
+    public async Task<IActionResult> OnPostEliminarFotoAsync(int fotoId)
+    {
+        var ok = await _fotoSvc.EliminarFotoAsync(fotoId);
+        return new JsonResult(new { success = ok });
+    }
+
+    // ==================== BUSQUEDA DE REMISIONES/FACTURAS ====================
+
+    public async Task<IActionResult> OnGetBuscarRemisionesAsync(string? texto)
+    {
+        var remisiones = await _svc.ObtenerRemisionesAsync();
+        if (!string.IsNullOrWhiteSpace(texto))
+        {
+            var t = texto.ToLower();
+            remisiones = remisiones
+                .Where(r => (r.NombreProveedor ?? "").ToLower().Contains(t)
+                         || (r.NumeroRemision ?? "").ToLower().Contains(t)
+                         || r.IdRemision.ToString().Contains(t))
+                .ToList();
+        }
+        return new JsonResult(remisiones.Select(r => new
+        {
+            r.IdRemision,
+            r.NombreProveedor,
+            r.NumeroRemision,
+            fechaRemision = r.FechaRemision?.ToString("dd/MM/yy"),
+            r.Consignacion,
+            r.CantidadPiezas
+        }));
+    }
+
+    public async Task<IActionResult> OnGetBuscarFacturasAsync(string? texto)
+    {
+        var facturas = await _svc.ObtenerFacturasAsync(texto);
+        return new JsonResult(facturas.Select(f => new
+        {
+            f.IdFactura,
+            f.FolioFactura,
+            f.NombreProveedor,
+            fechaFactura = f.FechaFactura?.ToString("dd/MM/yy"),
+            totalBruto = f.TotalBruto?.ToString("N2"),
+            totalNeto = f.TotalNeto?.ToString("N2")
+        }));
+    }
+
+    public async Task<IActionResult> OnGetPiezasRemisionAsync(int idRemision)
+    {
+        var piezas = await _svc.ObtenerPiezasPorRemisionAsync(idRemision);
+        var totales = await _svc.ObtenerTotalesRemisionAsync(idRemision);
+        return new JsonResult(new { piezas, totales });
     }
 }

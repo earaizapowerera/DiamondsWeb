@@ -297,4 +297,131 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // ==================== DRAG & DROP para foto ====================
+    var dropzone = document.getElementById('fotoDropzone');
+    if (dropzone) {
+        dropzone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.add('drag-over');
+        });
+        dropzone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+        });
+        dropzone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                var inputFoto = document.getElementById('inputFoto');
+                if (inputFoto) {
+                    var dt = new DataTransfer();
+                    dt.items.add(e.dataTransfer.files[0]);
+                    inputFoto.files = dt.files;
+                    subirFoto(inputFoto);
+                }
+            }
+        });
+    }
 });
+
+// ==================== FOTO DE PIEZA ====================
+
+/**
+ * Sube una foto desde el input file del navegador.
+ */
+function subirFoto(inputEl) {
+    if (!inputEl.files || !inputEl.files[0]) return;
+
+    var file = inputEl.files[0];
+    var tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp'];
+    if (tiposPermitidos.indexOf(file.type) === -1) {
+        alert('Tipo de archivo no permitido. Use JPG, PNG, WebP, GIF o BMP.');
+        inputEl.value = '';
+        return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+        alert('El archivo es muy grande. Maximo 10 MB.');
+        inputEl.value = '';
+        return;
+    }
+
+    var dropzone = document.getElementById('fotoDropzone');
+    var loading = document.getElementById('fotoLoading');
+    if (dropzone) dropzone.classList.add('d-none');
+    if (loading) loading.classList.remove('d-none');
+
+    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+    var formData = new FormData();
+    formData.append('foto', file);
+    if (token) formData.append('__RequestVerificationToken', token.value);
+
+    fetch('?handler=SubirFoto', { method: 'POST', body: formData })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (loading) loading.classList.add('d-none');
+            if (data.success) {
+                mostrarFotoPreview(data.url, data.storedFileName);
+            } else {
+                if (dropzone) dropzone.classList.remove('d-none');
+                alert('Error al subir foto: ' + (data.error || 'desconocido'));
+            }
+        })
+        .catch(function(err) {
+            if (loading) loading.classList.add('d-none');
+            if (dropzone) dropzone.classList.remove('d-none');
+            alert('Error de conexion: ' + err.message);
+        });
+
+    inputEl.value = '';
+}
+
+/**
+ * Selecciona una foto de las recientes del movil.
+ */
+function seleccionarFotoMovil(storedFileName, url) {
+    mostrarFotoPreview(url, storedFileName);
+    document.querySelectorAll('.foto-thumb').forEach(function(t) {
+        t.classList.remove('selected');
+        if (t.src.indexOf(storedFileName) !== -1) t.classList.add('selected');
+    });
+}
+
+/**
+ * Muestra el preview de la foto y actualiza el hidden field.
+ */
+function mostrarFotoPreview(url, storedFileName) {
+    var preview = document.getElementById('fotoPreview');
+    var img = document.getElementById('imgPreview');
+    var uploadArea = document.getElementById('fotoUploadArea');
+    var hidArchivoFoto = document.getElementById('hidArchivoFoto');
+
+    if (img) img.src = url;
+    if (preview) preview.classList.remove('d-none');
+    if (uploadArea) uploadArea.classList.add('d-none');
+    if (hidArchivoFoto) hidArchivoFoto.value = storedFileName;
+}
+
+/**
+ * Quita la foto seleccionada.
+ */
+function quitarFoto() {
+    var preview = document.getElementById('fotoPreview');
+    var img = document.getElementById('imgPreview');
+    var uploadArea = document.getElementById('fotoUploadArea');
+    var dropzone = document.getElementById('fotoDropzone');
+    var hidArchivoFoto = document.getElementById('hidArchivoFoto');
+
+    if (preview) preview.classList.add('d-none');
+    if (img) img.src = '';
+    if (uploadArea) uploadArea.classList.remove('d-none');
+    if (dropzone) dropzone.classList.remove('d-none');
+    if (hidArchivoFoto) hidArchivoFoto.value = '';
+
+    document.querySelectorAll('.foto-thumb').forEach(function(t) {
+        t.classList.remove('selected');
+    });
+}

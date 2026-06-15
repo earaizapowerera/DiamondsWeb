@@ -67,8 +67,9 @@ public class IndexModel : PageModel
 
         try
         {
-            // IdUsuario=1 como default (admin). En producción se resolvería del claim del usuario.
-            var id = await _service.CrearAsync(NombreGrupo, 1);
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
+            var id = await _service.CrearAsync(NombreGrupo, idUsuario);
             TempData["Success"] = $"Grupo \"{NombreGrupo.Trim()}\" creado correctamente (Id: {id}).";
         }
         catch (Exception ex)
@@ -111,7 +112,9 @@ public class IndexModel : PageModel
 
         try
         {
-            var ok = await _service.ActualizarAsync(EditId.Value, NombreGrupo, 1);
+            var editUserId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var eu) ? eu
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
+            var ok = await _service.ActualizarAsync(EditId.Value, NombreGrupo, editUserId);
             if (ok)
                 TempData["Success"] = $"Grupo \"{NombreGrupo.Trim()}\" actualizado correctamente.";
             else

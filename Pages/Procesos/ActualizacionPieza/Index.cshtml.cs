@@ -103,7 +103,8 @@ public class IndexModel : PageModel
                 await _salesService.AsignarPiezaFacturaAsync(CodigoBarras.Trim(), IdFactura, TCCosto, CBFactura, CNFactura);
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
             pieza.IdUsuario = idUsuario;
             await _inventoryService.ActualizarPiezaSencillaAsync(pieza);
 

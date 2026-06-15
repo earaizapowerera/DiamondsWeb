@@ -130,11 +130,14 @@ public class IndexModel : PageModel
         try
         {
             var idUsuario = int.TryParse(
-                User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+                User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
+            var idTienda = int.TryParse(
+                User.FindFirst("IdTienda")?.Value, out var tid) ? tid : 1;
 
             var idFactura = await _service.CrearFacturaAsync(
                 NuevaFolioFactura, NuevaProveedor, NuevaIdRazonSocial,
-                NuevaFechaFactura, idUsuario, 1); // IdTienda = 1 default
+                NuevaFechaFactura, idUsuario, idTienda);
 
             TempData["Success"] = $"Factura creada con ID {idFactura}.";
 

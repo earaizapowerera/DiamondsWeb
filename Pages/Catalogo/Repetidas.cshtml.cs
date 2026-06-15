@@ -85,7 +85,9 @@ public class RepetidasModel : PageModel
                 IdDivisor = idDivisor
             };
 
-            var codigo = await _service.CrearAsync(form);
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
+            var codigo = await _service.CrearAsync(form, idUsuario);
             TempData["Exito"] = $"Pieza creada con codigo de barras: {codigo}";
         }
         catch (Exception ex)

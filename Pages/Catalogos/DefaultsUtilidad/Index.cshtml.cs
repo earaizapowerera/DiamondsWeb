@@ -66,7 +66,8 @@ public class IndexModel : PageModel
                 return RedirectToPage();
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
             await _catalogService.CrearDefaultUtilidadAsync(
                 NuevaUtilidad, NuevaUtilidadGemas, NuevaUtilidadReloj, idUsuario);
             TempData["Success"] = "Factor de utilidad creado exitosamente.";
@@ -96,7 +97,8 @@ public class IndexModel : PageModel
                 return RedirectToPage();
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
             await _catalogService.ActualizarDefaultUtilidadAsync(
                 EditId.Value, EditUtilidad.Value, EditUtilidadGemas.Value, EditUtilidadReloj.Value, idUsuario);
             TempData["Success"] = "Factor de utilidad actualizado exitosamente.";

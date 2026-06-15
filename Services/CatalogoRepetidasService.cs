@@ -101,7 +101,7 @@ public class CatalogoRepetidasService
     /// Crea una nueva pieza repetida con código de barras auto-generado.
     /// También inserta registro en tabla Etiquetas (comportamiento legacy).
     /// </summary>
-    public async Task<string> CrearAsync(RepetidaForm form)
+    public async Task<string> CrearAsync(RepetidaForm form, int idUsuario)
     {
         using var conn = (SqlConnection)CreateConnection();
         await conn.OpenAsync();
@@ -118,7 +118,7 @@ public class CatalogoRepetidasService
                      Precio, FechaCaptura, FechaUltEdicion, IdUsuario, IdDivisor)
                 VALUES
                     (@CodigoBarras, @Descripcion, @Proveedor, @IdGrupo, @Kilates,
-                     @Precio, GETUTCDATE(), GETUTCDATE(), 1, @IdDivisor)",
+                     @Precio, GETUTCDATE(), GETUTCDATE(), @IdUsuario, @IdDivisor)",
                 new
                 {
                     CodigoBarras = codigoBarras,
@@ -127,6 +127,7 @@ public class CatalogoRepetidasService
                     form.IdGrupo,
                     form.Kilates,
                     form.Precio,
+                    IdUsuario = idUsuario,
                     form.IdDivisor
                 }, tx);
 
@@ -137,11 +138,12 @@ public class CatalogoRepetidasService
                      FechaCaptura, IdUsuario, FechaUltEdicion, Precio, IdTabla)
                 VALUES
                     (@CodigoBarras, 0, 0, @Descripcion,
-                     GETUTCDATE(), 1, GETUTCDATE(), @Precio, 0)",
+                     GETUTCDATE(), @IdUsuario, GETUTCDATE(), @Precio, 0)",
                 new
                 {
                     CodigoBarras = codigoBarras,
                     form.Descripcion,
+                    IdUsuario = idUsuario,
                     form.Precio
                 }, tx);
 

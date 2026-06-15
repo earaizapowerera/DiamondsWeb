@@ -40,7 +40,8 @@ public class RegistroExistenciasModel : PageModel
 
     private int ObtenerIdUsuario()
     {
-        return int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+        return int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
     }
 
     /// <summary>
