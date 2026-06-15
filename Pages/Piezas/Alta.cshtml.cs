@@ -30,9 +30,10 @@ public class AltaModel : PageModel
     [BindProperty] public string TabCaracteristica { get; set; } = "Oro";
     [BindProperty] public string TabCosto { get; set; } = "Pieza";
 
-    // Remision actual
+    // Remision / Factura actual
     [BindProperty(SupportsGet = true)] public int? IdRemision { get; set; }
     public Remision? RemisionActual { get; set; }
+    public Factura? FacturaActual { get; set; }
 
     // Foto
     public List<PiezaFoto> FotosRecientes { get; set; } = new();
@@ -44,6 +45,10 @@ public class AltaModel : PageModel
     public List<Moneda> Monedas { get; set; } = new();
     public List<DivisorVenta> Divisores { get; set; } = new();
     public List<EtiquetaPlantilla> Etiquetas { get; set; } = new();
+
+    // Remision: grid de piezas y totales (server-side rendering)
+    public List<PiezaResumen> PiezasRemision { get; set; } = new();
+    public RemisionTotales? Totales { get; set; }
 
     public string? MensajeExito { get; set; }
     public string? MensajeError { get; set; }
@@ -90,6 +95,8 @@ public class AltaModel : PageModel
         if (IdRemision.HasValue)
         {
             RemisionActual = await _svc.ObtenerRemisionAsync(IdRemision.Value);
+            PiezasRemision = await _svc.ObtenerPiezasPorRemisionAsync(IdRemision.Value);
+            Totales = await _svc.ObtenerTotalesRemisionAsync(IdRemision.Value);
             if (!EsEdicion)
             {
                 Pieza.IdRemision = IdRemision.Value;
@@ -98,6 +105,10 @@ public class AltaModel : PageModel
                     await AplicarDefaultsProveedorAsync(RemisionActual.Proveedor);
             }
         }
+
+        // Cargar factura actual (si pieza tiene IdFactura)
+        if (EsEdicion && Pieza.IdFactura.HasValue && Pieza.IdFactura.Value > 0)
+            FacturaActual = await _svc.ObtenerFacturaAsync(Pieza.IdFactura.Value);
 
         // Cargar foto actual (si edicion y tiene ArchivoFoto)
         if (EsEdicion && !string.IsNullOrEmpty(Pieza.ArchivoFoto))
