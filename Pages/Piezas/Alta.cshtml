@@ -856,8 +856,8 @@
                         <td>@p.NombreGrupo</td>
                         <td class="text-end">@p.CBTotal.ToString("N2")</td>
                         <td class="text-end">@p.CNTotal.ToString("N2")</td>
-                        <td class="text-end fw-bold">$@p.Precio.ToString("N0")</td>
-                        <td class="text-end">@(p.Peso > 0 ? p.Peso.ToString("N2") : "")</td>
+                        <td class="text-end fw-bold">$@(p.Precio?.ToString("N0") ?? "0")</td>
+                        <td class="text-end">@(p.Peso > 0 ? p.Peso?.ToString("N2") : "")</td>
                         <td>@p.Kilates</td>
                         <td class="text-center">
                             <a asp-page="Alta" asp-route-cb="@p.CodigoBarras" asp-route-IdRemision="@Model.IdRemision"

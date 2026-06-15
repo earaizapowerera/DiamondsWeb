@@ -12,11 +12,16 @@ public class AltaModel : PageModel
 {
     private readonly PiezaService _svc;
     private readonly FotoService _fotoSvc;
+    private readonly RemisionService _remisionSvc;
+    private readonly ActualizacionService _actualizacionSvc;
 
-    public AltaModel(PiezaService svc, FotoService fotoSvc)
+    public AltaModel(PiezaService svc, FotoService fotoSvc,
+        RemisionService remisionSvc, ActualizacionService actualizacionSvc)
     {
         _svc = svc;
         _fotoSvc = fotoSvc;
+        _remisionSvc = remisionSvc;
+        _actualizacionSvc = actualizacionSvc;
     }
 
     // Modo edicion
@@ -33,6 +38,13 @@ public class AltaModel : PageModel
     // Remision actual
     [BindProperty(SupportsGet = true)] public int? IdRemision { get; set; }
     public Remision? RemisionActual { get; set; }
+
+    // Factura actual (vinculada a remisión/pieza)
+    public FacturaBusqueda? FacturaActual { get; set; }
+
+    // Piezas de la remisión y totales
+    public List<PiezaRemision> PiezasRemision { get; set; } = new();
+    public RemisionTotales? Totales { get; set; }
 
     // Foto
     public List<PiezaFoto> FotosRecientes { get; set; } = new();
@@ -97,6 +109,15 @@ public class AltaModel : PageModel
                 if (RemisionActual != null)
                     await AplicarDefaultsProveedorAsync(RemisionActual.Proveedor);
             }
+            // Cargar piezas y totales de la remisión
+            PiezasRemision = await _remisionSvc.ObtenerPiezasRemisionAsync(IdRemision.Value);
+            Totales = await _svc.ObtenerTotalesRemisionAsync(IdRemision.Value);
+        }
+
+        // Cargar factura actual si la pieza tiene una vinculada
+        if (Pieza.IdFactura.HasValue && Pieza.IdFactura.Value > 0)
+        {
+            FacturaActual = await _actualizacionSvc.ObtenerFacturaPorIdAsync(Pieza.IdFactura.Value);
         }
 
         // Cargar foto actual (si edicion y tiene ArchivoFoto)

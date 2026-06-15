@@ -89,6 +89,11 @@ public class PiezaRemision
 {
     public string CodigoBarras { get; set; } = string.Empty;
     public string? Obs2 { get; set; }
+    public string? Descripcion { get; set; }
+    public string? NombreGrupo { get; set; }
+    public decimal? Precio { get; set; }
+    public decimal? Peso { get; set; }
+    public decimal? Kilates { get; set; }
     public decimal CBTotal { get; set; }
     public decimal CNTotal { get; set; }
     public decimal? TCCosto { get; set; }
