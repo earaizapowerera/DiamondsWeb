@@ -60,17 +60,9 @@ public class IndexModel : PageModel
     {
         try
         {
-            var idUsuarioStr = User.FindFirst("IdUsuario")?.Value;
-            if (string.IsNullOrEmpty(idUsuarioStr) || !int.TryParse(idUsuarioStr, out var idUsuario))
-            {
-                TempData["Error"] = "No se pudo identificar al usuario. Inicie sesión nuevamente.";
-                return RedirectToPage();
-            }
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
 
-            var resultado = _corteService.RealizarCorteAsync(idUsuario, comentario?.Trim());
-            await resultado;
-
-            var corte = resultado.Result;
+            var corte = await _corteService.RealizarCorteAsync(idUsuario, comentario?.Trim());
             TempData["Success"] = $"Corte de caja realizado exitosamente. " +
                 $"Período cerrado: {corte.TotalNotas} notas por {corte.TotalVentas:C2}.";
 
