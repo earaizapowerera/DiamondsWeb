@@ -4,7 +4,7 @@
     ViewData["Title"] = Model.EsEdicion ? $"Editar Pieza {Model.Cb}" : "Alta de Pieza";
 }
 
-<link rel="stylesheet" href="/css/piezas.css?v=20260615" />
+<link rel="stylesheet" href="/css/piezas.css?v=20260616" />
 
 @if (!string.IsNullOrEmpty(Model.MensajeExito))
 {
@@ -885,7 +885,7 @@ else if (Model.RemisionActual == null && !Model.EsEdicion)
 }
 
 @section Scripts {
-<script src="/js/piezas.js?v=20260615"></script>
+<script src="/js/piezas.js?v=20260616"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Searchable dropdowns

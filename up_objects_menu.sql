@@ -31,7 +31,7 @@ VALUES
 INSERT INTO dbo.up_objects (object_id, object_type_id, object_name, route_path, icon_override, order_hint, parent_id, is_active, created_at, updated_at)
 VALUES
     (NEWID(), @ScreenTypeId, 'Diamantes', '/Catalogos/Diamantes', 'fa-solid fa-gem', 1, @FolderCatalogos, 1, GETUTCDATE(), GETUTCDATE()),
-    (NEWID(), @ScreenTypeId, 'Piezas Sencillas', '/Inventario/PiezasSencillas', 'fa-solid fa-ring', 2, @FolderCatalogos, 1, GETUTCDATE(), GETUTCDATE()),
+    (NEWID(), @ScreenTypeId, 'Piezas Sencillas', '/Piezas', 'fa-solid fa-ring', 2, @FolderCatalogos, 1, GETUTCDATE(), GETUTCDATE()),
     (NEWID(), @ScreenTypeId, 'Piezas Compuestas', '/Inventario/PiezasCompuestas', 'fa-solid fa-puzzle-piece', 3, @FolderCatalogos, 1, GETUTCDATE(), GETUTCDATE()),
     (NEWID(), @ScreenTypeId, 'Catálogo Repetidas', '/Catalogos/Repetidas', 'fa-solid fa-clone', 4, @FolderCatalogos, 1, GETUTCDATE(), GETUTCDATE()),
     (NEWID(), @ScreenTypeId, 'Proveedores', '/Catalogos/Proveedores', 'fa-solid fa-truck', 5, @FolderCatalogos, 1, GETUTCDATE(), GETUTCDATE()),

@@ -30,9 +30,15 @@ public class AltaModel : PageModel
     [BindProperty] public string TabCaracteristica { get; set; } = "Oro";
     [BindProperty] public string TabCosto { get; set; } = "Pieza";
 
-    // Remision actual
+    // Remision y Factura
     [BindProperty(SupportsGet = true)] public int? IdRemision { get; set; }
+    [BindProperty(SupportsGet = true)] public int? IdFactura { get; set; }
     public Remision? RemisionActual { get; set; }
+    public Factura? FacturaActual { get; set; }
+
+    // Grid de piezas de la remision/factura actual
+    public List<PiezaResumen> PiezasRemision { get; set; } = new();
+    public RemisionTotales? Totales { get; set; }
 
     // Foto
     public List<PiezaFoto> FotosRecientes { get; set; } = new();
@@ -97,6 +103,22 @@ public class AltaModel : PageModel
                 if (RemisionActual != null)
                     await AplicarDefaultsProveedorAsync(RemisionActual.Proveedor);
             }
+            // Cargar grid de piezas de la remision
+            PiezasRemision = await _svc.ObtenerPiezasPorRemisionAsync(IdRemision.Value);
+            Totales = await _svc.ObtenerTotalesRemisionAsync(IdRemision.Value);
+        }
+
+        // Cargar factura (desde query string o desde la pieza en edicion)
+        if (IdFactura.HasValue)
+        {
+            FacturaActual = await _svc.ObtenerFacturaAsync(IdFactura.Value);
+            if (!EsEdicion)
+                Pieza.IdFactura = IdFactura.Value;
+        }
+        else if (EsEdicion && Pieza.IdFactura.HasValue)
+        {
+            FacturaActual = await _svc.ObtenerFacturaAsync(Pieza.IdFactura.Value);
+            IdFactura = Pieza.IdFactura;
         }
 
         // Cargar foto actual (si edicion y tiene ArchivoFoto)
@@ -146,8 +168,8 @@ public class AltaModel : PageModel
 
             // Si tiene remision, regresar al alta para continuar capturando
             if (IdRemision.HasValue && !EsEdicion)
-                return RedirectToPage("Alta", new { IdRemision });
-            return RedirectToPage("Alta", new { cb = result.CodigoBarras });
+                return RedirectToPage("Alta", new { IdRemision, IdFactura });
+            return RedirectToPage("Alta", new { cb = result.CodigoBarras, IdRemision, IdFactura });
         }
 
         MensajeError = result.Error;
@@ -312,6 +334,64 @@ public class AltaModel : PageModel
     {
         var ok = await _fotoSvc.EliminarFotoAsync(fotoId);
         return new JsonResult(new { success = ok });
+    }
+
+    // ==================== CREAR REMISION/FACTURA AL VUELO ====================
+
+    public async Task<IActionResult> OnPostCrearRemisionAsync(int proveedor, string? numeroRemision,
+        DateTime? fechaRemision, bool consignacion)
+    {
+        try
+        {
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idTienda = int.TryParse(User.FindFirst("IdTienda")?.Value, out var tid) ? tid : 1;
+            var remision = new Remision
+            {
+                Proveedor = proveedor,
+                NumeroRemision = string.IsNullOrWhiteSpace(numeroRemision) ? "S/N" : numeroRemision,
+                FechaRemision = fechaRemision ?? DateTime.UtcNow,
+                Consignacion = consignacion,
+                IdUsuario = idUsuario,
+                IdTienda = idTienda,
+                IdLocalizacion = idTienda
+            };
+            var id = await _svc.CrearRemisionAsync(remision);
+            return new JsonResult(new { success = true, idRemision = id });
+        }
+        catch (Exception ex)
+        {
+            return new JsonResult(new { success = false, error = ex.Message });
+        }
+    }
+
+    public async Task<IActionResult> OnPostCrearFacturaAsync(int proveedor, string? folioFactura,
+        int idRazonSocial, DateTime? fechaFactura)
+    {
+        try
+        {
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var factura = new Factura
+            {
+                FolioFactura = string.IsNullOrWhiteSpace(folioFactura) ? "S/N" : folioFactura,
+                Proveedor = proveedor,
+                IdRazonSocialProveedor = idRazonSocial,
+                FechaFactura = fechaFactura ?? DateTime.UtcNow,
+                IdUsuario = idUsuario
+            };
+            var id = await _svc.CrearFacturaAsync(factura);
+            return new JsonResult(new { success = true, idFactura = id });
+        }
+        catch (Exception ex)
+        {
+            return new JsonResult(new { success = false, error = ex.Message });
+        }
+    }
+
+    public Task<IActionResult> OnPostVincularFacturaAsync(int idRemision, int idFactura)
+    {
+        // La factura se vincula por pieza individual (campo IdFactura en Piezas)
+        // Este handler solo confirma la operacion - el link real ocurre al guardar la pieza
+        return Task.FromResult<IActionResult>(new JsonResult(new { success = true }));
     }
 
     // ==================== BUSQUEDA DE REMISIONES/FACTURAS ====================
