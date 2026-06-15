@@ -88,7 +88,12 @@ public class PiezaDisponible
 public class PiezaRemision
 {
     public string CodigoBarras { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
     public string? Obs2 { get; set; }
+    public string? NombreGrupo { get; set; }
+    public int Precio { get; set; }
+    public decimal Peso { get; set; }
+    public string? Kilates { get; set; }
     public decimal CBTotal { get; set; }
     public decimal CNTotal { get; set; }
     public decimal? TCCosto { get; set; }
