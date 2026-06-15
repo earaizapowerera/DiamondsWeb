@@ -12,11 +12,13 @@ public class AltaModel : PageModel
 {
     private readonly PiezaService _svc;
     private readonly FotoService _fotoSvc;
+    private readonly DescripcionLLMService _llmSvc;
 
-    public AltaModel(PiezaService svc, FotoService fotoSvc)
+    public AltaModel(PiezaService svc, FotoService fotoSvc, DescripcionLLMService llmSvc)
     {
         _svc = svc;
         _fotoSvc = fotoSvc;
+        _llmSvc = llmSvc;
     }
 
     // Modo edicion
@@ -33,6 +35,13 @@ public class AltaModel : PageModel
     // Remision actual
     [BindProperty(SupportsGet = true)] public int? IdRemision { get; set; }
     public Remision? RemisionActual { get; set; }
+
+    // Factura actual
+    public Factura? FacturaActual { get; set; }
+
+    // Piezas de la remision (para la grilla)
+    public List<PiezaResumen> PiezasRemision { get; set; } = new();
+    public RemisionTotales? Totales { get; set; }
 
     // Foto
     public List<PiezaFoto> FotosRecientes { get; set; } = new();
@@ -97,7 +106,15 @@ public class AltaModel : PageModel
                 if (RemisionActual != null)
                     await AplicarDefaultsProveedorAsync(RemisionActual.Proveedor);
             }
+
+            // Cargar piezas y totales de la remision para la grilla
+            PiezasRemision = await _svc.ObtenerPiezasPorRemisionAsync(IdRemision.Value);
+            Totales = await _svc.ObtenerTotalesRemisionAsync(IdRemision.Value);
         }
+
+        // Cargar factura si la pieza tiene una
+        if (Pieza.IdFactura.HasValue)
+            FacturaActual = await _svc.ObtenerFacturaAsync(Pieza.IdFactura.Value);
 
         // Cargar foto actual (si edicion y tiene ArchivoFoto)
         if (EsEdicion && !string.IsNullOrEmpty(Pieza.ArchivoFoto))
@@ -358,5 +375,91 @@ public class AltaModel : PageModel
         var piezas = await _svc.ObtenerPiezasPorRemisionAsync(idRemision);
         var totales = await _svc.ObtenerTotalesRemisionAsync(idRemision);
         return new JsonResult(new { piezas, totales });
+    }
+
+    // ==================== DESCRIPCION INTELIGENTE (LLM) ====================
+
+    /// <summary>
+    /// Mejora la descripcion de la pieza usando Claude.
+    /// Recibe los datos del formulario via AJAX (JSON).
+    /// Opcionalmente incluye la foto para vision.
+    /// </summary>
+    public async Task<IActionResult> OnPostMejorarDescripcionAsync(
+        [FromForm] string descripcion,
+        [FromForm] string? grupo,
+        [FromForm] string? kilates,
+        [FromForm] string? modelo,
+        [FromForm] string? linea,
+        [FromForm] decimal quilates,
+        [FromForm] string? color,
+        [FromForm] string? pureza,
+        [FromForm] string? corte,
+        [FromForm] string? numSerie,
+        [FromForm] string? obs1,
+        [FromForm] string? obs2,
+        [FromForm] string? descripcionManoObra,
+        [FromForm] string? observaciones,
+        [FromForm] decimal? peso,
+        [FromForm] string? tipoCaracteristica,
+        [FromForm] string? archivoFoto)
+    {
+        var request = new MejorarDescripcionRequest
+        {
+            Descripcion = descripcion ?? "",
+            Grupo = grupo,
+            Kilates = kilates,
+            Modelo = modelo,
+            Linea = linea,
+            Quilates = quilates,
+            Color = color,
+            Pureza = pureza,
+            Corte = corte,
+            NumSerie = numSerie,
+            Obs1 = obs1,
+            Obs2 = obs2,
+            DescripcionManoObra = descripcionManoObra,
+            Observaciones = observaciones,
+            Peso = peso,
+            TipoCaracteristica = tipoCaracteristica
+        };
+
+        // Si hay foto adjunta, leer los bytes para enviar al LLM (vision)
+        byte[]? fotoBytes = null;
+        string? fotoMediaType = null;
+        if (!string.IsNullOrEmpty(archivoFoto))
+        {
+            var foto = await _fotoSvc.ObtenerFotoPorNombreAsync(archivoFoto);
+            if (foto != null)
+            {
+                var fotoPath = _fotoSvc.ObtenerRutaFisica(archivoFoto);
+                if (System.IO.File.Exists(fotoPath))
+                {
+                    fotoBytes = await System.IO.File.ReadAllBytesAsync(fotoPath);
+                    fotoMediaType = ObtenerMediaType(archivoFoto);
+                }
+            }
+        }
+
+        var result = await _llmSvc.MejorarDescripcionAsync(request, fotoBytes, fotoMediaType);
+        return new JsonResult(new
+        {
+            success = result.Success,
+            descripcionOriginal = result.DescripcionOriginal,
+            descripcionMejorada = result.DescripcionMejorada,
+            error = result.Error
+        });
+    }
+
+    private static string ObtenerMediaType(string fileName)
+    {
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
+        return ext switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            _ => "image/jpeg"
+        };
     }
 }

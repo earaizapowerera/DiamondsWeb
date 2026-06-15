@@ -4,7 +4,7 @@
     ViewData["Title"] = Model.EsEdicion ? $"Editar Pieza {Model.Cb}" : "Alta de Pieza";
 }
 
-<link rel="stylesheet" href="/css/piezas.css?v=20260615" />
+<link rel="stylesheet" href="/css/piezas.css?v=20260615b" />
 
 @if (!string.IsNullOrEmpty(Model.MensajeExito))
 {
@@ -265,8 +265,15 @@
                     <div class="row g-2">
                         <div class="col-md-8">
                             <label class="form-label form-label-sm mb-0">Descripcion <span class="text-danger">*</span></label>
-                            <input type="text" asp-for="Pieza.Descripcion" class="form-control form-control-sm" required maxlength="100"
-                                   placeholder="Descripcion de la pieza..." />
+                            <div class="input-group input-group-sm">
+                                <input type="text" asp-for="Pieza.Descripcion" class="form-control form-control-sm" required maxlength="100"
+                                       placeholder="Descripcion de la pieza..." id="txtDescripcion" />
+                                <button type="button" class="btn btn-outline-info" onclick="mejorarDescripcionIA()"
+                                        id="btnMejorarIA" title="Mejorar descripcion con IA (Ctrl+M)">
+                                    <i class="fa-solid fa-wand-magic-sparkles" id="iconMejorarIA"></i>
+                                    <span class="d-none d-md-inline ms-1">IA</span>
+                                </button>
+                            </div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label form-label-sm mb-0">Grupo <span class="text-danger">*</span></label>
@@ -884,8 +891,57 @@ else if (Model.RemisionActual == null && !Model.EsEdicion)
 </div>
 }
 
+<!-- Modal: Preview Descripcion Mejorada por IA -->
+<div class="modal fade" id="modalDescripcionIA" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header py-2 bg-info-subtle">
+                <h6 class="modal-title">
+                    <i class="fa-solid fa-wand-magic-sparkles me-1"></i>Descripcion Mejorada por IA
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Original -->
+                <div class="mb-3">
+                    <label class="form-label form-label-sm text-muted mb-1">
+                        <i class="fa-solid fa-pen me-1"></i>Original
+                    </label>
+                    <div class="form-control form-control-sm bg-light" id="iaDescOriginal" style="min-height:38px;"></div>
+                </div>
+                <!-- Mejorada -->
+                <div class="mb-3">
+                    <label class="form-label form-label-sm text-success mb-1">
+                        <i class="fa-solid fa-sparkles me-1"></i>Sugerencia IA
+                    </label>
+                    <input type="text" class="form-control form-control-sm border-success fw-medium"
+                           id="iaDescMejorada" maxlength="100" />
+                    <small class="text-muted" id="iaDescContador">0/100</small>
+                </div>
+                <!-- Info de foto -->
+                <div id="iaFotoInfo" class="d-none">
+                    <small class="text-info">
+                        <i class="fa-solid fa-image me-1"></i>Se envio la foto de la pieza al modelo de IA para enriquecer la descripcion.
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-xmark me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="regenerarDescripcionIA()">
+                    <i class="fa-solid fa-arrows-rotate me-1"></i>Regenerar
+                </button>
+                <button type="button" class="btn btn-success btn-sm" onclick="aceptarDescripcionIA()">
+                    <i class="fa-solid fa-check me-1"></i>Aceptar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
-<script src="/js/piezas.js?v=20260615"></script>
+<script src="/js/piezas.js?v=20260615b"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Searchable dropdowns
@@ -920,7 +976,20 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             calcularDesdeIVA();
         }
+        if (e.ctrlKey && e.key === 'm') {
+            e.preventDefault();
+            mejorarDescripcionIA();
+        }
     });
+
+    // Contador de caracteres en modal IA
+    var iaInput = document.getElementById('iaDescMejorada');
+    if (iaInput) {
+        iaInput.addEventListener('input', function() {
+            var cnt = document.getElementById('iaDescContador');
+            if (cnt) cnt.textContent = this.value.length + '/100';
+        });
+    }
 });
 </script>
 }

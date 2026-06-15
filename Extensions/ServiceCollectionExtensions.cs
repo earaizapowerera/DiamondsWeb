@@ -56,6 +56,12 @@ public static class ServiceCollectionExtensions
         // Servicios sin dependencia de connectionString
         services.AddScoped<SppldXmlService>();
 
+        // Descripcion inteligente via Claude (LLM)
+        services.AddScoped(sp => new DescripcionLLMService(
+            sp.GetRequiredService<LLMConfig>(),
+            sp.GetRequiredService<IHttpClientFactory>(),
+            sp.GetRequiredService<ILogger<DescripcionLLMService>>()));
+
         return services;
     }
 }

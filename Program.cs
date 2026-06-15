@@ -38,6 +38,16 @@ var sppldConfig = new SppldConfig();
 builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
 
+var llmConfig = new LLMConfig();
+builder.Configuration.GetSection("LLMConfig").Bind(llmConfig);
+builder.Services.AddSingleton(llmConfig);
+
+// HttpClient para Anthropic API (timeout 30s)
+builder.Services.AddHttpClient("Anthropic", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 // Claims transformation: maps UserPortal user → Diamonds IdUsuario/IdTienda
 builder.Services.AddScoped<IClaimsTransformation, DiamondsClaimsTransformation>();
 
