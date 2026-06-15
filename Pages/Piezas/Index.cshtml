@@ -4,7 +4,7 @@
     ViewData["Title"] = "Piezas Sencillas";
 }
 
-<link rel="stylesheet" href="/css/piezas.css?v=20260609" />
+<link rel="stylesheet" href="/css/piezas.css?v=20260615" />
 
 @if (!string.IsNullOrEmpty(Model.MensajeExito))
 {
@@ -20,6 +20,7 @@
         <h5 class="mb-0"><i class="fa-solid fa-gem me-2"></i>Piezas Sencillas</h5>
     </div>
     <div class="d-flex gap-2">
+        <div id="columnSelectorContainer"></div>
         <a asp-page="Alta" class="btn btn-primary btn-sm">
             <i class="fa-solid fa-plus me-1"></i>Nueva Pieza
         </a>
@@ -120,19 +121,26 @@
 <div class="card">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover table-sm mb-0">
+            <table class="table table-hover table-sm mb-0" id="piezasTable">
                 <thead class="table-light">
                     <tr>
-                        <th>Codigo</th>
-                        <th>Descripcion</th>
-                        <th>Grupo</th>
-                        <th class="text-end">C. Bruto</th>
-                        <th class="text-end">C. Neto</th>
-                        <th class="text-end">Precio</th>
-                        <th class="text-end">Peso</th>
-                        <th>Kilates</th>
-                        <th>Modelo</th>
-                        <th>Linea</th>
+                        <th data-col="CodigoBarras">Codigo</th>
+                        <th data-col="Descripcion">Descripcion</th>
+                        <th data-col="NombreGrupo">Grupo</th>
+                        <th data-col="CBTotal" class="text-end">C. Bruto</th>
+                        <th data-col="CNTotal" class="text-end">C. Neto</th>
+                        <th data-col="Precio" class="text-end">Precio</th>
+                        <th data-col="Peso" class="text-end">Peso</th>
+                        <th data-col="Kilates">Kilates</th>
+                        <th data-col="Modelo">Modelo</th>
+                        <th data-col="Linea">Linea</th>
+                        <th data-col="Quilates" class="text-end" style="display:none">Quilates</th>
+                        <th data-col="Color" style="display:none">Color</th>
+                        <th data-col="Pureza" style="display:none">Pureza</th>
+                        <th data-col="Corte" style="display:none">Corte</th>
+                        <th data-col="NumSerie" style="display:none">No. Serie</th>
+                        <th data-col="NombreProveedor" style="display:none">Proveedor</th>
+                        <th data-col="FechaCaptura" style="display:none">Fecha</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
@@ -140,7 +148,7 @@
                     @if (Model.Piezas.Count == 0)
                     {
                     <tr>
-                        <td colspan="11" class="text-center text-muted py-3">
+                        <td colspan="18" class="text-center text-muted py-3">
                             <i class="fa-solid fa-inbox me-2"></i>No se encontraron piezas
                         </td>
                     </tr>
@@ -148,16 +156,23 @@
                     @foreach (var p in Model.Piezas)
                     {
                     <tr>
-                        <td><code>@p.CodigoBarras</code></td>
-                        <td class="text-truncate" style="max-width: 250px;" title="@p.Descripcion">@p.Descripcion</td>
-                        <td>@p.NombreGrupo</td>
-                        <td class="text-end">@p.CBTotal.ToString("N2")</td>
-                        <td class="text-end">@p.CNTotal.ToString("N2")</td>
-                        <td class="text-end fw-bold">$@p.Precio.ToString("N0")</td>
-                        <td class="text-end">@(p.Peso > 0 ? p.Peso.ToString("N2") : "")</td>
-                        <td>@p.Kilates</td>
-                        <td>@p.Modelo</td>
-                        <td>@p.Linea</td>
+                        <td data-col="CodigoBarras"><code>@p.CodigoBarras</code></td>
+                        <td data-col="Descripcion" class="text-truncate" style="max-width: 250px;" title="@p.Descripcion">@p.Descripcion</td>
+                        <td data-col="NombreGrupo">@p.NombreGrupo</td>
+                        <td data-col="CBTotal" class="text-end">@p.CBTotal.ToString("N2")</td>
+                        <td data-col="CNTotal" class="text-end">@p.CNTotal.ToString("N2")</td>
+                        <td data-col="Precio" class="text-end fw-bold">$@p.Precio.ToString("N0")</td>
+                        <td data-col="Peso" class="text-end">@(p.Peso > 0 ? p.Peso.ToString("N2") : "")</td>
+                        <td data-col="Kilates">@p.Kilates</td>
+                        <td data-col="Modelo">@p.Modelo</td>
+                        <td data-col="Linea">@p.Linea</td>
+                        <td data-col="Quilates" class="text-end" style="display:none">@(p.Quilates > 0 ? p.Quilates.ToString("N2") : "")</td>
+                        <td data-col="Color" style="display:none">@p.Color</td>
+                        <td data-col="Pureza" style="display:none">@p.Pureza</td>
+                        <td data-col="Corte" style="display:none">@p.Corte</td>
+                        <td data-col="NumSerie" style="display:none">@p.NumSerie</td>
+                        <td data-col="NombreProveedor" style="display:none">@p.NombreProveedor</td>
+                        <td data-col="FechaCaptura" style="display:none">@p.FechaCaptura.ToString("dd/MM/yyyy")</td>
                         <td class="text-center">
                             <div class="btn-group btn-group-sm">
                                 <a asp-page="Alta" asp-route-cb="@p.CodigoBarras" class="btn btn-outline-primary btn-sm" title="Modificar">
@@ -182,6 +197,7 @@
 </div>
 
 @section Scripts {
+<script src="/js/column-config.js?v=20260615"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Searchable dropdowns con TomSelect
@@ -191,6 +207,9 @@ document.addEventListener('DOMContentLoaded', function() {
         var selGrupo = document.getElementById('selGrupo');
         if (selGrupo) new TomSelect(selGrupo, { allowEmptyOption: true });
     }
+
+    // Inicializar columnas configurables
+    initColumnConfig('vPiezasWeb', '#piezasTable');
 });
 </script>
 }

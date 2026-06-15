@@ -23,9 +23,12 @@
 <div class="card mb-4 shadow-sm">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <span><i class="fa-solid fa-ring me-2"></i>Piezas Sencillas</span>
-        <a asp-page="Detalle" class="btn btn-light btn-sm">
-            <i class="fa-solid fa-plus me-1"></i>Nueva Pieza
-        </a>
+        <div class="d-flex gap-2">
+            <div id="columnSelectorContainer"></div>
+            <a asp-page="Detalle" class="btn btn-light btn-sm">
+                <i class="fa-solid fa-plus me-1"></i>Nueva Pieza
+            </a>
+        </div>
     </div>
     <div class="card-body">
         <form method="get" class="row g-3 align-items-end mb-4">
@@ -68,16 +71,25 @@
 
         <!-- Tabla -->
         <div class="table-responsive">
-            <table class="table table-hover table-striped table-sm mb-0">
+            <table class="table table-hover table-striped table-sm mb-0" id="piezasSencillasTable">
                 <thead class="table-dark">
                     <tr>
-                        <th>Codigo</th>
-                        <th>Descripcion</th>
-                        <th>Grupo</th>
-                        <th>Proveedor</th>
-                        <th class="text-end">Precio</th>
-                        <th class="text-center">Status</th>
-                        <th>Fecha</th>
+                        <th data-col="CodigoBarras">Codigo</th>
+                        <th data-col="Descripcion">Descripcion</th>
+                        <th data-col="Grupo">Grupo</th>
+                        <th data-col="NombreProveedor">Proveedor</th>
+                        <th data-col="Precio" class="text-end">Precio</th>
+                        <th data-col="IdStatus" class="text-center">Status</th>
+                        <th data-col="FechaCaptura">Fecha</th>
+                        <th data-col="Peso" class="text-end" style="display:none">Peso</th>
+                        <th data-col="Kilates" style="display:none">Kilates</th>
+                        <th data-col="Modelo" style="display:none">Modelo</th>
+                        <th data-col="Linea" style="display:none">Linea</th>
+                        <th data-col="CBTotal" class="text-end" style="display:none">C. Bruto</th>
+                        <th data-col="CNTotal" class="text-end" style="display:none">C. Neto</th>
+                        <th data-col="Quilates" class="text-end" style="display:none">Quilates</th>
+                        <th data-col="Color" style="display:none">Color</th>
+                        <th data-col="NumSerie" style="display:none">No. Serie</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
@@ -87,14 +99,14 @@
                         @foreach (var p in Model.Piezas)
                         {
                             <tr>
-                                <td>
+                                <td data-col="CodigoBarras">
                                     <code>@p.CodigoBarras</code>
                                 </td>
-                                <td>@p.Descripcion</td>
-                                <td><span class="badge bg-secondary">@p.Grupo</span></td>
-                                <td>@p.NombreProveedor</td>
-                                <td class="text-end fw-semibold">@(p.Precio?.ToString("C2"))</td>
-                                <td class="text-center">
+                                <td data-col="Descripcion">@p.Descripcion</td>
+                                <td data-col="Grupo"><span class="badge bg-secondary">@p.Grupo</span></td>
+                                <td data-col="NombreProveedor">@p.NombreProveedor</td>
+                                <td data-col="Precio" class="text-end fw-semibold">@(p.Precio?.ToString("C2"))</td>
+                                <td data-col="IdStatus" class="text-center">
                                     @if (p.IdStatus == 1)
                                     {
                                         <span class="badge bg-success">Activa</span>
@@ -104,7 +116,16 @@
                                         <span class="badge bg-warning text-dark">@(p.IdStatus)</span>
                                     }
                                 </td>
-                                <td>@p.FechaCaptura?.ToString("dd/MM/yyyy")</td>
+                                <td data-col="FechaCaptura">@p.FechaCaptura?.ToString("dd/MM/yyyy")</td>
+                                <td data-col="Peso" class="text-end" style="display:none">@(p.Peso > 0 ? p.Peso?.ToString("N2") : "")</td>
+                                <td data-col="Kilates" style="display:none">@p.Kilates</td>
+                                <td data-col="Modelo" style="display:none">@p.Modelo</td>
+                                <td data-col="Linea" style="display:none">@p.Linea</td>
+                                <td data-col="CBTotal" class="text-end" style="display:none">@(p.CBTotal?.ToString("N2"))</td>
+                                <td data-col="CNTotal" class="text-end" style="display:none">@(p.CNTotal?.ToString("N2"))</td>
+                                <td data-col="Quilates" class="text-end" style="display:none">@(p.Quilates > 0 ? p.Quilates.ToString("N2") : "")</td>
+                                <td data-col="Color" style="display:none">@p.Color</td>
+                                <td data-col="NumSerie" style="display:none">@p.NumSerie</td>
                                 <td class="text-center">
                                     <a asp-page="Detalle" asp-route-codigoBarras="@p.CodigoBarras"
                                        class="btn btn-outline-primary btn-sm" title="Ver / Editar">
@@ -117,7 +138,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="17" class="text-center text-muted py-4">
                                 <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
                                 No se encontraron piezas.
                             </td>
@@ -132,3 +153,13 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+<script src="/js/column-config.js?v=20260615"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar columnas configurables
+    initColumnConfig('vPiezasSencillasWeb', '#piezasSencillasTable');
+});
+</script>
+}
