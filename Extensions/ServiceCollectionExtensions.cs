@@ -40,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped(sp => new InventoryService(connectionString, sp.GetRequiredService<ILogger<InventoryService>>()));
         services.AddScoped(sp => new OpcionPagoService(connectionString, sp.GetRequiredService<ILogger<OpcionPagoService>>()));
         services.AddScoped(sp => new TiposCambioService(connectionString, sp.GetRequiredService<ILogger<TiposCambioService>>()));
+        services.AddScoped(sp => new PonderacionService(connectionString, sp.GetRequiredService<ILogger<PonderacionService>>()));
 
         // Servicios con constructor especial
         services.AddScoped(sp => new AmlService(
