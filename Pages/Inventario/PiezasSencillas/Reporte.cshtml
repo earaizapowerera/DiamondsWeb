@@ -1,0 +1,205 @@
+@page
+@model DiamondsWeb.Pages.Inventario.PiezasSencillas.ReporteModel
+@{
+    ViewData["Title"] = "Reporte de Piezas";
+}
+
+<link rel="stylesheet" href="~/css/print.css" />
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show no-print">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Filtros (no se imprimen) -->
+<div class="card mb-3 no-print">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-file-lines me-2"></i>Reporte de Piezas Sencillas</span>
+        <a asp-page="Index" class="btn btn-light btn-sm">
+            <i class="fa-solid fa-arrow-left me-1"></i>Volver al Listado
+        </a>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end mb-3">
+            <div class="col-md-3">
+                <label class="form-label"><small>Buscar</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Descripcion, codigo, modelo, serie..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Grupo</small></label>
+                <select name="IdGrupo" class="form-select form-select-sm" id="selGrupo">
+                    <option value="">-- Todos --</option>
+                    @foreach (var g in Model.Grupos)
+                    {
+                        <option value="@g.IdGrupo" selected="@(Model.IdGrupo == g.IdGrupo)">@g.Grupo1</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><small>Proveedor</small></label>
+                <select name="Proveedor" class="form-select form-select-sm" id="selProveedor">
+                    <option value="">-- Todos --</option>
+                    @foreach (var p in Model.Proveedores)
+                    {
+                        <option value="@p.Proveedor1" selected="@(Model.Proveedor == p.Proveedor1)">@p.NombreProveedor</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100" title="Aplicar filtros">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+            </div>
+            <div class="col-md-1">
+                <a href="/Inventario/PiezasSencillas/Reporte" class="btn btn-outline-secondary btn-sm w-100" title="Limpiar">
+                    <i class="fa-solid fa-eraser"></i>
+                </a>
+            </div>
+        </form>
+
+        <!-- Barra de acciones -->
+        <div class="report-toolbar">
+            <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()">
+                <i class="fa-solid fa-print me-1"></i>Imprimir
+            </button>
+            <a asp-page="Reporte" asp-page-handler="Excel"
+               asp-route-Buscar="@Model.Buscar" asp-route-IdGrupo="@Model.IdGrupo"
+               asp-route-Proveedor="@Model.Proveedor"
+               class="btn btn-success btn-sm">
+                <i class="fa-solid fa-file-excel me-1"></i>Exportar Excel
+            </a>
+            <a asp-page="Reporte" asp-page-handler="Pdf"
+               asp-route-Buscar="@Model.Buscar" asp-route-IdGrupo="@Model.IdGrupo"
+               asp-route-Proveedor="@Model.Proveedor"
+               class="btn btn-danger btn-sm">
+                <i class="fa-solid fa-file-pdf me-1"></i>Exportar PDF
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Cabecera del reporte (visible en impresion) -->
+<div class="report-header">
+    <h4>Diamonds — Listado de Piezas Sencillas</h4>
+    <div class="report-filters">
+        @{
+            var filtros = new List<string>();
+            if (!string.IsNullOrWhiteSpace(Model.Buscar)) filtros.Add($"Buscar: {Model.Buscar}");
+            if (Model.IdGrupo.HasValue)
+            {
+                var grupo = Model.Grupos.FirstOrDefault(g => g.IdGrupo == Model.IdGrupo);
+                filtros.Add($"Grupo: {grupo?.Grupo1 ?? Model.IdGrupo.ToString()}");
+            }
+            if (Model.Proveedor.HasValue)
+            {
+                var prov = Model.Proveedores.FirstOrDefault(p => p.Proveedor1 == Model.Proveedor);
+                filtros.Add($"Proveedor: {prov?.NombreProveedor ?? Model.Proveedor.ToString()}");
+            }
+        }
+        @if (filtros.Any())
+        {
+            <span>Filtros: @string.Join(" | ", filtros)</span>
+        }
+        else
+        {
+            <span>Sin filtros (mostrando todos)</span>
+        }
+    </div>
+    <div class="report-date">
+        Generado: <span class="utc-date" data-utc="@DateTime.UtcNow.ToString("o")Z">@DateTime.UtcNow.ToString("dd/MM/yyyy HH:mm")</span>
+    </div>
+</div>
+
+<!-- Tabla del reporte -->
+<div class="table-responsive">
+    <table class="table report-table mb-0">
+        <thead>
+            <tr>
+                <th>Codigo</th>
+                <th>Descripcion</th>
+                <th>Grupo</th>
+                <th>Proveedor</th>
+                <th class="text-end">Peso</th>
+                <th class="text-end">CB Pieza</th>
+                <th class="text-end">CN Pieza</th>
+                <th class="text-end">CB Total</th>
+                <th class="text-end">CN Total</th>
+                <th class="text-end">Precio</th>
+                <th>Kilates</th>
+                <th>Status</th>
+                <th>Fecha</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Piezas.Any())
+            {
+                @foreach (var p in Model.Piezas)
+                {
+                    <tr>
+                        <td><code>@p.CodigoBarras</code></td>
+                        <td>@p.Descripcion</td>
+                        <td>@p.Grupo</td>
+                        <td>@p.NombreProveedor</td>
+                        <td class="text-end">@(p.Peso?.ToString("N2") ?? "")</td>
+                        <td class="text-end">@(p.CBPieza?.ToString("C2") ?? "")</td>
+                        <td class="text-end">@(p.CNPieza?.ToString("C2") ?? "")</td>
+                        <td class="text-end">@(p.CBTotal?.ToString("C2") ?? "")</td>
+                        <td class="text-end">@(p.CNTotal?.ToString("C2") ?? "")</td>
+                        <td class="text-end fw-semibold">@(p.Precio?.ToString("C0") ?? "")</td>
+                        <td>@p.Kilates</td>
+                        <td>
+                            @if (p.IdStatus == 1)
+                            {
+                                <span class="badge bg-success">Activa</span>
+                            }
+                            else
+                            {
+                                <span>@p.StatusNombre</span>
+                            }
+                        </td>
+                        <td>@p.FechaCaptura?.ToString("dd/MM/yyyy")</td>
+                    </tr>
+                }
+                <!-- Fila de totales -->
+                <tr class="totals-row">
+                    <td colspan="4"><strong>TOTALES (@Model.Totales.TotalPiezas piezas)</strong></td>
+                    <td class="text-end">@Model.Totales.Peso.ToString("N2")</td>
+                    <td class="text-end">@Model.Totales.CBPieza.ToString("C2")</td>
+                    <td class="text-end">@Model.Totales.CNPieza.ToString("C2")</td>
+                    <td class="text-end">@Model.Totales.CBTotal.ToString("C2")</td>
+                    <td class="text-end">@Model.Totales.CNTotal.ToString("C2")</td>
+                    <td class="text-end">@Model.Totales.Precio.ToString("C0")</td>
+                    <td colspan="3"></td>
+                </tr>
+            }
+            else
+            {
+                <tr>
+                    <td colspan="13" class="text-center text-muted py-4">
+                        <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                        No se encontraron piezas con los filtros aplicados.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+<script>
+    // TomSelect para dropdowns searchable
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof TomSelect !== 'undefined') {
+            var grupoSel = document.getElementById('selGrupo');
+            if (grupoSel) new TomSelect(grupoSel, { allowEmptyOption: true, sortField: { field: 'text', direction: 'asc' } });
+
+            var provSel = document.getElementById('selProveedor');
+            if (provSel) new TomSelect(provSel, { allowEmptyOption: true, sortField: { field: 'text', direction: 'asc' } });
+        }
+    });
+</script>
+}

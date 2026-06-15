@@ -3,11 +3,15 @@ using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using PowerEra.UserPortal.Component.Extensions;
+using QuestPDF.Infrastructure;
 
 // Forzar cultura es-MX para que los montos muestren $ en vez de ¤
 var culturaMx = new CultureInfo("es-MX");
 CultureInfo.DefaultThreadCurrentCulture = culturaMx;
 CultureInfo.DefaultThreadCurrentUICulture = culturaMx;
+
+// QuestPDF — licencia Community (requerida por v2024+)
+QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
