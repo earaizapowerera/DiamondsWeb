@@ -210,6 +210,32 @@ public class PiezaService
         return await db.QuerySingleAsync<int>(sql, factura);
     }
 
+    public async Task<List<Factura>> ObtenerFacturasAsync(string? filtro = null)
+    {
+        using var db = CreateConnection();
+        var sql = @"SELECT TOP 50 f.IdFactura, f.FolioFactura, f.Proveedor,
+                     p.NombreProveedor, f.IdRazonSocialProveedor,
+                     f.FechaFactura, f.Pedimento, f.IdUsuario,
+                     ISNULL((SELECT SUM(CBTotal) FROM Piezas WHERE IdFactura = f.IdFactura), 0) AS TotalBruto,
+                     ISNULL((SELECT SUM(CNTotal) FROM Piezas WHERE IdFactura = f.IdFactura), 0) AS TotalNeto
+                     FROM Facturas f
+                     LEFT JOIN Proveedores p ON f.Proveedor = p.Proveedor
+                     WHERE (@Filtro IS NULL
+                        OR f.FolioFactura LIKE '%' + @Filtro + '%'
+                        OR p.NombreProveedor LIKE '%' + @Filtro + '%'
+                        OR CAST(f.IdFactura AS VARCHAR) LIKE '%' + @Filtro + '%')
+                     ORDER BY f.IdFactura DESC";
+        return (await db.QueryAsync<Factura>(sql, new { Filtro = filtro })).ToList();
+    }
+
+    public async Task VincularFacturaARemisionAsync(int idRemision, int idFactura)
+    {
+        using var db = CreateConnection();
+        await db.ExecuteAsync(
+            "UPDATE Piezas SET IdFactura = @IdFactura WHERE IdRemision = @IdRemision",
+            new { IdFactura = idFactura, IdRemision = idRemision });
+    }
+
     // ==================== PIEZAS ====================
 
     public async Task<List<PiezaResumen>> ObtenerPiezasPorRemisionAsync(int idRemision)

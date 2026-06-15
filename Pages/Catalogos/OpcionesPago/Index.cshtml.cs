@@ -80,7 +80,8 @@ public class IndexModel : PageModel
                 return RedirectToPage();
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
             await _catalogService.CrearOpcionPagoAsync(NuevoNombre.Trim(), NuevoIdMoneda, NuevoIdLogo, NuevoActivo, idUsuario);
             TempData["Success"] = "Opcion de pago creada exitosamente.";
         }
@@ -103,7 +104,8 @@ public class IndexModel : PageModel
                 return RedirectToPage();
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
             await _catalogService.ActualizarOpcionPagoAsync(EditId.Value, EditNombre.Trim(), EditIdMoneda, EditIdLogo, EditActivo, idUsuario);
             TempData["Success"] = "Opcion de pago actualizada exitosamente.";
         }

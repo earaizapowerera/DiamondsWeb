@@ -2,6 +2,7 @@ using System.Globalization;
 using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
+using Microsoft.AspNetCore.Authentication;
 using PowerEra.UserPortal.Component.Extensions;
 
 // Forzar cultura es-MX para que los montos muestren $ en vez de ¤
@@ -23,7 +24,7 @@ builder.Services.AddUserPortalComponent(options =>
     options.SessionExpirationMinutes = 60;
     options.SlidingExpiration = true;
     options.AutoInitializeDatabase = true;
-    options.DefaultAdminPassword = "Waykee2026!";
+    options.DefaultAdminPassword = builder.Configuration["Diamonds:DefaultAdminPassword"] ?? "changeme";
     options.SystemName = "Diamonds Web";
     options.LogoUrl = "";
 });
@@ -36,6 +37,9 @@ builder.Services.AddSingleton(amlConfig);
 var sppldConfig = new SppldConfig();
 builder.Configuration.GetSection("SppldConfig").Bind(sppldConfig);
 builder.Services.AddSingleton(sppldConfig);
+
+// Claims transformation: maps UserPortal user → Diamonds IdUsuario/IdTienda
+builder.Services.AddScoped<IClaimsTransformation, DiamondsClaimsTransformation>();
 
 // Todos los servicios de Diamonds (30 servicios con patrón estándar + AML + SPPLD)
 var diamondsConnStr = builder.Configuration.GetConnectionString("DiamondsDb")!;

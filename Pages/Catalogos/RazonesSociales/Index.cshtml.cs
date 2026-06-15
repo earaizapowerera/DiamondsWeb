@@ -78,7 +78,8 @@ public class IndexModel : PageModel
                 return RedirectToPage();
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
             var rs = new RazonSocialProveedor
             {
                 RazonSocialProveedorNombre = NuevoRazonSocial.Trim(),
@@ -112,7 +113,8 @@ public class IndexModel : PageModel
                 return RedirectToPage();
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
             var rs = new RazonSocialProveedor
             {
                 IdRazonSocialProveedor = EditId.Value,
@@ -157,7 +159,8 @@ public class IndexModel : PageModel
     {
         try
         {
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
             await _proveedorService.CrearAsignacionAsync(AsignarIdRS, AsignarProveedor, idUsuario);
             TempData["Success"] = "Proveedor asignado exitosamente.";
         }

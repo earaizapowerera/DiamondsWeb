@@ -14,14 +14,13 @@ public class PuntoVentaService
 {
     private readonly string _connectionString;
     private readonly ILogger<PuntoVentaService> _logger;
+    private readonly int _defaultTiendaId;
 
-    // IdTienda fijo = 1 (tienda local, igual que el legacy)
-    private const int IdTienda = 1;
-
-    public PuntoVentaService(string connectionString, ILogger<PuntoVentaService> logger)
+    public PuntoVentaService(string connectionString, ILogger<PuntoVentaService> logger, int defaultTiendaId = 1)
     {
         _connectionString = connectionString;
         _logger = logger;
+        _defaultTiendaId = defaultTiendaId;
     }
 
     private IDbConnection CreateConnection() => new SqlConnection(_connectionString);
@@ -95,7 +94,7 @@ public class PuntoVentaService
             await db.ExecuteAsync(
                 "UPDATE Contador SET Nota = Nota + 1", transaction: tx);
 
-            var idNota = IdTienda * 10000000 + nota; // formato: {IdTienda}{Nota}
+            var idNota = _defaultTiendaId * 10000000 + nota; // formato: {IdTienda}{Nota}
             var fechaBaja = req.FechaBaja ?? DateTime.UtcNow;
 
             await db.ExecuteAsync(
@@ -106,7 +105,7 @@ public class PuntoVentaService
                 new
                 {
                     IdNota = idNota,
-                    IdTienda,
+                    IdTienda = _defaultTiendaId,
                     IdUsuario = req.IdUsuario,
                     IdVendedor = req.IdUsuario, // vendedor = usuario por default
                     FechaBaja = fechaBaja

@@ -77,13 +77,15 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostReestablecerAsync(
         string codigoBarras, int idTienda)
     {
+        var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+            : throw new UnauthorizedAccessException("IdUsuario claim not found");
         var usuario = User.Identity?.Name ?? "admin";
 
         _logger.LogInformation(
             "Solicitud de reestablecimiento: CB={CB}, Tienda={Tienda}, Usuario={Usuario}",
             codigoBarras, idTienda, usuario);
 
-        var resultado = await _service.ReestablecerPiezaAsync(codigoBarras, idTienda, usuario);
+        var resultado = await _service.ReestablecerPiezaAsync(codigoBarras, idTienda, idUsuario, usuario);
 
         if (resultado.Exito)
         {

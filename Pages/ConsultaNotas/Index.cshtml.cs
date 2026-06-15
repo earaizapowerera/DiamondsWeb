@@ -67,8 +67,8 @@ public class IndexModel : PageModel
     /// </summary>
     public async Task<IActionResult> OnPostCancelarAsync(int idNota)
     {
-        // TODO: Obtener IdUsuario real del sistema de auth
-        var idUsuario = 1;
+        var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+            : throw new UnauthorizedAccessException("IdUsuario claim not found");
 
         var (success, message) = await _notasService.CancelarNotaAsync(idNota, idUsuario);
 

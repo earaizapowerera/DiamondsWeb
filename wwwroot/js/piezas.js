@@ -297,4 +297,369 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // ==================== BUSQUEDA EN MODALES ====================
+
+    // Buscar remisiones al escribir en el modal
+    var txtBuscarRemision = document.getElementById('txtBuscarRemision');
+    if (txtBuscarRemision) {
+        var timerRemision = null;
+        txtBuscarRemision.addEventListener('input', function() {
+            clearTimeout(timerRemision);
+            timerRemision = setTimeout(function() { buscarRemisionesAPI(txtBuscarRemision.value); }, 300);
+        });
+    }
+
+    // Cargar remisiones al abrir modal
+    var modalRemision = document.getElementById('modalBuscarRemision');
+    if (modalRemision) {
+        modalRemision.addEventListener('shown.bs.modal', function() {
+            var txt = document.getElementById('txtBuscarRemision');
+            if (txt) { txt.value = ''; txt.focus(); }
+            buscarRemisionesAPI('');
+        });
+    }
+
+    // Buscar facturas al escribir en el modal
+    var txtBuscarFactura = document.getElementById('txtBuscarFactura');
+    if (txtBuscarFactura) {
+        var timerFactura = null;
+        txtBuscarFactura.addEventListener('input', function() {
+            clearTimeout(timerFactura);
+            timerFactura = setTimeout(function() { buscarFacturasAPI(txtBuscarFactura.value); }, 300);
+        });
+    }
+
+    // Cargar facturas al abrir modal
+    var modalFactura = document.getElementById('modalBuscarFactura');
+    if (modalFactura) {
+        modalFactura.addEventListener('shown.bs.modal', function() {
+            var txt = document.getElementById('txtBuscarFactura');
+            if (txt) { txt.value = ''; txt.focus(); }
+            buscarFacturasAPI('');
+        });
+    }
+
+    // Cargar razones sociales cuando se selecciona proveedor de remision
+    var selProvRem = document.getElementById('selProveedorRemision');
+    if (selProvRem) {
+        selProvRem.addEventListener('change', function() {
+            cargarRazonesSociales(this.value);
+        });
+    }
+});
+
+// ==================== REMISION: Crear y Buscar ====================
+
+function crearRemision() {
+    var proveedor = document.getElementById('selProveedorRemision');
+    if (!proveedor || !proveedor.value) {
+        alert('Selecciona un proveedor');
+        return;
+    }
+    var numRemision = document.getElementById('txtNumRemision');
+    var fechaRemision = document.getElementById('txtFechaRemision');
+    var chkConsignacion = document.getElementById('chkConsignacion');
+
+    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+    var body = new FormData();
+    body.append('proveedor', proveedor.value);
+    body.append('numeroRemision', numRemision ? numRemision.value : 'S/N');
+    body.append('fechaRemision', fechaRemision ? fechaRemision.value : '');
+    body.append('consignacion', chkConsignacion ? chkConsignacion.checked : false);
+    if (token) body.append('__RequestVerificationToken', token.value);
+
+    fetch('?handler=CrearRemision', { method: 'POST', body: body })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                window.location.href = '/Piezas/Alta?IdRemision=' + data.idRemision;
+            } else {
+                alert('Error al crear remision: ' + (data.error || 'desconocido'));
+            }
+        })
+        .catch(function(err) { alert('Error: ' + err.message); });
+}
+
+function buscarRemisionesAPI(texto) {
+    var lista = document.getElementById('listaRemisiones');
+    if (!lista) return;
+    lista.innerHTML = '<div class="text-center py-2"><i class="fa-solid fa-spinner fa-spin"></i></div>';
+
+    fetch('?handler=BuscarRemisiones&texto=' + encodeURIComponent(texto || ''))
+        .then(function(r) { return r.json(); })
+        .then(function(items) {
+            if (!items || items.length === 0) {
+                lista.innerHTML = '<div class="text-center text-muted py-3"><small>No se encontraron remisiones</small></div>';
+                return;
+            }
+            var currentIdRemision = new URLSearchParams(window.location.search).get('IdRemision');
+            var html = '';
+            items.forEach(function(r) {
+                html += '<a href="/Piezas/Alta?IdRemision=' + r.idRemision + '"'
+                    + ' class="list-group-item list-group-item-action py-1 small'
+                    + (currentIdRemision == r.idRemision ? ' active' : '') + '">'
+                    + '<strong>#' + r.idRemision + '</strong> - ' + (r.nombreProveedor || '')
+                    + ' (' + (r.numeroRemision || 'S/N') + ')'
+                    + (r.consignacion ? ' <span class="badge bg-warning text-dark">Cons.</span>' : '')
+                    + '<span class="text-muted float-end">' + (r.fechaRemision || '')
+                    + (r.cantidadPiezas > 0 ? ' | ' + r.cantidadPiezas + ' pzas' : '')
+                    + '</span></a>';
+            });
+            lista.innerHTML = html;
+        })
+        .catch(function() { lista.innerHTML = '<div class="text-center text-danger py-2">Error de conexion</div>'; });
+}
+
+// ==================== FACTURA: Crear y Buscar ====================
+
+function crearFactura() {
+    var folioEl = document.getElementById('txtFolioFactura');
+    var razonSocialEl = document.getElementById('selRazonSocial');
+    var fechaFacturaEl = document.getElementById('txtFechaFactura');
+
+    // Obtener proveedor de la remision actual (del hidden field)
+    var idRemisionEl = document.querySelector('input[name="IdRemision"]');
+    var idRemision = idRemisionEl ? idRemisionEl.value : '';
+
+    // Necesitamos saber el proveedor de la remision.
+    // Obtenerlo del badge o del select.
+    var proveedorEl = document.getElementById('selProveedorRemision');
+    var proveedor = proveedorEl ? proveedorEl.value : '';
+    // Si la remision ya esta seleccionada, el proveedor no está en un select visible
+    // Lo obtenemos del data attribute que inyectaremos
+    if (!proveedor) {
+        var provHidden = document.getElementById('hidProveedorRemision');
+        proveedor = provHidden ? provHidden.value : '';
+    }
+
+    if (!proveedor) {
+        alert('No se pudo determinar el proveedor de la remision');
+        return;
+    }
+
+    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+    var body = new FormData();
+    body.append('proveedor', proveedor);
+    body.append('folioFactura', folioEl ? folioEl.value : '');
+    body.append('idRazonSocial', razonSocialEl ? razonSocialEl.value : '0');
+    body.append('fechaFactura', fechaFacturaEl ? fechaFacturaEl.value : '');
+    if (token) body.append('__RequestVerificationToken', token.value);
+
+    fetch('?handler=CrearFactura', { method: 'POST', body: body })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                // Vincular la factura a la remision
+                var bodyVinc = new FormData();
+                bodyVinc.append('idRemision', idRemision);
+                bodyVinc.append('idFactura', data.idFactura);
+                if (token) bodyVinc.append('__RequestVerificationToken', token.value);
+
+                fetch('?handler=VincularFactura', { method: 'POST', body: bodyVinc })
+                    .then(function() {
+                        window.location.href = '/Piezas/Alta?IdRemision=' + idRemision + '&IdFactura=' + data.idFactura;
+                    });
+            } else {
+                alert('Error al crear factura: ' + (data.error || 'desconocido'));
+            }
+        })
+        .catch(function(err) { alert('Error: ' + err.message); });
+}
+
+function buscarFacturasAPI(texto) {
+    var lista = document.getElementById('listaFacturas');
+    if (!lista) return;
+    lista.innerHTML = '<div class="text-center py-2"><i class="fa-solid fa-spinner fa-spin"></i></div>';
+
+    fetch('?handler=BuscarFacturas&texto=' + encodeURIComponent(texto || ''))
+        .then(function(r) { return r.json(); })
+        .then(function(items) {
+            if (!items || items.length === 0) {
+                lista.innerHTML = '<div class="text-center text-muted py-3"><small>No se encontraron facturas</small></div>';
+                return;
+            }
+            var idRemision = new URLSearchParams(window.location.search).get('IdRemision') || '';
+            var html = '';
+            items.forEach(function(f) {
+                var href = '/Piezas/Alta?IdFactura=' + f.idFactura;
+                if (idRemision) href += '&IdRemision=' + idRemision;
+                html += '<a href="' + href + '"'
+                    + ' class="list-group-item list-group-item-action py-1 small">'
+                    + '<strong>#' + f.idFactura + '</strong>'
+                    + (f.folioFactura ? ' - Folio: ' + f.folioFactura : '')
+                    + ' - ' + (f.nombreProveedor || '')
+                    + '<span class="text-muted float-end">' + (f.fechaFactura || '') + '</span>'
+                    + '</a>';
+            });
+            lista.innerHTML = html;
+        })
+        .catch(function() { lista.innerHTML = '<div class="text-center text-danger py-2">Error de conexion</div>'; });
+}
+
+function cargarRazonesSociales(proveedorId) {
+    var sel = document.getElementById('selRazonSocial');
+    if (!sel || !proveedorId) return;
+    sel.innerHTML = '<option value="0">Cargando...</option>';
+
+    fetch('?handler=RazonesSociales&proveedor=' + proveedorId)
+        .then(function(r) { return r.json(); })
+        .then(function(items) {
+            sel.innerHTML = '<option value="0">--</option>';
+            (items || []).forEach(function(rs) {
+                var opt = document.createElement('option');
+                opt.value = rs.idRazonSocialProveedor;
+                opt.textContent = rs.razonSocial;
+                sel.appendChild(opt);
+            });
+        })
+        .catch(function() { sel.innerHTML = '<option value="0">--</option>'; });
+}
+
+// ==================== FOTO DE PIEZA ====================
+
+/**
+ * Sube una foto desde el input file del navegador.
+ */
+function subirFoto(inputEl) {
+    if (!inputEl.files || !inputEl.files[0]) return;
+
+    var file = inputEl.files[0];
+
+    // Validar tipo
+    var tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp'];
+    if (tiposPermitidos.indexOf(file.type) === -1) {
+        alert('Tipo de archivo no permitido. Use JPG, PNG, WebP, GIF o BMP.');
+        inputEl.value = '';
+        return;
+    }
+
+    // Validar tamano (10 MB)
+    if (file.size > 10 * 1024 * 1024) {
+        alert('El archivo es muy grande. Maximo 10 MB.');
+        inputEl.value = '';
+        return;
+    }
+
+    // Mostrar spinner
+    var dropzone = document.getElementById('fotoDropzone');
+    var loading = document.getElementById('fotoLoading');
+    if (dropzone) dropzone.classList.add('d-none');
+    if (loading) loading.classList.remove('d-none');
+
+    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+    var formData = new FormData();
+    formData.append('foto', file);
+    if (token) formData.append('__RequestVerificationToken', token.value);
+
+    fetch('?handler=SubirFoto', { method: 'POST', body: formData })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (loading) loading.classList.add('d-none');
+            if (data.success) {
+                mostrarFotoPreview(data.url, data.storedFileName);
+            } else {
+                if (dropzone) dropzone.classList.remove('d-none');
+                alert('Error al subir foto: ' + (data.error || 'desconocido'));
+            }
+        })
+        .catch(function(err) {
+            if (loading) loading.classList.add('d-none');
+            if (dropzone) dropzone.classList.remove('d-none');
+            alert('Error de conexion: ' + err.message);
+        });
+
+    // Limpiar input para permitir re-subir el mismo archivo
+    inputEl.value = '';
+}
+
+/**
+ * Selecciona una foto de las recientes del movil.
+ */
+function seleccionarFotoMovil(storedFileName, url) {
+    mostrarFotoPreview(url, storedFileName);
+
+    // Marcar thumbnail como seleccionada
+    document.querySelectorAll('.foto-thumb').forEach(function(t) {
+        t.classList.remove('selected');
+    });
+    var thumbs = document.querySelectorAll('.foto-thumb');
+    thumbs.forEach(function(t) {
+        if (t.src.indexOf(storedFileName) !== -1) {
+            t.classList.add('selected');
+        }
+    });
+}
+
+/**
+ * Muestra el preview de la foto y actualiza el hidden field.
+ */
+function mostrarFotoPreview(url, storedFileName) {
+    var preview = document.getElementById('fotoPreview');
+    var img = document.getElementById('imgPreview');
+    var uploadArea = document.getElementById('fotoUploadArea');
+    var hidArchivoFoto = document.getElementById('hidArchivoFoto');
+
+    if (img) img.src = url;
+    if (preview) preview.classList.remove('d-none');
+    if (uploadArea) uploadArea.classList.add('d-none');
+    if (hidArchivoFoto) hidArchivoFoto.value = storedFileName;
+}
+
+/**
+ * Quita la foto seleccionada.
+ */
+function quitarFoto() {
+    var preview = document.getElementById('fotoPreview');
+    var img = document.getElementById('imgPreview');
+    var uploadArea = document.getElementById('fotoUploadArea');
+    var dropzone = document.getElementById('fotoDropzone');
+    var hidArchivoFoto = document.getElementById('hidArchivoFoto');
+
+    if (preview) preview.classList.add('d-none');
+    if (img) img.src = '';
+    if (uploadArea) uploadArea.classList.remove('d-none');
+    if (dropzone) dropzone.classList.remove('d-none');
+    if (hidArchivoFoto) hidArchivoFoto.value = '';
+
+    // Quitar seleccion de thumbnails
+    document.querySelectorAll('.foto-thumb').forEach(function(t) {
+        t.classList.remove('selected');
+    });
+}
+
+// ==================== DRAG & DROP ====================
+
+document.addEventListener('DOMContentLoaded', function() {
+    var dropzone = document.getElementById('fotoDropzone');
+    if (!dropzone) return;
+
+    dropzone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.add('drag-over');
+    });
+
+    dropzone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('drag-over');
+    });
+
+    dropzone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('drag-over');
+
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            var inputFoto = document.getElementById('inputFoto');
+            if (inputFoto) {
+                // Crear un DataTransfer para asignar los archivos al input
+                var dt = new DataTransfer();
+                dt.items.add(e.dataTransfer.files[0]);
+                inputFoto.files = dt.files;
+                subirFoto(inputFoto);
+            }
+        }
+    });
 });

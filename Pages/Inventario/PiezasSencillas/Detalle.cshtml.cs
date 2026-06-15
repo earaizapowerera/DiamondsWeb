@@ -62,13 +62,15 @@ public class DetalleModel : PageModel
     {
         try
         {
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
             Pieza.IdUsuario = idUsuario;
 
             if (string.IsNullOrWhiteSpace(codigoBarras))
             {
-                // Crear nueva pieza
-                Pieza.IdStatus = 1;
+                // Crear nueva pieza — IdStatus 1 = Nuevo Ingreso
+                const int StatusNuevoIngreso = 1;
+                Pieza.IdStatus = StatusNuevoIngreso;
                 await _inventoryService.CrearPiezaSencillaAsync(Pieza);
                 TempData["Success"] = $"Pieza {Pieza.CodigoBarras} creada exitosamente.";
                 return RedirectToPage("Detalle", new { codigoBarras = Pieza.CodigoBarras });

@@ -4,7 +4,7 @@
     ViewData["Title"] = Model.EsEdicion ? $"Editar Pieza {Model.Cb}" : "Alta de Pieza";
 }
 
-<link rel="stylesheet" href="/css/piezas.css?v=20260609" />
+<link rel="stylesheet" href="/css/piezas.css?v=20260615" />
 
 @if (!string.IsNullOrEmpty(Model.MensajeExito))
 {
@@ -32,16 +32,9 @@
             }
             else
             {
-                <span>Alta de Pieza Sencilla</span>
+                <span>Alta de Piezas Sencillas</span>
             }
         </h5>
-        @if (Model.RemisionActual != null)
-        {
-            <small class="text-muted">
-                Remision #@Model.RemisionActual.IdRemision - @Model.RemisionActual.NombreProveedor
-                (@Model.RemisionActual.NumeroRemision)
-            </small>
-        }
     </div>
     <div class="d-flex gap-2">
         <a asp-page="Index" asp-route-IdRemision="@Model.IdRemision" class="btn btn-outline-secondary btn-sm">
@@ -50,11 +43,206 @@
     </div>
 </div>
 
+<!-- ==================== REMISION / FACTURA ==================== -->
+<div class="card mb-3">
+    <div class="card-header py-2">
+        <i class="fa-solid fa-file-invoice me-1"></i>Remision y Factura
+    </div>
+    <div class="card-body py-2">
+        <div class="row g-3">
+            <!-- Remision (izquierda) -->
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <strong class="text-nowrap"><i class="fa-solid fa-truck me-1"></i>Remision</strong>
+                    @if (Model.RemisionActual != null)
+                    {
+                        <span class="badge bg-primary">#@Model.RemisionActual.IdRemision</span>
+                        @if (Model.RemisionActual.Consignacion)
+                        {
+                            <span class="badge bg-warning text-dark">Consignacion</span>
+                        }
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Sin seleccionar</span>
+                    }
+                </div>
+                @if (Model.RemisionActual != null)
+                {
+                    <div class="row g-2">
+                        <div class="col-sm-6">
+                            <small class="text-muted d-block">Proveedor</small>
+                            <span class="fw-medium">@Model.RemisionActual.NombreProveedor</span>
+                        </div>
+                        <div class="col-sm-3">
+                            <small class="text-muted d-block">Num. Remision</small>
+                            <span>@Model.RemisionActual.NumeroRemision</span>
+                        </div>
+                        <div class="col-sm-3">
+                            <small class="text-muted d-block">Fecha</small>
+                            <span>@(Model.RemisionActual.FechaRemision?.ToString("dd/MM/yyyy") ?? "")</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <!-- Formulario para crear/seleccionar remision -->
+                    <div id="formRemision">
+                        <div class="row g-2">
+                            <div class="col-sm-6">
+                                <label class="form-label form-label-sm mb-0">Proveedor <span class="text-danger">*</span></label>
+                                <select id="selProveedorRemision" class="form-select form-select-sm">
+                                    <option value="">Seleccionar...</option>
+                                    @foreach (var p in Model.Proveedores)
+                                    {
+                                        <option value="@p.Proveedor">@p.NombreProveedor</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-sm-3">
+                                <label class="form-label form-label-sm mb-0">Num. Remision</label>
+                                <input type="text" id="txtNumRemision" class="form-control form-control-sm" value="S/N" />
+                            </div>
+                            <div class="col-sm-3">
+                                <label class="form-label form-label-sm mb-0">Fecha</label>
+                                <input type="date" id="txtFechaRemision" class="form-control form-control-sm"
+                                       value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 mt-2 align-items-center">
+                            <div class="form-check form-check-inline mb-0">
+                                <input type="checkbox" id="chkConsignacion" class="form-check-input" checked>
+                                <label class="form-check-label small" for="chkConsignacion">Consignacion</label>
+                            </div>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="crearRemision()">
+                                <i class="fa-solid fa-plus me-1"></i>Registrar Remision
+                            </button>
+                            <span class="text-muted small">o</span>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modalBuscarRemision">
+                                <i class="fa-solid fa-search me-1"></i>Buscar Existente
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Separador vertical -->
+            <div class="col-md-0 d-none d-md-block" style="border-left: 1px solid var(--bs-border-color); padding:0; max-width:1px;"></div>
+
+            <!-- Factura (derecha) -->
+            <div class="col-md-5">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <strong class="text-nowrap"><i class="fa-solid fa-file-invoice-dollar me-1"></i>Factura</strong>
+                    @if (Model.FacturaActual != null)
+                    {
+                        <span class="badge bg-success">#@Model.FacturaActual.IdFactura</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Opcional</span>
+                    }
+                </div>
+                @if (Model.FacturaActual != null)
+                {
+                    <div class="row g-2">
+                        <div class="col-sm-4">
+                            <small class="text-muted d-block">Folio</small>
+                            <span class="fw-medium">@Model.FacturaActual.FolioFactura</span>
+                        </div>
+                        <div class="col-sm-4">
+                            <small class="text-muted d-block">Proveedor</small>
+                            <span>@Model.FacturaActual.NombreProveedor</span>
+                        </div>
+                        <div class="col-sm-4">
+                            <small class="text-muted d-block">Fecha</small>
+                            <span>@(Model.FacturaActual.FechaFactura?.ToString("dd/MM/yyyy") ?? "")</span>
+                        </div>
+                    </div>
+                }
+                else if (Model.RemisionActual != null)
+                {
+                    <!-- Solo mostrar crear factura si ya hay remision -->
+                    <div id="formFactura">
+                        <div class="row g-2">
+                            <div class="col-sm-4">
+                                <label class="form-label form-label-sm mb-0">Folio</label>
+                                <input type="text" id="txtFolioFactura" class="form-control form-control-sm" />
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="form-label form-label-sm mb-0">Razon Social</label>
+                                <select id="selRazonSocial" class="form-select form-select-sm">
+                                    <option value="0">--</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="form-label form-label-sm mb-0">Fecha</label>
+                                <input type="date" id="txtFechaFactura" class="form-control form-control-sm"
+                                       value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 mt-2 align-items-center">
+                            <button type="button" class="btn btn-outline-success btn-sm" onclick="crearFactura()">
+                                <i class="fa-solid fa-plus me-1"></i>Registrar Factura
+                            </button>
+                            <span class="text-muted small">o</span>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modalBuscarFactura">
+                                <i class="fa-solid fa-search me-1"></i>Buscar Existente
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Buscar Remision -->
+<div class="modal fade" id="modalBuscarRemision" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title"><i class="fa-solid fa-search me-1"></i>Buscar Remision</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="txtBuscarRemision" class="form-control form-control-sm mb-2"
+                       placeholder="Buscar por proveedor, numero o ID..." autofocus />
+                <div id="listaRemisiones" class="list-group list-group-flush" style="max-height:300px;overflow-y:auto;">
+                    <div class="text-center text-muted py-3"><small>Escribe para buscar remisiones...</small></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Buscar Factura -->
+<div class="modal fade" id="modalBuscarFactura" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title"><i class="fa-solid fa-search me-1"></i>Buscar Factura</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="txtBuscarFactura" class="form-control form-control-sm mb-2"
+                       placeholder="Buscar por folio, proveedor o ID..." autofocus />
+                <div id="listaFacturas" class="list-group list-group-flush" style="max-height:300px;overflow-y:auto;">
+                    <div class="text-center text-muted py-3"><small>Escribe para buscar facturas...</small></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <form method="post" asp-page-handler="Guardar" id="formPieza">
     <input type="hidden" asp-for="Cb" />
     <input type="hidden" asp-for="IdRemision" />
     <input type="hidden" asp-for="Pieza.IdRemision" />
     <input type="hidden" asp-for="Pieza.IdFactura" />
+    @if (Model.RemisionActual != null)
+    {
+        <input type="hidden" id="hidProveedorRemision" value="@Model.RemisionActual.Proveedor" />
+    }
     <input type="hidden" asp-for="Pieza.IdTienda" value="1" />
     <input type="hidden" asp-for="Pieza.IdLocalizacion" value="1" />
     <input type="hidden" asp-for="TabCaracteristica" id="hidTabCaracteristica" />
@@ -490,6 +678,66 @@
                 </div>
             </div>
 
+            <!-- Foto de la pieza -->
+            <div class="card mb-3">
+                <div class="card-header py-2">
+                    <i class="fa-solid fa-camera me-1"></i>Foto
+                </div>
+                <div class="card-body py-2">
+                    <!-- Hidden field para almacenar el nombre del archivo seleccionado -->
+                    <input type="hidden" asp-for="Pieza.ArchivoFoto" id="hidArchivoFoto" />
+
+                    <!-- Preview de foto actual -->
+                    <div id="fotoPreview" class="text-center mb-2 @(Model.FotoActual != null ? "" : "d-none")">
+                        <div class="position-relative d-inline-block">
+                            <img id="imgPreview"
+                                 src="@(Model.FotoActual?.Url ?? "")"
+                                 alt="Foto de la pieza"
+                                 class="foto-preview rounded border" />
+                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 foto-remove-btn"
+                                    onclick="quitarFoto()" title="Quitar foto">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Subir desde navegador -->
+                    <div id="fotoUploadArea" class="@(Model.FotoActual != null ? "d-none" : "")">
+                        <div class="foto-dropzone" id="fotoDropzone" onclick="document.getElementById('inputFoto').click()">
+                            <i class="fa-solid fa-cloud-arrow-up fa-2x text-muted mb-1"></i>
+                            <small class="text-muted d-block">Click o arrastra una foto</small>
+                            <small class="text-muted opacity-50">JPG, PNG, WebP (max 10MB)</small>
+                        </div>
+                        <input type="file" id="inputFoto" accept="image/*" class="d-none" onchange="subirFoto(this)" />
+                    </div>
+
+                    <!-- Spinner de carga -->
+                    <div id="fotoLoading" class="text-center py-2 d-none">
+                        <i class="fa-solid fa-spinner fa-spin me-1"></i>
+                        <small>Subiendo foto...</small>
+                    </div>
+
+                    <!-- Fotos recientes del movil -->
+                    @if (Model.FotosRecientes.Count > 0)
+                    {
+                    <div class="mt-2 pt-2 border-top" id="fotosMovil">
+                        <small class="text-muted d-block mb-1">
+                            <i class="fa-solid fa-mobile-screen me-1"></i>Fotos recientes (movil)
+                        </small>
+                        <div class="d-flex gap-2 flex-wrap">
+                            @foreach (var f in Model.FotosRecientes)
+                            {
+                            <div class="foto-thumb-wrap" onclick="seleccionarFotoMovil('@f.StoredFileName', '@f.Url')">
+                                <img src="@f.Url" alt="@f.FileName" class="foto-thumb rounded border"
+                                     title="@f.FileName - @f.UploadedAt.ToString("dd/MM HH:mm")" />
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+                </div>
+            </div>
+
             <!-- Formula visible -->
             <div class="card mb-3 border-info">
                 <div class="card-body py-2">
@@ -537,8 +785,105 @@
     </div>
 </form>
 
+<!-- ==================== GRID: Piezas de la Remision/Factura ==================== -->
+@if (Model.RemisionActual != null && Model.PiezasRemision.Count > 0)
+{
+<div class="card mt-3" id="cardGridPiezas">
+    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+        <span>
+            <i class="fa-solid fa-list me-1"></i>Piezas de Remision #@Model.RemisionActual.IdRemision
+            <span class="badge bg-primary ms-1">@Model.PiezasRemision.Count</span>
+        </span>
+        <a asp-page="Index" asp-route-IdRemision="@Model.IdRemision" class="btn btn-outline-primary btn-sm">
+            <i class="fa-solid fa-expand me-1"></i>Ver Completa
+        </a>
+    </div>
+    @if (Model.Totales != null)
+    {
+    <div class="card-body py-2 border-bottom bg-light">
+        <div class="row text-center">
+            <div class="col">
+                <small class="text-muted d-block">Piezas</small>
+                <strong>@Model.Totales.Piezas</strong>
+            </div>
+            <div class="col">
+                <small class="text-muted d-block">Peso</small>
+                <strong>@Model.Totales.Peso.ToString("N2") g</strong>
+            </div>
+            <div class="col">
+                <small class="text-muted d-block">C. Bruto Total</small>
+                <strong>@Model.Totales.BrutoTotal.ToString("C2")</strong>
+            </div>
+            <div class="col">
+                <small class="text-muted d-block">C. Neto Total</small>
+                <strong>@Model.Totales.NetoTotal.ToString("C2")</strong>
+            </div>
+            <div class="col">
+                <small class="text-muted d-block">Bruto Nota</small>
+                <strong>@Model.Totales.BrutoNota.ToString("C2")</strong>
+            </div>
+            <div class="col">
+                <small class="text-muted d-block">Neto Nota</small>
+                <strong>@Model.Totales.NetoNota.ToString("C2")</strong>
+            </div>
+        </div>
+    </div>
+    }
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-hover table-sm mb-0">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th>Codigo</th>
+                        <th>Descripcion</th>
+                        <th>Grupo</th>
+                        <th class="text-end">C. Bruto</th>
+                        <th class="text-end">C. Neto</th>
+                        <th class="text-end">Precio</th>
+                        <th class="text-end">Peso</th>
+                        <th>Kilates</th>
+                        <th class="text-center">Editar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.PiezasRemision)
+                    {
+                    <tr class="@(p.CodigoBarras == Model.Cb ? "table-warning" : "")">
+                        <td><code>@p.CodigoBarras</code></td>
+                        <td class="text-truncate" style="max-width:200px;" title="@p.Descripcion">@p.Descripcion</td>
+                        <td>@p.NombreGrupo</td>
+                        <td class="text-end">@p.CBTotal.ToString("N2")</td>
+                        <td class="text-end">@p.CNTotal.ToString("N2")</td>
+                        <td class="text-end fw-bold">$@p.Precio.ToString("N0")</td>
+                        <td class="text-end">@(p.Peso > 0 ? p.Peso.ToString("N2") : "")</td>
+                        <td>@p.Kilates</td>
+                        <td class="text-center">
+                            <a asp-page="Alta" asp-route-cb="@p.CodigoBarras" asp-route-IdRemision="@Model.IdRemision"
+                               class="btn btn-outline-primary btn-sm py-0 px-1" title="Editar">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+}
+else if (Model.RemisionActual == null && !Model.EsEdicion)
+{
+<div class="card mt-3 border-dashed">
+    <div class="card-body py-4 text-center text-muted">
+        <i class="fa-solid fa-file-invoice fa-2x mb-2 d-block opacity-50"></i>
+        <p class="mb-1">Selecciona o crea una <strong>Remision</strong> para comenzar a dar de alta piezas.</p>
+        <small>Las piezas dadas de alta aparecerán en un listado aquí.</small>
+    </div>
+</div>
+}
+
 @section Scripts {
-<script src="/js/piezas.js?v=20260609"></script>
+<script src="/js/piezas.js?v=20260615"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Searchable dropdowns
@@ -547,6 +892,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (selGrupo) new TomSelect(selGrupo, { allowEmptyOption: true });
         var selDivisor = document.getElementById('selDivisor');
         if (selDivisor) new TomSelect(selDivisor, { allowEmptyOption: false });
+        var selProvRem = document.getElementById('selProveedorRemision');
+        if (selProvRem) new TomSelect(selProvRem, { allowEmptyOption: true });
     }
 
     // Sincronizar divisor seleccionado
@@ -554,6 +901,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Calcular precio inicial
     calcularCostos();
+
+    // Cargar razones sociales si hay proveedor de remision
+    var hidProv = document.getElementById('hidProveedorRemision');
+    if (hidProv && hidProv.value) {
+        cargarRazonesSociales(hidProv.value);
+    }
 
     // Atajos de teclado
     document.addEventListener('keydown', function(e) {

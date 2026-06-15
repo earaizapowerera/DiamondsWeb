@@ -63,7 +63,8 @@ public class RazonesSocialesModel : PageModel
             Colonia = colonia?.Trim(),
             Municipio = municipio?.Trim(),
             Estado = estado?.Trim(),
-            IdUsuario = 1 // usuario por defecto
+            IdUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found")
         };
 
         try

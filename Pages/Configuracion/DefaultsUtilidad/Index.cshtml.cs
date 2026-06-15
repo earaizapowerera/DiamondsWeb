@@ -41,7 +41,8 @@ public class IndexModel : PageModel
     {
         try
         {
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
             await _catalogService.CrearDefaultUtilidadAsync(NuevoUtilidad, NuevoUtilidadReloj, NuevoUtilidadGemas, idUsuario);
             TempData["Success"] = "Default utilidad creado exitosamente.";
         }

@@ -51,7 +51,8 @@ public class IndexModel : PageModel
                 return RedirectToPage();
             }
 
-            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
             var resultado = await _inventoryService.RegistrarInventarioFisicoAsync(CodigoBarras.Trim(), idUsuario);
 
             if (resultado.Contains("no encontrada", StringComparison.OrdinalIgnoreCase))

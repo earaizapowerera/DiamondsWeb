@@ -12,14 +12,15 @@ public class IndexModel : PageModel
     private readonly LotesRepetidasService _service;
     private readonly ILogger<IndexModel> _logger;
 
-    // IdTienda hardcodeado como en VB6 (tienda local = 1)
-    private const int IdTienda = 1;
-
     public IndexModel(LotesRepetidasService service, ILogger<IndexModel> logger)
     {
         _service = service;
         _logger = logger;
     }
+
+    private int GetTiendaId() => int.TryParse(User.FindFirst("IdTienda")?.Value, out var id) ? id : 1;
+    private int GetUserId() => int.TryParse(User.FindFirst("IdUsuario")?.Value, out var id) ? id
+        : throw new UnauthorizedAccessException("IdUsuario claim not found");
 
     // ─── Datos para la vista ─────────────────────────────────────
 
@@ -62,7 +63,7 @@ public class IndexModel : PageModel
         try
         {
             var idRemision = await _service.CrearRemisionAsync(
-                proveedor, numRemision, fechaRemision, consignacion, IdTienda);
+                proveedor, numRemision, fechaRemision, consignacion, GetTiendaId(), GetUserId());
 
             return RedirectToPage(new { IdRemision = idRemision });
         }
@@ -95,7 +96,7 @@ public class IndexModel : PageModel
                 return Page();
             }
 
-            await _service.CrearPiezaEnLoteAsync(pieza, IdTienda);
+            await _service.CrearPiezaEnLoteAsync(pieza, GetTiendaId(), GetUserId());
 
             IdRemision = pieza.IdRemision;
             IdFactura = pieza.IdFactura;

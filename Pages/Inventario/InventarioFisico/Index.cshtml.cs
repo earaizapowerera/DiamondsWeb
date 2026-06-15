@@ -57,7 +57,8 @@ public class IndexModel : PageModel
         if (string.IsNullOrWhiteSpace(request?.CodigoBarras))
             return new JsonResult(new EscaneoResult { Success = false, Message = "Codigo vacio" });
 
-        var userId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+        var userId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
         var result = await _service.RegistrarEscaneoAsync(request.CodigoBarras, userId);
         return new JsonResult(result);
     }
@@ -68,7 +69,8 @@ public class IndexModel : PageModel
         if (string.IsNullOrWhiteSpace(request?.CodigoBarras))
             return new JsonResult(new { success = false });
 
-        var userId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+        var userId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
         var ok = await _service.RegistrarSobranteAsync(
             request.CodigoBarras, request.Descripcion, request.Precio, userId);
 
@@ -80,7 +82,8 @@ public class IndexModel : PageModel
     {
         try
         {
-            var userId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 1;
+            var userId = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
             var msg = await _service.IniciarInventarioAsync(userId);
             TempData["Success"] = msg;
         }
