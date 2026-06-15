@@ -1,0 +1,257 @@
+@page
+@model DiamondsWeb.Pages.Inventario.Periodos.IndexModel
+@{
+    ViewData["Title"] = "Registro de Períodos de Inventario";
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fa-solid fa-check-circle me-2"></i>@Model.SuccessMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Encabezado -->
+<div class="info-panel mb-3">
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <h5 class="mb-0"><i class="fa-solid fa-calendar-alt me-2"></i>Registro de Períodos de Inventario</h5>
+            <small class="text-muted">Períodos de inventario físico — @Model.Periodos.Count registros</small>
+        </div>
+        <div class="col-md-6 text-end">
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalPeriodo"
+                        onclick="prepararNuevo()">
+                    <i class="fa-solid fa-plus me-1"></i>Nuevo Período
+                </button>
+                <a href="/Inventario/Periodos?handler=Exportar" class="btn btn-outline-success btn-sm">
+                    <i class="fa-solid fa-file-excel me-1"></i>Exportar Excel
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Búsqueda -->
+<div class="filter-panel mb-3">
+    <form method="get">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label"><small>Buscar por usuario o fecha</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Escriba para filtrar períodos..." />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="/Inventario/Periodos" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-rotate-right me-1"></i>Limpiar
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Grid de Períodos -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-aml table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:70px">Id</th>
+                        <th>Período Desde</th>
+                        <th>Período Hasta</th>
+                        <th>Fecha Captura</th>
+                        <th>Última Edición</th>
+                        <th>Usuario</th>
+                        <th class="text-center" style="width:120px">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Periodos.Any())
+                    {
+                        @foreach (var p in Model.Periodos)
+                        {
+                            <tr>
+                                <td>@p.IdPeriodo</td>
+                                <td>
+                                    @if (p.PeriodoDesde.HasValue)
+                                    {
+                                        <strong>@p.PeriodoDesde.Value.ToString("dd/MM/yyyy")</strong>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (p.PeriodoHasta.HasValue)
+                                    {
+                                        <strong>@p.PeriodoHasta.Value.ToString("dd/MM/yyyy")</strong>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted badge bg-secondary">Abierto</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (p.FechaCaptura.HasValue)
+                                    {
+                                        <span class="utc-date" data-utc="@p.FechaCaptura.Value.ToString("o")Z">
+                                            @p.FechaCaptura.Value.ToString("dd/MM/yyyy HH:mm")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (p.FechaUltEdicion.HasValue)
+                                    {
+                                        <span class="utc-date" data-utc="@p.FechaUltEdicion.Value.ToString("o")Z">
+                                            @p.FechaUltEdicion.Value.ToString("dd/MM/yyyy HH:mm")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>@(p.NombreUsuario ?? "-")</td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-primary btn-editar" title="Editar"
+                                                data-bs-toggle="modal" data-bs-target="#modalPeriodo"
+                                                data-id="@p.IdPeriodo"
+                                                data-desde="@(p.PeriodoDesde?.ToString("yyyy-MM-dd") ?? "")"
+                                                data-hasta="@(p.PeriodoHasta?.ToString("yyyy-MM-dd") ?? "")">
+                                            <i class="fa-solid fa-pencil"></i>
+                                        </button>
+                                        <form method="post" asp-page-handler="Eliminar" class="d-inline">
+                                            <input type="hidden" name="id" value="@p.IdPeriodo" />
+                                            <button type="submit" class="btn btn-outline-danger btn-eliminar" title="Eliminar"
+                                                    data-id="@p.IdPeriodo">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron períodos de inventario.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear/Editar Período -->
+<div class="modal fade" id="modalPeriodo" tabindex="-1" aria-labelledby="modalPeriodoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formPeriodo" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalPeriodoLabel">
+                        <i class="fa-solid fa-calendar-alt me-2"></i><span id="modalTitulo">Nuevo Período</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="EditId" id="editId" />
+                    <div class="mb-3">
+                        <label for="periodoDesde" class="form-label">
+                            Período Desde <span class="text-danger">*</span>
+                        </label>
+                        <input type="date" class="form-control" id="periodoDesde" name="PeriodoDesde" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="periodoHasta" class="form-label">
+                            Período Hasta <small class="text-muted">(opcional)</small>
+                        </label>
+                        <input type="date" class="form-control" id="periodoHasta" name="PeriodoHasta" />
+                        <div class="form-text">Dejar vacío si el período aún no ha cerrado.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fa-solid fa-xmark me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="btnRegistrar">
+                        <i class="fa-solid fa-floppy-disk me-1"></i>Registrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function prepararNuevo() {
+        document.getElementById('modalTitulo').textContent = 'Nuevo Período';
+        document.getElementById('editId').value = '';
+        document.getElementById('periodoDesde').value = new Date().toISOString().split('T')[0];
+        document.getElementById('periodoHasta').value = '';
+        document.getElementById('btnRegistrar').innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Registrar';
+        document.getElementById('formPeriodo').action = '?handler=Crear';
+    }
+
+    // Botones de edición
+    document.querySelectorAll('.btn-editar').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var id = this.getAttribute('data-id');
+            var desde = this.getAttribute('data-desde');
+            var hasta = this.getAttribute('data-hasta');
+            document.getElementById('modalTitulo').textContent = 'Editar Período #' + id;
+            document.getElementById('editId').value = id;
+            document.getElementById('periodoDesde').value = desde;
+            document.getElementById('periodoHasta').value = hasta;
+            document.getElementById('btnRegistrar').innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Guardar Cambios';
+            document.getElementById('formPeriodo').action = '?handler=Editar';
+        });
+    });
+
+    // Botones de eliminar: confirmación
+    document.querySelectorAll('.btn-eliminar').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            var id = this.getAttribute('data-id');
+            if (!confirm('¿Eliminar el período #' + id + '? Esta acción no se puede deshacer.')) {
+                e.preventDefault();
+            }
+        });
+    });
+
+    // Focus en el input al abrir el modal
+    document.getElementById('modalPeriodo').addEventListener('shown.bs.modal', function () {
+        document.getElementById('periodoDesde').focus();
+    });
+
+    // Convertir fechas UTC al cargar
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof convertUtcDatesToLocal === 'function') convertUtcDatesToLocal();
+    });
+</script>
+}
