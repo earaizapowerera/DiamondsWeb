@@ -32,9 +32,12 @@ public class AltaModel : PageModel
     [BindProperty] public string TabCaracteristica { get; set; } = "Oro";
     [BindProperty] public string TabCosto { get; set; } = "Pieza";
 
-    // Remision actual
+    // Remision y Factura actual
     [BindProperty(SupportsGet = true)] public int? IdRemision { get; set; }
     public Remision? RemisionActual { get; set; }
+    public Factura? FacturaActual { get; set; }
+    public List<PiezaResumen> PiezasRemision { get; set; } = new();
+    public RemisionTotales? Totales { get; set; }
 
     // Foto
     public List<PiezaFoto> FotosRecientes { get; set; } = new();
@@ -103,7 +106,15 @@ public class AltaModel : PageModel
                 if (RemisionActual != null)
                     await AplicarDefaultsProveedorAsync(RemisionActual.Proveedor);
             }
+
+            // Cargar piezas y totales de la remision para el grid
+            PiezasRemision = await _svc.ObtenerPiezasPorRemisionAsync(IdRemision.Value);
+            Totales = await _svc.ObtenerTotalesRemisionAsync(IdRemision.Value);
         }
+
+        // Cargar factura si la pieza tiene una vinculada
+        if (Pieza.IdFactura.HasValue)
+            FacturaActual = await _svc.ObtenerFacturaAsync(Pieza.IdFactura.Value);
 
         // Cargar foto actual (si edicion y tiene ArchivoFoto)
         if (EsEdicion && !string.IsNullOrEmpty(Pieza.ArchivoFoto))
