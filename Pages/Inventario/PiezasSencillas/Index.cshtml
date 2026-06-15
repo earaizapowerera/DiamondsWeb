@@ -66,18 +66,39 @@
             </div>
         </form>
 
+        <!-- Selector de columnas -->
+        <div class="mb-2 d-flex justify-content-end">
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                    <i class="fa-solid fa-columns me-1"></i>Columnas
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" id="colSelector">
+                    <li><label class="dropdown-item"><input type="checkbox" class="col-toggle me-2" data-col="col-codigo" checked> Codigo</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="col-toggle me-2" data-col="col-desc" checked> Descripcion</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="col-toggle me-2" data-col="col-grupo" checked> Grupo</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="col-toggle me-2" data-col="col-prov" checked> Proveedor</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="col-toggle me-2" data-col="col-precio" checked> Precio</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="col-toggle me-2" data-col="col-status" checked> Status</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="col-toggle me-2" data-col="col-fecha" checked> Fecha</label></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-primary" href="#" id="colShowAll">Mostrar todas</a></li>
+                </ul>
+            </div>
+        </div>
+
         <!-- Tabla -->
         <div class="table-responsive">
-            <table class="table table-hover table-striped table-sm mb-0">
+            <table class="table table-hover table-striped table-sm mb-0" id="tblPiezas">
                 <thead class="table-dark">
                     <tr>
-                        <th>Codigo</th>
-                        <th>Descripcion</th>
-                        <th>Grupo</th>
-                        <th>Proveedor</th>
-                        <th class="text-end">Precio</th>
-                        <th class="text-center">Status</th>
-                        <th>Fecha</th>
+                        <th class="col-codigo">Codigo</th>
+                        <th class="col-desc">Descripcion</th>
+                        <th class="col-grupo">Grupo</th>
+                        <th class="col-prov">Proveedor</th>
+                        <th class="col-precio text-end">Precio</th>
+                        <th class="col-status text-center">Status</th>
+                        <th class="col-fecha">Fecha</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
@@ -87,14 +108,14 @@
                         @foreach (var p in Model.Piezas)
                         {
                             <tr>
-                                <td>
+                                <td class="col-codigo">
                                     <code>@p.CodigoBarras</code>
                                 </td>
-                                <td>@p.Descripcion</td>
-                                <td><span class="badge bg-secondary">@p.Grupo</span></td>
-                                <td>@p.NombreProveedor</td>
-                                <td class="text-end fw-semibold">@(p.Precio?.ToString("C2"))</td>
-                                <td class="text-center">
+                                <td class="col-desc">@p.Descripcion</td>
+                                <td class="col-grupo"><span class="badge bg-secondary">@p.Grupo</span></td>
+                                <td class="col-prov">@p.NombreProveedor</td>
+                                <td class="col-precio text-end fw-semibold">@(p.Precio?.ToString("C2"))</td>
+                                <td class="col-status text-center">
                                     @if (p.IdStatus == 1)
                                     {
                                         <span class="badge bg-success">Activa</span>
@@ -104,7 +125,7 @@
                                         <span class="badge bg-warning text-dark">@(p.IdStatus)</span>
                                     }
                                 </td>
-                                <td>@p.FechaCaptura?.ToString("dd/MM/yyyy")</td>
+                                <td class="col-fecha">@p.FechaCaptura?.ToString("dd/MM/yyyy")</td>
                                 <td class="text-center">
                                     <a asp-page="Detalle" asp-route-codigoBarras="@p.CodigoBarras"
                                        class="btn btn-outline-primary btn-sm" title="Ver / Editar">
@@ -132,3 +153,51 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+<script>
+(function() {
+    var STORAGE_KEY = 'diamonds_cols_piezas';
+
+    function loadPrefs() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+    }
+
+    function savePrefs(prefs) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    }
+
+    function applyVisibility(colClass, visible) {
+        document.querySelectorAll('.' + colClass).forEach(function(el) {
+            el.style.display = visible ? '' : 'none';
+        });
+    }
+
+    // Initialize from localStorage
+    var prefs = loadPrefs();
+    document.querySelectorAll('.col-toggle').forEach(function(cb) {
+        var col = cb.dataset.col;
+        if (prefs[col] === false) {
+            cb.checked = false;
+            applyVisibility(col, false);
+        }
+        cb.addEventListener('change', function() {
+            var p = loadPrefs();
+            p[this.dataset.col] = this.checked;
+            savePrefs(p);
+            applyVisibility(this.dataset.col, this.checked);
+        });
+    });
+
+    // Show all
+    document.getElementById('colShowAll').addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('.col-toggle').forEach(function(cb) {
+            cb.checked = true;
+            applyVisibility(cb.dataset.col, true);
+        });
+        savePrefs({});
+    });
+})();
+</script>
+}

@@ -13,20 +13,40 @@ namespace DiamondsWeb.Controllers;
 public class FotosController : ControllerBase
 {
     private readonly FotoService _fotoService;
+    private readonly string _apiKey;
 
-    public FotosController(FotoService fotoService) => _fotoService = fotoService;
+    public FotosController(FotoService fotoService, IConfiguration config)
+    {
+        _fotoService = fotoService;
+        _apiKey = config["Diamonds:MobileApiKey"] ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Valida API key del header X-Api-Key para endpoints de la app móvil.
+    /// </summary>
+    private bool ValidarApiKey()
+    {
+        if (string.IsNullOrEmpty(_apiKey))
+            return false;
+        var headerKey = Request.Headers["X-Api-Key"].FirstOrDefault();
+        return !string.IsNullOrEmpty(headerKey) && headerKey == _apiKey;
+    }
 
     /// <summary>
     /// Subir foto desde la app movil Diamonds.
     /// POST /api/fotos/upload
     /// Content-Type: multipart/form-data
+    /// Headers: X-Api-Key (required)
     /// Fields: file (required), userId (required)
     /// </summary>
     [HttpPost("upload")]
-    [AllowAnonymous] // TODO: Agregar API key auth para app movil
+    [AllowAnonymous]
     [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
     public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromForm] int userId)
     {
+        if (!ValidarApiKey() && !User.Identity?.IsAuthenticated == true)
+            return Unauthorized(new { error = "API key invalida o sesion no autenticada" });
+
         if (file == null || file.Length == 0)
             return BadRequest(new { error = "No se envio archivo" });
 
@@ -51,11 +71,15 @@ public class FotosController : ControllerBase
     /// <summary>
     /// Listar ultimas N fotos no vinculadas de un usuario.
     /// GET /api/fotos/recientes?userId=1&count=3&source=mobile
+    /// Headers: X-Api-Key (required for mobile), or session auth
     /// </summary>
     [HttpGet("recientes")]
-    [AllowAnonymous] // TODO: Agregar API key auth para app movil
+    [AllowAnonymous]
     public async Task<IActionResult> Recientes([FromQuery] int userId, [FromQuery] int count = 3, [FromQuery] string? source = null)
     {
+        if (!ValidarApiKey() && !User.Identity?.IsAuthenticated == true)
+            return Unauthorized(new { error = "API key invalida o sesion no autenticada" });
+
         if (userId <= 0)
             return BadRequest(new { error = "userId es requerido" });
 
