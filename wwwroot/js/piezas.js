@@ -298,6 +298,56 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // ==================== BUSQUEDA EN MODALES ====================
+
+    // Buscar remisiones al escribir en el modal
+    var txtBuscarRemision = document.getElementById('txtBuscarRemision');
+    if (txtBuscarRemision) {
+        var timerRemision = null;
+        txtBuscarRemision.addEventListener('input', function() {
+            clearTimeout(timerRemision);
+            timerRemision = setTimeout(function() { buscarRemisionesAPI(txtBuscarRemision.value); }, 300);
+        });
+    }
+
+    // Cargar remisiones al abrir modal
+    var modalRemision = document.getElementById('modalBuscarRemision');
+    if (modalRemision) {
+        modalRemision.addEventListener('shown.bs.modal', function() {
+            var txt = document.getElementById('txtBuscarRemision');
+            if (txt) { txt.value = ''; txt.focus(); }
+            buscarRemisionesAPI('');
+        });
+    }
+
+    // Buscar facturas al escribir en el modal
+    var txtBuscarFactura = document.getElementById('txtBuscarFactura');
+    if (txtBuscarFactura) {
+        var timerFactura = null;
+        txtBuscarFactura.addEventListener('input', function() {
+            clearTimeout(timerFactura);
+            timerFactura = setTimeout(function() { buscarFacturasAPI(txtBuscarFactura.value); }, 300);
+        });
+    }
+
+    // Cargar facturas al abrir modal
+    var modalFactura = document.getElementById('modalBuscarFactura');
+    if (modalFactura) {
+        modalFactura.addEventListener('shown.bs.modal', function() {
+            var txt = document.getElementById('txtBuscarFactura');
+            if (txt) { txt.value = ''; txt.focus(); }
+            buscarFacturasAPI('');
+        });
+    }
+
+    // Cargar razones sociales cuando se selecciona proveedor de remision
+    var selProvRem = document.getElementById('selProveedorRemision');
+    if (selProvRem) {
+        selProvRem.addEventListener('change', function() {
+            cargarRazonesSociales(this.value);
+        });
+    }
+
     // ==================== DRAG & DROP para foto ====================
     var dropzone = document.getElementById('fotoDropzone');
     if (dropzone) {
@@ -424,4 +474,168 @@ function quitarFoto() {
     document.querySelectorAll('.foto-thumb').forEach(function(t) {
         t.classList.remove('selected');
     });
+}
+
+// ==================== REMISION: Crear y Buscar ====================
+
+function crearRemision() {
+    var proveedor = document.getElementById('selProveedorRemision');
+    if (!proveedor || !proveedor.value) {
+        alert('Selecciona un proveedor');
+        return;
+    }
+    var numRemision = document.getElementById('txtNumRemision');
+    var fechaRemision = document.getElementById('txtFechaRemision');
+    var chkConsignacion = document.getElementById('chkConsignacion');
+
+    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+    var body = new FormData();
+    body.append('proveedor', proveedor.value);
+    body.append('numeroRemision', numRemision ? numRemision.value : 'S/N');
+    body.append('fechaRemision', fechaRemision ? fechaRemision.value : '');
+    body.append('consignacion', chkConsignacion ? chkConsignacion.checked : false);
+    if (token) body.append('__RequestVerificationToken', token.value);
+
+    fetch('?handler=CrearRemision', { method: 'POST', body: body })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                window.location.href = '/Piezas/Alta?IdRemision=' + data.idRemision;
+            } else {
+                alert('Error al crear remision: ' + (data.error || 'desconocido'));
+            }
+        })
+        .catch(function(err) { alert('Error: ' + err.message); });
+}
+
+function buscarRemisionesAPI(texto) {
+    var lista = document.getElementById('listaRemisiones');
+    if (!lista) return;
+    lista.innerHTML = '<div class="text-center py-2"><i class="fa-solid fa-spinner fa-spin"></i></div>';
+
+    fetch('?handler=BuscarRemisiones&texto=' + encodeURIComponent(texto || ''))
+        .then(function(r) { return r.json(); })
+        .then(function(items) {
+            if (!items || items.length === 0) {
+                lista.innerHTML = '<div class="text-center text-muted py-3"><small>No se encontraron remisiones</small></div>';
+                return;
+            }
+            var currentIdRemision = new URLSearchParams(window.location.search).get('IdRemision');
+            var html = '';
+            items.forEach(function(r) {
+                html += '<a href="/Piezas/Alta?IdRemision=' + r.idRemision + '"'
+                    + ' class="list-group-item list-group-item-action py-1 small'
+                    + (currentIdRemision == r.idRemision ? ' active' : '') + '">'
+                    + '<strong>#' + r.idRemision + '</strong> - ' + (r.nombreProveedor || '')
+                    + ' (' + (r.numeroRemision || 'S/N') + ')'
+                    + (r.consignacion ? ' <span class="badge bg-warning text-dark">Cons.</span>' : '')
+                    + '<span class="text-muted float-end">' + (r.fechaRemision || '')
+                    + (r.cantidadPiezas > 0 ? ' | ' + r.cantidadPiezas + ' pzas' : '')
+                    + '</span></a>';
+            });
+            lista.innerHTML = html;
+        })
+        .catch(function() { lista.innerHTML = '<div class="text-center text-danger py-2">Error de conexion</div>'; });
+}
+
+// ==================== FACTURA: Crear y Buscar ====================
+
+function crearFactura() {
+    var folioEl = document.getElementById('txtFolioFactura');
+    var razonSocialEl = document.getElementById('selRazonSocial');
+    var fechaFacturaEl = document.getElementById('txtFechaFactura');
+
+    var idRemisionEl = document.querySelector('input[name="IdRemision"]');
+    var idRemision = idRemisionEl ? idRemisionEl.value : '';
+
+    // Obtener proveedor de la remision actual
+    var proveedor = '';
+    var provHidden = document.getElementById('hidProveedorRemision');
+    if (provHidden) proveedor = provHidden.value;
+    if (!proveedor) {
+        var proveedorEl = document.getElementById('selProveedorRemision');
+        proveedor = proveedorEl ? proveedorEl.value : '';
+    }
+
+    if (!proveedor) {
+        alert('No se pudo determinar el proveedor de la remision');
+        return;
+    }
+
+    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+    var body = new FormData();
+    body.append('proveedor', proveedor);
+    body.append('folioFactura', folioEl ? folioEl.value : '');
+    body.append('idRazonSocial', razonSocialEl ? razonSocialEl.value : '0');
+    body.append('fechaFactura', fechaFacturaEl ? fechaFacturaEl.value : '');
+    if (token) body.append('__RequestVerificationToken', token.value);
+
+    fetch('?handler=CrearFactura', { method: 'POST', body: body })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                // Vincular la factura a la remision
+                var bodyVinc = new FormData();
+                bodyVinc.append('idRemision', idRemision);
+                bodyVinc.append('idFactura', data.idFactura);
+                if (token) bodyVinc.append('__RequestVerificationToken', token.value);
+
+                fetch('?handler=VincularFactura', { method: 'POST', body: bodyVinc })
+                    .then(function() {
+                        window.location.href = '/Piezas/Alta?IdRemision=' + idRemision + '&IdFactura=' + data.idFactura;
+                    });
+            } else {
+                alert('Error al crear factura: ' + (data.error || 'desconocido'));
+            }
+        })
+        .catch(function(err) { alert('Error: ' + err.message); });
+}
+
+function buscarFacturasAPI(texto) {
+    var lista = document.getElementById('listaFacturas');
+    if (!lista) return;
+    lista.innerHTML = '<div class="text-center py-2"><i class="fa-solid fa-spinner fa-spin"></i></div>';
+
+    fetch('?handler=BuscarFacturas&texto=' + encodeURIComponent(texto || ''))
+        .then(function(r) { return r.json(); })
+        .then(function(items) {
+            if (!items || items.length === 0) {
+                lista.innerHTML = '<div class="text-center text-muted py-3"><small>No se encontraron facturas</small></div>';
+                return;
+            }
+            var idRemision = new URLSearchParams(window.location.search).get('IdRemision') || '';
+            var html = '';
+            items.forEach(function(f) {
+                var href = '/Piezas/Alta?IdFactura=' + f.idFactura;
+                if (idRemision) href += '&IdRemision=' + idRemision;
+                html += '<a href="' + href + '"'
+                    + ' class="list-group-item list-group-item-action py-1 small">'
+                    + '<strong>#' + f.idFactura + '</strong>'
+                    + (f.folioFactura ? ' - Folio: ' + f.folioFactura : '')
+                    + ' - ' + (f.nombreProveedor || '')
+                    + '<span class="text-muted float-end">' + (f.fechaFactura || '') + '</span>'
+                    + '</a>';
+            });
+            lista.innerHTML = html;
+        })
+        .catch(function() { lista.innerHTML = '<div class="text-center text-danger py-2">Error de conexion</div>'; });
+}
+
+function cargarRazonesSociales(proveedorId) {
+    var sel = document.getElementById('selRazonSocial');
+    if (!sel || !proveedorId) return;
+    sel.innerHTML = '<option value="0">Cargando...</option>';
+
+    fetch('?handler=RazonesSociales&proveedor=' + proveedorId)
+        .then(function(r) { return r.json(); })
+        .then(function(items) {
+            sel.innerHTML = '<option value="0">--</option>';
+            (items || []).forEach(function(rs) {
+                var opt = document.createElement('option');
+                opt.value = rs.idRazonSocialProveedor;
+                opt.textContent = rs.razonSocial;
+                sel.appendChild(opt);
+            });
+        })
+        .catch(function() { sel.innerHTML = '<option value="0">--</option>'; });
 }

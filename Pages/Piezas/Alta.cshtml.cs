@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace DiamondsWeb.Pages.Piezas;
 
 [Authorize]
+[RequestSizeLimit(10 * 1024 * 1024)] // 10 MB para upload de fotos
 public class AltaModel : PageModel
 {
     private readonly PiezaService _svc;
@@ -103,7 +104,8 @@ public class AltaModel : PageModel
             FotoActual = await _fotoSvc.ObtenerFotoPorNombreAsync(Pieza.ArchivoFoto);
 
         // Cargar ultimas 3 fotos moviles no vinculadas
-        FotosRecientes = await _fotoSvc.ObtenerFotosRecientesAsync(1, 3, "mobile"); // TODO: userId from claims
+        var fotoUid = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var fid) ? fid : 1;
+        FotosRecientes = await _fotoSvc.ObtenerFotosRecientesAsync(fotoUid, 3, "mobile");
     }
 
     public async Task<IActionResult> OnPostGuardarAsync()
@@ -271,7 +273,6 @@ public class AltaModel : PageModel
     // ==================== FOTOS ====================
 
     /// <summary>Sube una foto desde el navegador web via AJAX.</summary>
-    [RequestSizeLimit(10 * 1024 * 1024)]
     public async Task<IActionResult> OnPostSubirFotoAsync(IFormFile foto)
     {
         if (foto == null || foto.Length == 0)
