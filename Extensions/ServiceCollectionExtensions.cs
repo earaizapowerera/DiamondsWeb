@@ -56,6 +56,7 @@ public static class ServiceCollectionExtensions
         });
         services.AddScoped(sp => new ReportePiezasService(connectionString, sp.GetRequiredService<ILogger<ReportePiezasService>>()));
         services.AddScoped(sp => new CorteService(connectionString, sp.GetRequiredService<ILogger<CorteService>>()));
+        services.AddScoped(sp => new PonderacionService(connectionString, sp.GetRequiredService<ILogger<PonderacionService>>()));
 
         // Servicios con constructor especial
         services.AddScoped(sp => new AmlService(

@@ -77,7 +77,8 @@ VALUES
     (NEWID(), @ScreenTypeId, 'Actualización Pieza', '/Procesos/ActualizacionPieza', 'fa-solid fa-pen-to-square', 2, @FolderProcesos, 1, GETUTCDATE(), GETUTCDATE()),
     (NEWID(), @ScreenTypeId, 'Actualización Remisiones', '/Procesos/ActualizacionRemisiones', 'fa-solid fa-truck-ramp-box', 3, @FolderProcesos, 1, GETUTCDATE(), GETUTCDATE()),
     (NEWID(), @ScreenTypeId, 'Cambio de Status', '/Procesos/CambioStatus', 'fa-solid fa-arrows-rotate', 4, @FolderProcesos, 1, GETUTCDATE(), GETUTCDATE()),
-    (NEWID(), @ScreenTypeId, 'Pre Bajas', '/Procesos/PreBajas', 'fa-solid fa-clipboard-list', 5, @FolderProcesos, 1, GETUTCDATE(), GETUTCDATE());
+    (NEWID(), @ScreenTypeId, 'Pre Bajas', '/Procesos/PreBajas', 'fa-solid fa-clipboard-list', 5, @FolderProcesos, 1, GETUTCDATE(), GETUTCDATE()),
+    (NEWID(), @ScreenTypeId, 'Ponderación de Costos', '/Procesos/Ponderacion', 'fa-solid fa-percent', 6, @FolderProcesos, 1, GETUTCDATE(), GETUTCDATE());
 
 -- ═══════════════════════════════════════════════════════════════
 -- CONFIGURACIÓN
