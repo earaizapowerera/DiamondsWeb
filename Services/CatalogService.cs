@@ -110,8 +110,10 @@ public class CatalogService
     {
         using var conn = CreateConnection();
         return (await conn.QueryAsync<DefaultUtilidadExtra>(@"
-            SELECT IdDefaultUtilidadExtra, DefaultUtilidadExtra AS DefaultUtilidadExtra1, IdUsuario, FechaCaptura
-            FROM DefaultsUtilidadExtra ORDER BY FechaCaptura DESC")).ToList();
+            SELECT TOP 50 IdDefaultUtilidadExtra, DefaultUtilidadExtra AS DefaultUtilidadExtra1,
+                   IdUsuario, Nombre AS NombreUsuario, FechaCaptura
+            FROM vDefaultsUtilidadExtra
+            ORDER BY FechaCaptura DESC")).ToList();
     }
 
     public async Task<int> CrearDefaultUtilidadExtraAsync(decimal utilidadExtra, int idUsuario)
