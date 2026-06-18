@@ -53,7 +53,8 @@ VALUES
     (NEWID(), @ScreenTypeId, 'Devoluciones Proveedor', '/Ventas/Devoluciones', 'fa-solid fa-undo', 4, @FolderVentas, 1, GETUTCDATE(), GETUTCDATE()),
     (NEWID(), @ScreenTypeId, 'Devoluciones Cliente', '/Ventas/DevolucionesCliente', 'fa-solid fa-rotate-left', 5, @FolderVentas, 1, GETUTCDATE(), GETUTCDATE()),
     (NEWID(), @ViewTypeId, 'Consignación', '/Ventas/Consignacion', 'fa-solid fa-handshake', 6, @FolderVentas, 1, GETUTCDATE(), GETUTCDATE()),
-    (NEWID(), @ViewTypeId, 'Control Anti-Lavado', '/AntiLavado', 'fa-solid fa-scale-balanced', 7, @FolderVentas, 1, GETUTCDATE(), GETUTCDATE());
+    (NEWID(), @ViewTypeId, 'Control Anti-Lavado', '/AntiLavado', 'fa-solid fa-scale-balanced', 7, @FolderVentas, 1, GETUTCDATE(), GETUTCDATE()),
+    (NEWID(), @ScreenTypeId, 'Corte de Caja', '/Ventas/CorteDeCaja', 'fa-solid fa-scissors', 8, @FolderVentas, 1, GETUTCDATE(), GETUTCDATE());
 
 -- ═══════════════════════════════════════════════════════════════
 -- INVENTARIO

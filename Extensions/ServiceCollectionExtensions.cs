@@ -55,6 +55,7 @@ public static class ServiceCollectionExtensions
             return new FotoService(connectionString, fotosPath, sp.GetRequiredService<ILogger<FotoService>>());
         });
         services.AddScoped(sp => new ReportePiezasService(connectionString, sp.GetRequiredService<ILogger<ReportePiezasService>>()));
+        services.AddScoped(sp => new CorteService(connectionString, sp.GetRequiredService<ILogger<CorteService>>()));
 
         // Servicios con constructor especial
         services.AddScoped(sp => new AmlService(
