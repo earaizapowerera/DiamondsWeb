@@ -187,6 +187,14 @@ public class PiezaResumen
     public string? Linea { get; set; }
     public string? NombreMoneda { get; set; }
     public DateTime FechaCaptura { get; set; }
+
+    // Campos adicionales para columnas configurables
+    public decimal Quilates { get; set; }
+    public string? Color { get; set; }
+    public string? Pureza { get; set; }
+    public string? Corte { get; set; }
+    public string? NumSerie { get; set; }
+    public string? NombreProveedor { get; set; }
 }
 
 /// <summary>

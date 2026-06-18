@@ -238,6 +238,8 @@ public class InventoryService
         var sql = $@"SELECT TOP 500
                 p.CodigoBarras, p.Descripcion, p.IdGrupo, p.Precio,
                 p.FechaCaptura, p.IdStatus, p.Proveedor,
+                p.Peso, p.Kilates, p.Modelo, p.Linea,
+                p.CBTotal, p.CNTotal, p.Quilates, p.Color, p.NumSerie,
                 pr.NombreProveedor, g.Grupo1 AS Grupo
             FROM piezas p
             LEFT JOIN vProveedores pr ON pr.Proveedor = p.Proveedor

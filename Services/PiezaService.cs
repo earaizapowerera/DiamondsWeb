@@ -235,10 +235,14 @@ public class PiezaService
         using var db = CreateConnection();
         var sql = @"SELECT TOP 50 p.CodigoBarras, p.Descripcion, g.Grupo AS NombreGrupo,
                      p.CBTotal, p.CNTotal, p.Precio, p.Peso,
-                     p.Kilates, p.Modelo, p.Linea, m.Moneda AS NombreMoneda, p.FechaCaptura
+                     p.Kilates, p.Modelo, p.Linea, m.Moneda AS NombreMoneda, p.FechaCaptura,
+                     p.Quilates, p.Color, p.Pureza, p.Corte, p.NumSerie,
+                     pr.NombreProveedor
                      FROM Piezas p
                      LEFT JOIN Grupos g ON p.IdGrupo = g.IdGrupo
                      LEFT JOIN Monedas m ON p.IdMoneda = m.IdMoneda
+                     LEFT JOIN Remisiones r ON p.IdRemision = r.IdRemision
+                     LEFT JOIN vProveedores pr ON r.Proveedor = pr.Proveedor
                      WHERE p.IdRemision = @IdRemision
                      ORDER BY p.FechaCaptura DESC";
         return (await db.QueryAsync<PiezaResumen>(sql, new { IdRemision = idRemision })).ToList();
@@ -533,10 +537,14 @@ public class PiezaService
         using var db = CreateConnection();
         var sql = @"SELECT TOP 50 p.CodigoBarras, p.Descripcion, g.Grupo AS NombreGrupo,
                      p.CBTotal, p.CNTotal, p.Precio, p.Peso,
-                     p.Kilates, p.Modelo, p.Linea, m.Moneda AS NombreMoneda, p.FechaCaptura
+                     p.Kilates, p.Modelo, p.Linea, m.Moneda AS NombreMoneda, p.FechaCaptura,
+                     p.Quilates, p.Color, p.Pureza, p.Corte, p.NumSerie,
+                     pr.NombreProveedor
                      FROM Piezas p
                      LEFT JOIN Grupos g ON p.IdGrupo = g.IdGrupo
                      LEFT JOIN Monedas m ON p.IdMoneda = m.IdMoneda
+                     LEFT JOIN Remisiones r ON p.IdRemision = r.IdRemision
+                     LEFT JOIN vProveedores pr ON r.Proveedor = pr.Proveedor
                      WHERE 1=1
                      AND (@Texto IS NULL OR p.Descripcion LIKE '%' + @Texto + '%' OR p.CodigoBarras LIKE '%' + @Texto + '%')
                      AND (@IdRemision IS NULL OR p.IdRemision = @IdRemision)
