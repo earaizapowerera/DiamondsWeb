@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
@@ -16,10 +17,11 @@ public class PuntoVentaSeleniumTests : IDisposable
 {
     private const string BaseUrl = "https://diamonds.dev.powerera.com";
     private const string LoginUser = "admin";
-    private const string LoginPass = "admin";
-    private const string CodigoPiezaSencilla = "000270";
+    private const string LoginPass = "Waykee2026!";
+    private const string CodigoPiezaSencilla = "000933";
     private const string CodigoPiezaRepetida = "003946";
     private const int IdUsuarioDiamonds = 1;
+    private const string DiamondsDb = "Server=dbdev.powerera.com;Database=diamondsdev;User Id=earaiza;Password=VgfN-n4ju?H1Z4#JFRE;Encrypt=False;TrustServerCertificate=True;";
 
     private readonly IWebDriver _driver;
     private readonly WebDriverWait _wait;
@@ -41,6 +43,8 @@ public class PuntoVentaSeleniumTests : IDisposable
 
     public void Dispose()
     {
+        // Clean up any leftover sessions in DB on dispose
+        try { LimpiarSesionesDB(); } catch { }
         _driver.Quit();
         _driver.Dispose();
     }
@@ -119,21 +123,31 @@ public class PuntoVentaSeleniumTests : IDisposable
             throw new Exception($"CrearSesion: lblUsuario never populated. URL={_driver.Url}");
     }
 
+    /// <summary>
+    /// Limpia sesiones directamente en la BD para evitar problemas de estado entre tests.
+    /// </summary>
+    private void LimpiarSesionesDB()
+    {
+        using var conn = new SqlConnection(DiamondsDb);
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            DELETE PiezasNotasTemporal WHERE IdNota IN (SELECT IdNota FROM Notas WHERE IdUsuario = @UserId);
+            DELETE PagosNotas WHERE IdNota IN (SELECT IdNota FROM Notas WHERE IdUsuario = @UserId);
+            DELETE Notas WHERE IdUsuario = @UserId;";
+        cmd.Parameters.AddWithValue("@UserId", IdUsuarioDiamonds);
+        cmd.ExecuteNonQuery();
+    }
+
     private void CancelarSesionSiExiste()
     {
-        Thread.Sleep(500);
         try
         {
-            // Check if cancel button exists and is enabled
-            var btns = _driver.FindElements(By.Id("btnCancelar"));
-            if (btns.Count > 0 && btns[0].Enabled)
-            {
-                // Override confirm dialog and click cancel
-                ((IJavaScriptExecutor)_driver).ExecuteScript(
-                    "window.confirm = () => true;");
-                btns[0].Click();
-                Thread.Sleep(2000);
-            }
+            LimpiarSesionesDB();
+            // Reload the page to get clean state
+            _driver.Navigate().GoToUrl($"{BaseUrl}/PuntoVenta");
+            WaitFor(By.Id("txtUsuario"));
+            Thread.Sleep(500);
         }
         catch { }
     }
