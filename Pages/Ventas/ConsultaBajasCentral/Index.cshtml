@@ -1,0 +1,265 @@
+@page
+@model DiamondsWeb.Pages.Ventas.ConsultaBajasCentral.IndexModel
+@{
+    ViewData["Title"] = "Consulta de Bajas Central";
+    var esResumen = Model.Modo == "resumen";
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@Model.ErrorMessage
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">
+        <i class="fa-solid fa-server me-2"></i>Consulta de Bajas Central
+        <small class="text-muted ms-2">(BD Host)</small>
+    </h5>
+    <div class="d-flex gap-2 align-items-center">
+        <div class="btn-group btn-group-sm" role="group">
+            <a href="@BuildUrl(modo: "resumen")"
+               class="btn @(esResumen ? "btn-primary" : "btn-outline-primary")">
+                <i class="fa-solid fa-list me-1"></i>Resumen
+            </a>
+            <a href="@BuildUrl(modo: "detalle")"
+               class="btn @(!esResumen ? "btn-primary" : "btn-outline-primary")">
+                <i class="fa-solid fa-table-columns me-1"></i>Todas las Columnas
+            </a>
+        </div>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="fa-solid fa-print me-1"></i>Imprimir
+        </button>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="filter-panel">
+    <form method="get" id="frmFiltros">
+        <input type="hidden" name="Modo" value="@Model.Modo" />
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label"><small>Buscar</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Codigo, descripcion, modelo, cliente..." />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Fecha desde</small></label>
+                <input type="date" class="form-control form-control-sm" name="FechaDesde"
+                       value="@Model.FechaDesde" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Fecha hasta</small></label>
+                <input type="date" class="form-control form-control-sm" name="FechaHasta"
+                       value="@Model.FechaHasta" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Grupo</small></label>
+                <select class="form-select form-select-sm" name="Grupo" id="selGrupoCentral">
+                    <option value="">-- Todos --</option>
+                    @foreach (var g in Model.Grupos)
+                    {
+                        <option value="@g" selected="@(Model.Grupo == g)">@g</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-1">
+                <a href="/Ventas/ConsultaBajasCentral" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Stats bar -->
+<div class="d-flex justify-content-between align-items-center mb-3 px-2">
+    <div>
+        <span class="badge bg-secondary fs-6">
+            <i class="fa-solid fa-cubes me-1"></i>Piezas: <strong>@Model.Stats.TotalPiezas.ToString("N0")</strong>
+        </span>
+        <span class="badge bg-success fs-6 ms-2">
+            <i class="fa-solid fa-dollar-sign me-1"></i>Suma: <strong>@Model.Stats.SumaPrecio.ToString("N2")</strong>
+        </span>
+    </div>
+    <small class="text-muted">
+        Mostrando @Model.Piezas.Count de @Model.TotalRegistros registros
+        @if (Model.TotalPaginas > 1)
+        {
+            <span>| Pagina @Model.Pagina de @Model.TotalPaginas</span>
+        }
+    </small>
+</div>
+
+<!-- Tabla principal -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bajas table-hover table-sm mb-0" id="tblBajasCentral">
+                <thead>
+                    <tr>
+                        <th>Codigo</th>
+                        <th>Descripcion</th>
+                        <th>Modelo</th>
+                        <th>Linea</th>
+                        <th class="text-end">Precio</th>
+                        <th>Cliente</th>
+                        <th>Fecha Baja</th>
+                        <th>Obs</th>
+                        @if (!esResumen)
+                        {
+                            <th>Nota</th>
+                            <th class="text-end">Peso</th>
+                            <th class="text-end">$/Gramo</th>
+                            <th>Kilates</th>
+                            <th class="text-end">Quilates</th>
+                            <th>Color</th>
+                            <th>Pureza</th>
+                            <th>Corte</th>
+                            <th>No. Serie</th>
+                            <th>Obs1</th>
+                            <th>Grupo</th>
+                            <th>Moneda</th>
+                            <th>Fecha Captura</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Piezas.Any())
+                    {
+                        <tr>
+                            <td colspan="@(esResumen ? 8 : 19)" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x d-block mb-2"></i>
+                                No se encontraron piezas en la BD central.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var p in Model.Piezas)
+                    {
+                        <tr>
+                            <td><code>@p.CodigoBarras</code></td>
+                            <td class="text-truncate" style="max-width:250px;" title="@p.Descripcion">@p.Descripcion</td>
+                            <td>@p.Modelo</td>
+                            <td>@p.Linea</td>
+                            <td class="text-end fw-bold">@p.Precio.ToString("N0")</td>
+                            <td>@p.NombreCliente</td>
+                            <td>
+                                @if (p.FechaBaja.HasValue)
+                                {
+                                    <span class="utc-date" data-utc="@p.FechaBaja.Value.ToString("o")">
+                                        @p.FechaBaja.Value.ToString("dd/MM/yyyy")
+                                    </span>
+                                }
+                            </td>
+                            <td>@p.Obs2</td>
+                            @if (!esResumen)
+                            {
+                                <td>@p.IdNota</td>
+                                <td class="text-end">@p.Peso.ToString("N3")</td>
+                                <td class="text-end">@p.PrecioGramo.ToString("N2")</td>
+                                <td>@p.Kilates</td>
+                                <td class="text-end">@p.Quilates.ToString("N2")</td>
+                                <td>@p.Color</td>
+                                <td>@p.Pureza</td>
+                                <td>@p.Corte</td>
+                                <td>@p.NumSerie</td>
+                                <td>@p.Obs1</td>
+                                <td><span class="badge bg-info text-dark">@p.Grupo</span></td>
+                                <td>@p.Moneda</td>
+                                <td>
+                                    @if (p.FechaCaptura.HasValue)
+                                    {
+                                        @p.FechaCaptura.Value.ToString("dd/MM/yyyy")
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Paginacion -->
+@if (Model.TotalPaginas > 1)
+{
+<nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center">
+        <li class="page-item @(Model.Pagina <= 1 ? "disabled" : "")">
+            <a class="page-link" href="@BuildUrl(pagina: Model.Pagina - 1)">
+                <i class="fa-solid fa-chevron-left"></i>
+            </a>
+        </li>
+        @{
+            var inicio = Math.Max(1, Model.Pagina - 3);
+            var fin = Math.Min(Model.TotalPaginas, Model.Pagina + 3);
+        }
+        @if (inicio > 1)
+        {
+            <li class="page-item"><a class="page-link" href="@BuildUrl(pagina: 1)">1</a></li>
+            @if (inicio > 2)
+            {
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+            }
+        }
+        @for (int i = inicio; i <= fin; i++)
+        {
+            <li class="page-item @(i == Model.Pagina ? "active" : "")">
+                <a class="page-link" href="@BuildUrl(pagina: i)">@i</a>
+            </li>
+        }
+        @if (fin < Model.TotalPaginas)
+        {
+            @if (fin < Model.TotalPaginas - 1)
+            {
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+            }
+            <li class="page-item"><a class="page-link" href="@BuildUrl(pagina: Model.TotalPaginas)">@Model.TotalPaginas</a></li>
+        }
+        <li class="page-item @(Model.Pagina >= Model.TotalPaginas ? "disabled" : "")">
+            <a class="page-link" href="@BuildUrl(pagina: Model.Pagina + 1)">
+                <i class="fa-solid fa-chevron-right"></i>
+            </a>
+        </li>
+    </ul>
+</nav>
+}
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var sel = document.getElementById('selGrupoCentral');
+        if (sel && typeof TomSelect !== 'undefined' && sel.options.length > 6) {
+            new TomSelect(sel, {
+                allowEmptyOption: true,
+                sortField: { field: 'text', direction: 'asc' }
+            });
+        }
+    });
+</script>
+}
+
+@functions {
+    string BuildUrl(int? pagina = null, string? modo = null)
+    {
+        var p = pagina ?? Model.Pagina;
+        var m = modo ?? Model.Modo;
+        var qs = new List<string>();
+        if (!string.IsNullOrEmpty(Model.Buscar)) qs.Add($"Buscar={System.Net.WebUtility.UrlEncode(Model.Buscar)}");
+        if (!string.IsNullOrEmpty(Model.FechaDesde)) qs.Add($"FechaDesde={Model.FechaDesde}");
+        if (!string.IsNullOrEmpty(Model.FechaHasta)) qs.Add($"FechaHasta={Model.FechaHasta}");
+        if (!string.IsNullOrEmpty(Model.Grupo)) qs.Add($"Grupo={System.Net.WebUtility.UrlEncode(Model.Grupo)}");
+        qs.Add($"Modo={m}");
+        if (p > 1) qs.Add($"Pagina={p}");
+        return "/Ventas/ConsultaBajasCentral?" + string.Join("&", qs);
+    }
+}
