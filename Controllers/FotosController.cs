@@ -15,8 +15,24 @@ namespace DiamondsWeb.Controllers;
 public class FotosController : ControllerBase
 {
     private readonly FotoService _fotoService;
+    private readonly string _apiKey;
 
-    public FotosController(FotoService fotoService) => _fotoService = fotoService;
+    public FotosController(FotoService fotoService, IConfiguration config)
+    {
+        _fotoService = fotoService;
+        _apiKey = config["Diamonds:MobileApiKey"] ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Valida API key del header X-Api-Key para endpoints de la app móvil.
+    /// </summary>
+    private bool ValidarApiKey()
+    {
+        if (string.IsNullOrEmpty(_apiKey))
+            return false;
+        var headerKey = Request.Headers["X-Api-Key"].FirstOrDefault();
+        return !string.IsNullOrEmpty(headerKey) && headerKey == _apiKey;
+    }
 
     /// <summary>
     /// Resuelve el IdUsuario: si esta autenticado, del claim; si no, del parametro.
@@ -44,6 +60,9 @@ public class FotosController : ControllerBase
     [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
     public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromForm] int userId = 0)
     {
+        if (!ValidarApiKey() && !User.Identity?.IsAuthenticated == true)
+            return Unauthorized(new { error = "API key invalida o sesion no autenticada" });
+
         if (file == null || file.Length == 0)
             return BadRequest(new { error = "No se envio archivo" });
 
@@ -69,6 +88,7 @@ public class FotosController : ControllerBase
     /// <summary>
     /// Listar ultimas N fotos no vinculadas de un usuario.
     /// GET /api/fotos/recientes?userId=1&count=3&source=mobile
+    /// Headers: X-Api-Key (required for mobile), or session auth
     /// </summary>
     [HttpGet("recientes")]
     [AllowAnonymous]

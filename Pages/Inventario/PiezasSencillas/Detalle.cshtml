@@ -36,9 +36,18 @@
                 }
             }
         </span>
-        <a asp-page="Index" class="btn btn-outline-light btn-sm">
-            <i class="fa-solid fa-arrow-left me-1"></i>Regresar
-        </a>
+        <div>
+            @if (!Model.EsNueva)
+            {
+                <button type="button" class="btn btn-outline-danger btn-sm me-2" id="btnEliminar"
+                        data-cb="@Model.Pieza.CodigoBarras">
+                    <i class="fa-solid fa-trash me-1"></i>Eliminar
+                </button>
+            }
+            <a asp-page="Index" class="btn btn-outline-light btn-sm">
+                <i class="fa-solid fa-arrow-left me-1"></i>Regresar
+            </a>
+        </div>
     </div>
     <div class="card-body">
         <form method="post">
@@ -399,8 +408,38 @@
 </div>
 }
 
+<!-- Form oculto para eliminar -->
+@if (!Model.EsNueva)
+{
+<form id="formEliminar" method="post" asp-page-handler="Eliminar" style="display:none;">
+    <input type="hidden" name="codigoBarras" value="@Model.Pieza.CodigoBarras" />
+</form>
+}
+
 @section Scripts {
 <script>
+    // ── Eliminar pieza con validación ──
+    (function() {
+        var btn = document.getElementById('btnEliminar');
+        if (!btn) return;
+        btn.addEventListener('click', async function() {
+            var cb = this.dataset.cb;
+            try {
+                var resp = await fetch('?handler=ValidarEliminar&codigoBarras=' + encodeURIComponent(cb));
+                var data = await resp.json();
+                if (!data.permitido) {
+                    alert('No se puede eliminar:\n' + data.motivo);
+                    return;
+                }
+                if (confirm('¿Eliminar pieza ' + cb + '?\nEsta acción no se puede deshacer.')) {
+                    document.getElementById('formEliminar').submit();
+                }
+            } catch(e) {
+                alert('Error al validar: ' + e.message);
+            }
+        });
+    })();
+
     function mostrarCaracteristicas() {
         var tipo = document.getElementById('tipoPieza').value;
         document.getElementById('caract-oro').classList.add('d-none');

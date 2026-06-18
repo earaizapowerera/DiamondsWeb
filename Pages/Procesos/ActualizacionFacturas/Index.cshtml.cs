@@ -49,6 +49,9 @@ public class IndexModel : PageModel
         return int.TryParse(claim, out var id) ? id : 1;
     }
 
+    private int ObtenerIdTienda() =>
+        int.TryParse(User.FindFirst("IdTienda")?.Value, out var id) ? id : 1;
+
     /// <summary>
     /// GET: Carga la pantalla con la factura seleccionada (si hay).
     /// </summary>
@@ -181,7 +184,7 @@ public class IndexModel : PageModel
             TCCosto = tcCosto
         };
 
-        var (ok, mensaje) = await _svc.AsignarPiezaAsync(req);
+        var (ok, mensaje) = await _svc.AsignarPiezaAsync(req, ObtenerIdTienda());
         TempData["Mensaje"] = mensaje;
         TempData["MensajeTipo"] = ok ? "success" : "danger";
         return RedirectToPage(new { IdFactura = idFactura, FiltroPiezas = filtroPiezas });
@@ -192,7 +195,7 @@ public class IndexModel : PageModel
         string? filtroPiezas)
     {
         var (ok, mensaje, _) = await _svc.AsignarRemisionCompletaAsync(
-            idFactura, idRemision, tipoCambio);
+            idFactura, idRemision, tipoCambio, ObtenerIdTienda());
 
         TempData["Mensaje"] = mensaje;
         TempData["MensajeTipo"] = ok ? "success" : "danger";
@@ -202,7 +205,7 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostQuitarPiezaAsync(
         int idFactura, string codigoBarras)
     {
-        var (ok, mensaje) = await _svc.QuitarPiezaAsync(idFactura, codigoBarras);
+        var (ok, mensaje) = await _svc.QuitarPiezaAsync(idFactura, codigoBarras, ObtenerIdTienda());
         TempData["Mensaje"] = mensaje;
         TempData["MensajeTipo"] = ok ? "success" : "danger";
         return RedirectToPage(new { IdFactura = idFactura });

@@ -322,7 +322,7 @@ public class AmlService
         string? reportadoPor, string? observaciones, DateTime? fechaReporte = null,
         string? nombreArchivoXml = null, DateTime? fechaGeneracionXml = null)
     {
-        var fecha = fechaReporte ?? DateTime.Now;
+        var fecha = fechaReporte ?? DateTime.UtcNow;
         var sql = @"
             IF NOT EXISTS (SELECT 1 FROM AML_Reportados
                            WHERE NombreCliente = @NombreCliente

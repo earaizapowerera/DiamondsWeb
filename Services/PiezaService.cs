@@ -420,6 +420,65 @@ public class PiezaService
         }
     }
 
+    /// <summary>
+    /// Valida si un usuario puede eliminar una pieza.
+    /// Reglas VB6: ventana de 2 horas desde FechaCaptura, o usuario con permiso especial.
+    /// </summary>
+    public async Task<(bool permitido, string motivo)> ValidarPermisoEliminarAsync(
+        string codigoBarras, int userId, int horasVentana = 2)
+    {
+        using var db = CreateConnection();
+        var pieza = await db.QueryFirstOrDefaultAsync<dynamic>(
+            "SELECT TOP 1 FechaCaptura, IdUsuario FROM Piezas WHERE CodigoBarras = @CB",
+            new { CB = codigoBarras });
+
+        if (pieza == null)
+            return (false, "Pieza no encontrada.");
+
+        // Verificar si está en una nota de venta (no se puede eliminar si ya se vendió)
+        var enNota = await db.ExecuteScalarAsync<int>(
+            "SELECT TOP 1 COUNT(*) FROM PiezasNotasTemporal WHERE CodigoBarras = @CB",
+            new { CB = codigoBarras });
+        if (enNota > 0)
+            return (false, "No se puede eliminar: la pieza está en una nota de venta activa.");
+
+        var enBaja = await db.ExecuteScalarAsync<int>(
+            "SELECT TOP 1 COUNT(*) FROM BajasPiezas WHERE CodigoBarras = @CB",
+            new { CB = codigoBarras });
+        if (enBaja > 0)
+            return (false, "No se puede eliminar: la pieza ya fue dada de baja (vendida).");
+
+        // Verificar ventana de tiempo (solo el creador tiene ventana de 2 horas)
+        var fechaCaptura = (DateTime)pieza.FechaCaptura;
+        var horasDesdeCreacion = (DateTime.UtcNow - fechaCaptura).TotalHours;
+        var esCreador = (int)pieza.IdUsuario == userId;
+
+        if (!esCreador)
+            return (false, "Solo el usuario que capturó la pieza puede eliminarla.");
+
+        if (horasDesdeCreacion > horasVentana)
+            return (false, $"Fuera de la ventana de eliminación ({horasVentana} horas). La pieza fue capturada hace {horasDesdeCreacion:F1} horas.");
+
+        return (true, "Permitido.");
+    }
+
+    /// <summary>
+    /// Elimina una pieza con validación de permisos, copia a bitácora.
+    /// Replica lógica VB6: ventana de 2 horas, solo el creador, no vendidas.
+    /// </summary>
+    public async Task<(bool ok, string mensaje)> EliminarPiezaConPermisosAsync(
+        string codigoBarras, int userId, int horasVentana = 2)
+    {
+        var (permitido, motivo) = await ValidarPermisoEliminarAsync(codigoBarras, userId, horasVentana);
+        if (!permitido)
+            return (false, motivo);
+
+        var ok = await EliminarPiezaAsync(codigoBarras, userId);
+        return ok
+            ? (true, $"Pieza {codigoBarras} eliminada correctamente.")
+            : (false, "Error interno al eliminar la pieza.");
+    }
+
     public async Task<bool> EliminarPiezaAsync(string codigoBarras, int userId)
     {
         try
@@ -428,7 +487,7 @@ public class PiezaService
             db.Open();
             using var tx = db.BeginTransaction();
 
-            // Copiar a PiezasCanceladas para auditoria
+            // Copiar a PiezasCanceladas para auditoría
             await db.ExecuteAsync(
                 @"INSERT INTO PiezasCanceladas (CodigoBarras, Descripcion, IdRemision, IdFactura, IdGrupo,
                   CBPieza, DescPieza, CNPieza, Peso, PrecioGramo, CBPeso, DescPeso, CNPeso,

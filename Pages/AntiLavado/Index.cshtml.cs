@@ -95,7 +95,7 @@ public class IndexModel : PageModel
 
         var xmlBytes = _sppldService.GenerarXmlAviso(_sppldConfig, mes, anio, clientes, operacionesPorCliente);
         var fileName = $"SPPLD_Anexo6_{anio}{mes:D2}.xml";
-        var fechaGeneracion = DateTime.Now;
+        var fechaGeneracion = DateTime.UtcNow;
         var reportadoPor = User.Identity?.Name ?? "admin";
 
         // Marcar cada cliente seleccionado como reportado con datos del XML

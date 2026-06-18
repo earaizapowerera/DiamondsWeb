@@ -210,7 +210,7 @@ public class SalesService
         using var conn = CreateConnection();
         await conn.ExecuteAsync(@"
             UPDATE Piezas SET IdFactura = @IdFact, TCCosto = @TC, CBFactura = @CB, CNFactura = @CN,
-                FechaUltEdicion = GETDATE()
+                FechaUltEdicion = GETUTCDATE()
             WHERE CodigoBarras = @Codigo",
             new { Codigo = codigoBarras, IdFact = idFactura, TC = tcCosto, CB = cbFactura, CN = cnFactura });
     }
@@ -220,7 +220,7 @@ public class SalesService
         using var conn = CreateConnection();
         await conn.ExecuteAsync(@"
             UPDATE Piezas SET IdFactura = NULL, CBFactura = NULL, CNFactura = NULL, TCCosto = NULL,
-                FechaUltEdicion = GETDATE()
+                FechaUltEdicion = GETUTCDATE()
             WHERE CodigoBarras = @Codigo", new { Codigo = codigoBarras });
     }
 
@@ -244,19 +244,21 @@ public class SalesService
     {
         using var conn = CreateConnection();
         await conn.ExecuteAsync(@"
-            UPDATE Piezas SET IdRemision = @IdRem, FechaUltEdicion = GETDATE()
+            UPDATE Piezas SET IdRemision = @IdRem, FechaUltEdicion = GETUTCDATE()
             WHERE CodigoBarras = @Codigo", new { Codigo = codigoBarras, IdRem = idRemision });
     }
 
     // ══════════════════════════════════════════════
     // POS — PUNTO DE VENTA
     // ══════════════════════════════════════════════
-    public async Task<string> CrearSesionVentaAsync(int idUsuario)
+    public async Task<string> CrearSesionVentaAsync(int idUsuario, int idTienda = 1)
     {
         using var conn = CreateConnection();
         var nota = await conn.ExecuteScalarAsync<int>("SELECT ISNULL(Nota,0)+1 FROM contador");
         await conn.ExecuteAsync("UPDATE contador SET Nota = Nota + 1");
-        var idTienda = await conn.ExecuteScalarAsync<int?>("SELECT TOP 1 IdTienda FROM Tiendas") ?? 1;
+        // Si no se pasa idTienda explícito, buscar en BD como fallback
+        if (idTienda <= 0)
+            idTienda = await conn.ExecuteScalarAsync<int?>("SELECT TOP 1 IdTienda FROM Tiendas") ?? 1;
         var idNota = $"{idTienda}{nota:D6}";
         return idNota;
     }

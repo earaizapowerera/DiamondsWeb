@@ -11,12 +11,15 @@ public class DetalleModel : PageModel
 {
     private readonly InventoryService _inventoryService;
     private readonly CatalogService _catalogService;
+    private readonly PiezaService _piezaService;
     private readonly ILogger<DetalleModel> _logger;
 
-    public DetalleModel(InventoryService inventoryService, CatalogService catalogService, ILogger<DetalleModel> logger)
+    public DetalleModel(InventoryService inventoryService, CatalogService catalogService,
+        PiezaService piezaService, ILogger<DetalleModel> logger)
     {
         _inventoryService = inventoryService;
         _catalogService = catalogService;
+        _piezaService = piezaService;
         _logger = logger;
     }
 
@@ -92,6 +95,36 @@ public class DetalleModel : PageModel
             EsNueva = string.IsNullOrWhiteSpace(codigoBarras);
             return Page();
         }
+    }
+
+    public async Task<IActionResult> OnPostEliminarAsync(string codigoBarras)
+    {
+        try
+        {
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
+
+            var (ok, mensaje) = await _piezaService.EliminarPiezaConPermisosAsync(codigoBarras, idUsuario);
+            TempData[ok ? "Success" : "Error"] = mensaje;
+            return ok ? RedirectToPage("Index") : RedirectToPage("Detalle", new { codigoBarras });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al eliminar pieza {CB}", codigoBarras);
+            TempData["Error"] = $"Error: {ex.Message}";
+            return RedirectToPage("Detalle", new { codigoBarras });
+        }
+    }
+
+    /// <summary>AJAX: Verifica si el usuario puede eliminar una pieza.</summary>
+    public async Task<IActionResult> OnGetValidarEliminarAsync(string codigoBarras)
+    {
+        var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid : 0;
+        if (idUsuario == 0)
+            return new JsonResult(new { permitido = false, motivo = "No autenticado." });
+
+        var (permitido, motivo) = await _piezaService.ValidarPermisoEliminarAsync(codigoBarras, idUsuario);
+        return new JsonResult(new { permitido, motivo });
     }
 
     private async Task CargarCatalogosAsync()
