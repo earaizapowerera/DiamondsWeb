@@ -50,6 +50,16 @@ builder.Services.AddScoped<LotesRepetidasService>(sp => new LotesRepetidasServic
     diamondsConnStr,
     sp.GetRequiredService<ILogger<LotesRepetidasService>>()));
 
+// Pieza Service (Alta de Piezas Sencillas)
+builder.Services.AddScoped<PiezaService>(sp => new PiezaService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<PiezaService>>()));
+
+// Grupos Service (Catalogo de Grupos)
+builder.Services.AddScoped<GruposService>(sp => new GruposService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<GruposService>>()));
+
 var app = builder.Build();
 
 // Middleware
