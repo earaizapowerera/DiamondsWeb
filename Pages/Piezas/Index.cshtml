@@ -4,7 +4,7 @@
     ViewData["Title"] = "Piezas Sencillas";
 }
 
-<link rel="stylesheet" href="/css/piezas.css?v=20260609" />
+<link rel="stylesheet" href="/css/piezas.css?v=20260615" />
 
 @if (!string.IsNullOrEmpty(Model.MensajeExito))
 {
@@ -13,6 +13,12 @@
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 }
+
+<!-- Alert dinamico para resultado de eliminacion -->
+<div id="alertEliminar" class="alert alert-dismissible fade show d-none" role="alert">
+    <span id="alertEliminarMsg"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
 
 <!-- Barra de herramientas -->
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -147,7 +153,7 @@
                     }
                     @foreach (var p in Model.Piezas)
                     {
-                    <tr>
+                    <tr id="row-@p.CodigoBarras">
                         <td><code>@p.CodigoBarras</code></td>
                         <td class="text-truncate" style="max-width: 250px;" title="@p.Descripcion">@p.Descripcion</td>
                         <td>@p.NombreGrupo</td>
@@ -163,20 +169,112 @@
                                 <a asp-page="Alta" asp-route-cb="@p.CodigoBarras" class="btn btn-outline-primary btn-sm" title="Modificar">
                                     <i class="fa-solid fa-pen-to-square"></i>
                                 </a>
-                                <form method="post" asp-page-handler="Eliminar" class="d-inline"
-                                      onsubmit="return confirm('Eliminar pieza @p.CodigoBarras?')">
-                                    <input type="hidden" name="codigoBarras" value="@p.CodigoBarras" />
-                                    <input type="hidden" name="idRemision" value="@Model.IdRemision" />
-                                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-outline-danger btn-sm btn-eliminar"
+                                        title="Eliminar"
+                                        data-cb="@p.CodigoBarras"
+                                        data-desc="@p.Descripcion">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
                             </div>
                         </td>
                     </tr>
                     }
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de eliminacion con permisos -->
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white py-2">
+                <h6 class="modal-title" id="modalEliminarLabel">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i>Eliminar Pieza
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Estado de carga -->
+                <div id="elimLoading" class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <span class="ms-2">Verificando permisos...</span>
+                </div>
+
+                <!-- Contenido principal (oculto hasta que cargue) -->
+                <div id="elimContent" class="d-none">
+                    <!-- Info de la pieza -->
+                    <div class="mb-3 p-2 bg-light rounded">
+                        <div class="row">
+                            <div class="col-4"><small class="text-muted">Codigo:</small></div>
+                            <div class="col-8"><code id="elimCB"></code></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4"><small class="text-muted">Descripcion:</small></div>
+                            <div class="col-8"><span id="elimDesc"></span></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4"><small class="text-muted">Fecha captura:</small></div>
+                            <div class="col-8"><span id="elimFecha"></span></div>
+                        </div>
+                    </div>
+
+                    <!-- Status badges -->
+                    <div id="elimBadges" class="mb-3">
+                        <span id="badgeEtiqueta" class="badge me-1 d-none"></span>
+                        <span id="badgeVentana" class="badge me-1 d-none"></span>
+                        <span id="badgeSupervisor" class="badge me-1 d-none"></span>
+                    </div>
+
+                    <!-- Alerta de autorizacion requerida -->
+                    <div id="elimAlertAuth" class="alert alert-warning py-2 d-none">
+                        <i class="fa-solid fa-lock me-1"></i>
+                        <span id="elimAuthMotivo"></span>
+                    </div>
+
+                    <!-- Motivo de cancelacion -->
+                    <div class="mb-3">
+                        <label for="elimMotivo" class="form-label form-label-sm">
+                            Motivo de cancelacion <small class="text-muted">(opcional)</small>
+                        </label>
+                        <textarea id="elimMotivo" class="form-control form-control-sm" rows="2"
+                                  placeholder="Razon por la que se elimina esta pieza..."></textarea>
+                    </div>
+
+                    <!-- Seccion de autorizacion de supervisor -->
+                    <div id="elimSupervisorSection" class="d-none">
+                        <hr>
+                        <h6 class="text-muted mb-2">
+                            <i class="fa-solid fa-user-shield me-1"></i>Autorizacion de Supervisor
+                        </h6>
+                        <div class="mb-2">
+                            <label for="elimSuperNombre" class="form-label form-label-sm mb-0">Nombre del supervisor</label>
+                            <input type="text" id="elimSuperNombre" class="form-control form-control-sm"
+                                   placeholder="Nombre del usuario supervisor" autocomplete="off" />
+                        </div>
+                        <div class="mb-2">
+                            <label for="elimSuperPassword" class="form-label form-label-sm mb-0">Contrasena</label>
+                            <input type="password" id="elimSuperPassword" class="form-control form-control-sm"
+                                   placeholder="Contrasena del supervisor" autocomplete="off" />
+                        </div>
+                        <div id="elimAuthError" class="text-danger small d-none"></div>
+                    </div>
+                </div>
+
+                <!-- Error general -->
+                <div id="elimError" class="alert alert-danger py-2 d-none">
+                    <i class="fa-solid fa-circle-xmark me-1"></i><span id="elimErrorMsg"></span>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-xmark me-1"></i>Cancelar
+                </button>
+                <button type="button" id="btnConfirmarEliminar" class="btn btn-danger btn-sm" disabled>
+                    <i class="fa-solid fa-trash me-1"></i>Eliminar Pieza
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -190,6 +288,177 @@ document.addEventListener('DOMContentLoaded', function() {
         if (selRemision) new TomSelect(selRemision, { allowEmptyOption: true });
         var selGrupo = document.getElementById('selGrupo');
         if (selGrupo) new TomSelect(selGrupo, { allowEmptyOption: true });
+    }
+
+    // --- Eliminacion con permisos ---
+    var modalEl = document.getElementById('modalEliminar');
+    var modal = new bootstrap.Modal(modalEl);
+    var antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    var currentCB = '';
+    var requiresAuth = false;
+
+    // Click en boton eliminar → verificar permisos y abrir modal
+    document.querySelectorAll('.btn-eliminar').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            currentCB = this.dataset.cb;
+            var desc = this.dataset.desc;
+            abrirModalEliminar(currentCB, desc);
+        });
+    });
+
+    function abrirModalEliminar(cb, desc) {
+        // Reset modal state
+        document.getElementById('elimLoading').classList.remove('d-none');
+        document.getElementById('elimContent').classList.add('d-none');
+        document.getElementById('elimError').classList.add('d-none');
+        document.getElementById('elimSupervisorSection').classList.add('d-none');
+        document.getElementById('elimAlertAuth').classList.add('d-none');
+        document.getElementById('elimAuthError').classList.add('d-none');
+        document.getElementById('elimMotivo').value = '';
+        document.getElementById('elimSuperNombre').value = '';
+        document.getElementById('elimSuperPassword').value = '';
+        document.getElementById('btnConfirmarEliminar').disabled = true;
+        requiresAuth = false;
+
+        modal.show();
+
+        // Fetch permisos via AJAX
+        fetch('/Piezas?handler=VerificarPermisoEliminar&codigoBarras=' + encodeURIComponent(cb))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                document.getElementById('elimLoading').classList.add('d-none');
+
+                if (data.motivoRequerimiento === 'La pieza no existe.') {
+                    document.getElementById('elimError').classList.remove('d-none');
+                    document.getElementById('elimErrorMsg').textContent = 'La pieza no existe.';
+                    return;
+                }
+
+                document.getElementById('elimContent').classList.remove('d-none');
+
+                // Mostrar info de la pieza
+                document.getElementById('elimCB').textContent = data.codigoBarras || cb;
+                document.getElementById('elimDesc').textContent = data.descripcion || desc || '';
+                document.getElementById('elimFecha').textContent = data.fechaCaptura
+                    ? new Date(data.fechaCaptura).toLocaleString()
+                    : 'N/A';
+
+                // Badges de estado
+                mostrarBadge('badgeEtiqueta',
+                    data.etiquetaImpresa ? 'Etiqueta impresa' : 'Sin etiqueta',
+                    data.etiquetaImpresa ? 'bg-warning text-dark' : 'bg-secondary');
+                mostrarBadge('badgeVentana',
+                    data.dentroDeVentana ? 'Dentro de 2 hrs' : 'Fuera de ventana',
+                    data.dentroDeVentana ? 'bg-success' : 'bg-secondary');
+                mostrarBadge('badgeSupervisor',
+                    data.esSupervisor ? 'Supervisor' : 'Usuario normal',
+                    data.esSupervisor ? 'bg-info' : 'bg-secondary');
+
+                // Mostrar seccion de autorizacion si es necesario
+                requiresAuth = data.requiereAutorizacion;
+                if (requiresAuth) {
+                    document.getElementById('elimAlertAuth').classList.remove('d-none');
+                    document.getElementById('elimAuthMotivo').textContent = data.motivoRequerimiento;
+                    document.getElementById('elimSupervisorSection').classList.remove('d-none');
+                }
+
+                document.getElementById('btnConfirmarEliminar').disabled = false;
+            })
+            .catch(function(err) {
+                document.getElementById('elimLoading').classList.add('d-none');
+                document.getElementById('elimError').classList.remove('d-none');
+                document.getElementById('elimErrorMsg').textContent = 'Error al verificar permisos: ' + err.message;
+            });
+    }
+
+    function mostrarBadge(id, text, cssClass) {
+        var el = document.getElementById(id);
+        el.textContent = text;
+        el.className = 'badge me-1 ' + cssClass;
+    }
+
+    // Confirmar eliminacion
+    document.getElementById('btnConfirmarEliminar').addEventListener('click', function() {
+        var btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...';
+
+        var body = {
+            codigoBarras: currentCB,
+            motivo: document.getElementById('elimMotivo').value || null
+        };
+
+        if (requiresAuth) {
+            var nombre = document.getElementById('elimSuperNombre').value.trim();
+            var password = document.getElementById('elimSuperPassword').value;
+            if (!nombre || !password) {
+                document.getElementById('elimAuthError').textContent = 'Ingrese nombre y contrasena del supervisor.';
+                document.getElementById('elimAuthError').classList.remove('d-none');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-trash me-1"></i>Eliminar Pieza';
+                return;
+            }
+            body.supervisorNombre = nombre;
+            body.supervisorPassword = password;
+        }
+
+        fetch('/Piezas?handler=EliminarConPermiso', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': antiForgeryToken
+            },
+            body: JSON.stringify(body)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                modal.hide();
+                // Eliminar fila de la tabla
+                var row = document.getElementById('row-' + currentCB);
+                if (row) {
+                    row.style.transition = 'opacity 0.3s';
+                    row.style.opacity = '0';
+                    setTimeout(function() { row.remove(); }, 300);
+                }
+                mostrarAlerta('success', data.mensaje || 'Pieza eliminada correctamente.');
+            } else {
+                // Mostrar error en el modal
+                if (data.error && data.error.indexOf('supervisor') >= 0) {
+                    document.getElementById('elimAuthError').textContent = data.error;
+                    document.getElementById('elimAuthError').classList.remove('d-none');
+                } else {
+                    document.getElementById('elimError').classList.remove('d-none');
+                    document.getElementById('elimErrorMsg').textContent = data.error || 'Error desconocido.';
+                }
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-trash me-1"></i>Eliminar Pieza';
+            }
+        })
+        .catch(function(err) {
+            document.getElementById('elimError').classList.remove('d-none');
+            document.getElementById('elimErrorMsg').textContent = 'Error de red: ' + err.message;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-trash me-1"></i>Eliminar Pieza';
+        });
+    });
+
+    // Reset al cerrar modal
+    modalEl.addEventListener('hidden.bs.modal', function() {
+        document.getElementById('btnConfirmarEliminar').innerHTML = '<i class="fa-solid fa-trash me-1"></i>Eliminar Pieza';
+        document.getElementById('btnConfirmarEliminar').disabled = true;
+    });
+
+    function mostrarAlerta(tipo, mensaje) {
+        var alert = document.getElementById('alertEliminar');
+        alert.className = 'alert alert-' + (tipo === 'success' ? 'success' : 'danger') + ' alert-dismissible fade show';
+        document.getElementById('alertEliminarMsg').innerHTML =
+            '<i class="fa-solid fa-' + (tipo === 'success' ? 'check-circle' : 'circle-xmark') + ' me-2"></i>' + mensaje;
+        alert.classList.remove('d-none');
+        // Auto-dismiss after 5s
+        setTimeout(function() {
+            alert.classList.add('d-none');
+        }, 5000);
     }
 });
 </script>
