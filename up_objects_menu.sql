@@ -91,6 +91,19 @@ VALUES
     (NEWID(), @ScreenTypeId, 'Diseño Etiquetas', '/Configuracion/DisenioEtiquetas', 'fa-solid fa-tag', 6, @FolderConfig, 1, GETUTCDATE(), GETUTCDATE());
 
 -- ═══════════════════════════════════════════════════════════════
--- RESUMEN: 5 carpetas + 33 pantallas = 38 objetos de menú
+-- RRHH
+-- ═══════════════════════════════════════════════════════════════
+DECLARE @FolderRRHH UNIQUEIDENTIFIER = NEWID();
+
+INSERT INTO dbo.up_objects (object_id, object_type_id, object_name, route_path, icon_override, order_hint, is_active, created_at, updated_at)
+VALUES
+    (@FolderRRHH, @FolderTypeId, 'RRHH', NULL, 'fa-solid fa-users', 60, 1, GETUTCDATE(), GETUTCDATE());
+
+INSERT INTO dbo.up_objects (object_id, object_type_id, object_name, route_path, icon_override, order_hint, parent_id, is_active, created_at, updated_at)
+VALUES
+    (NEWID(), @ScreenTypeId, 'Control de Asistencia', '/RRHH/Asistencia', 'fa-solid fa-clock', 1, @FolderRRHH, 1, GETUTCDATE(), GETUTCDATE());
+
+-- ═══════════════════════════════════════════════════════════════
+-- RESUMEN: 6 carpetas + 34 pantallas = 40 objetos de menú
 -- ═══════════════════════════════════════════════════════════════
 SELECT 'Menu objects created: ' + CAST(COUNT(*) AS VARCHAR) + ' items' FROM dbo.up_objects WHERE created_at >= DATEADD(MINUTE, -5, GETUTCDATE());

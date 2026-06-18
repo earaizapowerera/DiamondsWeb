@@ -1,0 +1,308 @@
+@page
+@model DiamondsWeb.Pages.RRHH.Asistencia.IndexModel
+@{
+    ViewData["Title"] = "Control de Asistencia";
+    // Default automatico: antes de 1pm = Entrada, despues = Salida
+    var horaActual = DateTime.Now.Hour;
+    var movimientoDefault = horaActual >= 13 ? "S" : "E";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SECCION: Registro Rapido (Reloj Checador)          -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <i class="fa-solid fa-clock me-2"></i>Registrar Asistencia
+    </div>
+    <div class="card-body">
+        <form method="post" asp-page-handler="Registrar" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label"><small>Empleado</small></label>
+                <select class="form-select form-select-sm" name="NuevoIdEmpleado" id="selectEmpleadoNuevo" required>
+                    <option value="">-- Seleccionar --</option>
+                    @foreach (var emp in Model.Empleados)
+                    {
+                        <option value="@emp.IdUsuario">@emp.Nombre</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label"><small>Movimiento</small></label>
+                <div class="d-flex gap-3 pt-1">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="NuevoMovimiento"
+                               id="radioEntrada" value="E" checked="@(movimientoDefault == "E")">
+                        <label class="form-check-label text-success fw-bold" for="radioEntrada">
+                            <i class="fa-solid fa-arrow-right-to-bracket me-1"></i>Entrada
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="NuevoMovimiento"
+                               id="radioSalida" value="S" checked="@(movimientoDefault == "S")">
+                        <label class="form-check-label text-danger fw-bold" for="radioSalida">
+                            <i class="fa-solid fa-arrow-right-from-bracket me-1"></i>Salida
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="text-muted text-center">
+                    <small>Fecha/Hora</small><br />
+                    <span id="relojActual" class="fw-bold"></span>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-success btn-sm w-100">
+                    <i class="fa-solid fa-check me-1"></i>Registrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SECCION: Historial de Asistencia                   -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-list me-2"></i>Historial de Asistencia
+    </div>
+    <div class="card-body">
+        <!-- Filtros -->
+        <form method="get" class="row g-3 align-items-end mb-4">
+            <div class="col-md-3">
+                <label class="form-label"><small>Empleado</small></label>
+                <select class="form-select form-select-sm" name="FiltroEmpleado" id="selectEmpleadoFiltro">
+                    <option value="">-- Todos --</option>
+                    @foreach (var emp in Model.Empleados)
+                    {
+                        <option value="@emp.IdUsuario" selected="@(Model.FiltroEmpleado == emp.IdUsuario)">@emp.Nombre</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Movimiento</small></label>
+                <select class="form-select form-select-sm" name="FiltroMovimiento">
+                    <option value="">-- Todos --</option>
+                    <option value="E" selected="@(Model.FiltroMovimiento == "E")">Entrada</option>
+                    <option value="S" selected="@(Model.FiltroMovimiento == "S")">Salida</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Desde</small></label>
+                <input type="date" class="form-control form-control-sm" name="FiltroFechaDesde"
+                       value="@(Model.FiltroFechaDesde?.ToString("yyyy-MM-dd"))" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><small>Hasta</small></label>
+                <input type="date" class="form-control form-control-sm" name="FiltroFechaHasta"
+                       value="@(Model.FiltroFechaHasta?.ToString("yyyy-MM-dd"))" />
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-filter me-1"></i>Filtrar
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="/RRHH/Asistencia" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+
+        <!-- Tabla de registros -->
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Empleado</th>
+                        <th>Movimiento</th>
+                        <th>Fecha y Hora</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Registros.Any())
+                    {
+                        @foreach (var reg in Model.Registros)
+                        {
+                            <tr>
+                                <td>@reg.IdAsistencia</td>
+                                <td>@reg.Nombre</td>
+                                <td>
+                                    @if (reg.Movimiento == "E")
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="fa-solid fa-arrow-right-to-bracket me-1"></i>Entrada
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">
+                                            <i class="fa-solid fa-arrow-right-from-bracket me-1"></i>Salida
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="utc-date" data-utc="@reg.FechaCaptura.ToString("o")">
+                                        @reg.FechaCaptura.ToString("dd/MM/yyyy HH:mm:ss")
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-outline-primary btn-sm"
+                                            title="Editar"
+                                            data-bs-toggle="modal" data-bs-target="#modalEditar"
+                                            data-id="@reg.IdAsistencia"
+                                            data-idusuario="@reg.IdUsuario"
+                                            data-movimiento="@reg.Movimiento">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <form method="post" asp-page-handler="Eliminar" class="d-inline">
+                                        <input type="hidden" name="id" value="@reg.IdAsistencia" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                title="Eliminar"
+                                                onclick="return confirm('Eliminar este registro de asistencia?')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No se encontraron registros de asistencia.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- MODAL: Editar Registro                             -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-labelledby="modalEditarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Editar">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="modalEditarLabel">
+                        <i class="fa-solid fa-pen me-2"></i>Editar Registro
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="EditId" id="editId" />
+                    <div class="mb-3">
+                        <label class="form-label">Empleado</label>
+                        <select class="form-select" name="EditIdEmpleado" id="editIdEmpleado" required>
+                            <option value="">-- Seleccionar --</option>
+                            @foreach (var emp in Model.Empleados)
+                            {
+                                <option value="@emp.IdUsuario">@emp.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Movimiento</label>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="EditMovimiento"
+                                       id="editEntrada" value="E">
+                                <label class="form-check-label text-success fw-bold" for="editEntrada">
+                                    <i class="fa-solid fa-arrow-right-to-bracket me-1"></i>Entrada
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="EditMovimiento"
+                                       id="editSalida" value="S">
+                                <label class="form-check-label text-danger fw-bold" for="editSalida">
+                                    <i class="fa-solid fa-arrow-right-from-bracket me-1"></i>Salida
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-save me-1"></i>Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.4.3/dist/js/tom-select.complete.min.js"></script>
+<script>
+    // Reloj en tiempo real
+    function actualizarReloj() {
+        var ahora = new Date();
+        var fmt = ahora.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                  + ' ' + ahora.toLocaleTimeString('es-MX');
+        var el = document.getElementById('relojActual');
+        if (el) el.textContent = fmt;
+    }
+    actualizarReloj();
+    setInterval(actualizarReloj, 1000);
+
+    // TomSelect para dropdowns de empleados (mas de 5 opciones)
+    document.addEventListener('DOMContentLoaded', function () {
+        var selNuevo = document.getElementById('selectEmpleadoNuevo');
+        if (selNuevo && typeof TomSelect !== 'undefined') {
+            new TomSelect(selNuevo, {
+                allowEmptyOption: true,
+                sortField: { field: 'text', direction: 'asc' },
+                placeholder: 'Buscar empleado...'
+            });
+        }
+
+        var selFiltro = document.getElementById('selectEmpleadoFiltro');
+        if (selFiltro && typeof TomSelect !== 'undefined') {
+            new TomSelect(selFiltro, {
+                allowEmptyOption: true,
+                sortField: { field: 'text', direction: 'asc' },
+                placeholder: 'Buscar empleado...'
+            });
+        }
+
+        // Poblar modal de edicion al abrir
+        var modalEditar = document.getElementById('modalEditar');
+        if (modalEditar) {
+            modalEditar.addEventListener('show.bs.modal', function (event) {
+                var btn = event.relatedTarget;
+                document.getElementById('editId').value = btn.getAttribute('data-id');
+                document.getElementById('editIdEmpleado').value = btn.getAttribute('data-idusuario');
+
+                var mov = btn.getAttribute('data-movimiento');
+                document.getElementById('editEntrada').checked = (mov === 'E');
+                document.getElementById('editSalida').checked = (mov === 'S');
+            });
+        }
+    });
+</script>
+}
