@@ -160,6 +160,11 @@ builder.Services.AddScoped<SalesService>(sp => new SalesService(
     diamondsConnStr,
     sp.GetRequiredService<ILogger<SalesService>>()));
 
+// Actualización Pieza por Pieza Service
+builder.Services.AddScoped<ActualizacionService>(sp => new ActualizacionService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<ActualizacionService>>()));
+
 var app = builder.Build();
 
 // Middleware

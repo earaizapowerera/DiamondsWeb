@@ -1,7 +1,7 @@
 @page
 @model DiamondsWeb.Pages.Procesos.ActualizacionPieza.IndexModel
 @{
-    ViewData["Title"] = "Actualización de Pieza";
+    ViewData["Title"] = "Actualización Pieza por Pieza";
 }
 
 @if (TempData["Error"] != null)
@@ -20,14 +20,14 @@
 }
 
 <!-- Búsqueda de Pieza -->
-<div class="card mb-4">
+<div class="card mb-3">
     <div class="card-header bg-primary text-white">
-        <i class="fa-solid fa-pen-to-square me-2"></i>Actualización de Pieza
+        <i class="fa-solid fa-pen-to-square me-2"></i>Actualización Pieza por Pieza
     </div>
     <div class="card-body">
-        <form method="get" class="row g-3 align-items-end mb-4">
+        <form method="get" class="row g-2 align-items-end">
             <div class="col-md-6">
-                <label class="form-label"><small>Código de Barras</small></label>
+                <label class="form-label form-label-sm"><small>Código de Barras</small></label>
                 <input type="text" class="form-control form-control-sm" name="CodigoBarras"
                        value="@Model.CodigoBarras" placeholder="Escanee o ingrese código de barras..." autofocus />
             </div>
@@ -45,26 +45,22 @@
     </div>
 </div>
 
-@if (Model.PiezaEncontrada != null)
+@if (Model.Pieza != null)
 {
-    var p = Model.PiezaEncontrada;
+    var p = Model.Pieza;
+    var fa = Model.FacturaActual;
 
-    <!-- Info Actual de la Pieza -->
-    <div class="card mb-4">
+    <!-- Información Actual de la Pieza -->
+    <div class="card mb-3">
         <div class="card-header bg-info text-white">
-            <i class="fa-solid fa-circle-info me-2"></i>Información Actual - @p.CodigoBarras
+            <i class="fa-solid fa-circle-info me-2"></i>Pieza: @p.CodigoBarras
         </div>
         <div class="card-body">
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <strong>Descripción:</strong> @p.Descripcion
-                </div>
-                <div class="col-md-4">
-                    <strong>Proveedor:</strong> @p.NombreProveedor
-                </div>
-                <div class="col-md-4">
-                    <strong>Precio:</strong> @p.Precio?.ToString("C")
-                </div>
+            <div class="row mb-2">
+                <div class="col-md-4"><strong>Descripción:</strong> @p.Descripcion</div>
+                <div class="col-md-3"><strong>Proveedor:</strong> @p.Proveedor</div>
+                <div class="col-md-3"><strong>Remisión:</strong> @(p.Remision ?? "N/A")</div>
+                <div class="col-md-2"><strong>Moneda:</strong> @(p.IdMoneda?.ToString() ?? "N/A")</div>
             </div>
             <div class="row mb-3">
                 <div class="col-md-3">
@@ -84,120 +80,185 @@
             <!-- Costos Actuales -->
             <h6 class="mt-3"><i class="fa-solid fa-coins me-2"></i>Costos Actuales</h6>
             <div class="table-responsive">
-                <table class="table table-bordered table-sm">
+                <table class="table table-bordered table-sm mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Concepto</th>
-                            <th class="text-end">Costo Bruto (Extranjero)</th>
-                            <th class="text-end">Costo Neto (Nacional)</th>
-                            <th class="text-end">Descuento</th>
+                            <th></th>
+                            <th class="text-end">CB Pieza</th>
+                            <th class="text-end">CN Pieza</th>
+                            <th class="text-end">Desc Pieza</th>
+                            <th class="text-end">CB Factura (MN)</th>
+                            <th class="text-end">CN Factura (MN)</th>
+                            <th class="text-end">TC Costo</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Pieza</td>
+                            <td>Actual</td>
                             <td class="text-end">@p.CBPieza?.ToString("N2")</td>
                             <td class="text-end">@p.CNPieza?.ToString("N2")</td>
-                            <td class="text-end">@p.DescPieza?.ToString("N2")</td>
-                        </tr>
-                        <tr>
-                            <td>Peso</td>
-                            <td class="text-end">@p.CBPeso?.ToString("N2")</td>
-                            <td class="text-end">@p.CNPeso?.ToString("N2")</td>
-                            <td class="text-end">@p.DescPeso?.ToString("N2")</td>
-                        </tr>
-                        <tr>
-                            <td>Mano de Obra</td>
-                            <td class="text-end">@p.CBManoObra?.ToString("N2")</td>
-                            <td class="text-end">@p.CNManoObra?.ToString("N2")</td>
-                            <td class="text-end">@p.DescManoObra?.ToString("N2")</td>
-                        </tr>
-                        <tr>
-                            <td>Factura</td>
-                            <td class="text-end">@p.CBFactura?.ToString("N2")</td>
-                            <td class="text-end">@p.CNFactura?.ToString("N2")</td>
-                            <td class="text-end">@p.DescFactura?.ToString("N2")</td>
-                        </tr>
-                        <tr class="table-secondary">
-                            <td><strong>TC Costo</strong></td>
-                            <td class="text-end" colspan="3">@p.TCCosto?.ToString("N4")</td>
+                            <td class="text-end">@(p.DescPieza?.ToString("N2"))%</td>
+                            <td class="text-end">@p.CostoBrutoMN?.ToString("N2")</td>
+                            <td class="text-end">@p.CostoMN?.ToString("N2")</td>
+                            <td class="text-end">@p.TCCosto?.ToString("N4")</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
+            @if (fa != null)
+            {
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <strong>Factura actual:</strong> @fa.FolioFactura
+                        — @fa.RazonSocialProveedor
+                        — @fa.FechaFactura?.ToString("dd/MM/yyyy")
+                    </small>
+                </div>
+            }
         </div>
     </div>
 
-    <!-- Formulario de Actualización -->
-    <div class="card mb-4">
+    <!-- Sección Factura -->
+    <div class="card mb-3">
+        <div class="card-header bg-secondary text-white">
+            <i class="fa-solid fa-file-invoice me-2"></i>Factura
+        </div>
+        <div class="card-body">
+            <div class="row g-2 align-items-end mb-3">
+                <div class="col-md-5">
+                    <label class="form-label form-label-sm"><small>Folio Factura</small></label>
+                    <input type="text" id="folioFactura" class="form-control form-control-sm"
+                           placeholder="Ingrese folio..." />
+                </div>
+                <div class="col-md-3">
+                    <button type="button" id="btnBuscarFactura" class="btn btn-secondary btn-sm w-100">
+                        <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar Factura
+                    </button>
+                </div>
+            </div>
+
+            <!-- Factura encontrada -->
+            <div id="facturaInfo" class="alert alert-success d-none mb-0">
+                <i class="fa-solid fa-check me-1"></i>
+                <strong>Factura:</strong> <span id="facturaFolio"></span> —
+                <span id="facturaRazonSocial"></span> —
+                <span id="facturaFecha"></span>
+                <input type="hidden" id="facturaIdFound" />
+            </div>
+
+            <!-- Crear factura nueva -->
+            <div id="crearFacturaPanel" class="d-none border rounded p-3 bg-light">
+                <h6 class="mb-3"><i class="fa-solid fa-plus me-1"></i>Factura no encontrada — Crear nueva</h6>
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label form-label-sm"><small>Folio</small></label>
+                        <input type="text" id="nuevaFolio" class="form-control form-control-sm bg-light" readonly />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label form-label-sm"><small>Proveedor</small></label>
+                        <input type="text" id="nuevaProveedor" class="form-control form-control-sm bg-light"
+                               value="@p.Proveedor" readonly />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label form-label-sm"><small>Razón Social</small></label>
+                        <select id="nuevaRazonSocial" class="form-select form-select-sm"></select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label form-label-sm"><small>Fecha</small></label>
+                        <input type="date" id="nuevaFecha" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" id="btnCrearFactura" class="btn btn-success btn-sm w-100">
+                            <i class="fa-solid fa-plus me-1"></i>Registrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actualizar Costos -->
+    <div class="card mb-3" id="cardCostos" style="display:none;">
         <div class="card-header bg-warning text-dark">
             <i class="fa-solid fa-pen me-2"></i>Actualizar Costos
         </div>
         <div class="card-body">
-            <form method="post" asp-page-handler="Actualizar">
-                <input type="hidden" name="CodigoBarras" value="@p.CodigoBarras" />
+            <form method="post" asp-page-handler="Guardar" id="formGuardar">
+                <input type="hidden" name="GuardarCB" value="@p.CodigoBarras" />
+                <input type="hidden" name="GuardarIdFactura" id="hdnIdFactura" />
+                <input type="hidden" name="GuardarCBPieza" id="hdnCBPieza" />
+                <input type="hidden" name="GuardarCNPieza" id="hdnCNPieza" />
+                <input type="hidden" name="GuardarDescPieza" id="hdnDescPieza" />
+                <input type="hidden" name="GuardarIdMoneda" id="hdnIdMoneda" />
+                <input type="hidden" name="GuardarTC" id="hdnTC" />
+                <input type="hidden" name="GuardarCBFactura" id="hdnCBFactura" />
+                <input type="hidden" name="GuardarCNFactura" id="hdnCNFactura" />
 
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label"><small>Factura</small></label>
-                        <select name="IdFactura" class="form-select form-select-sm">
-                            <option value="">-- Sin cambio --</option>
-                            @foreach (var f in Model.Facturas)
+                <!-- Moneda -->
+                <div class="row g-2 mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label form-label-sm"><small>Moneda</small></label>
+                        <select id="selMoneda" class="form-select form-select-sm">
+                            @foreach (var m in Model.Monedas)
                             {
-                                <option value="@f.IdFactura" selected="@(f.IdFactura.ToString() == p.IdFactura?.ToString() ? "selected" : null)">
-                                    @f.FolioFactura - @f.NombreProveedor
-                                </option>
+                                <option value="@m.IdMoneda"
+                                        data-extranjera="@m.Extranjera.ToString().ToLower()">@m.Moneda</option>
                             }
                         </select>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label"><small>Tipo de Cambio Costo</small></label>
-                        <input type="number" step="0.0001" class="form-control form-control-sm" name="TCCosto"
-                               value="@p.TCCosto" id="tcCosto" />
+                </div>
+
+                <!-- Costos de Pieza -->
+                <h6><i class="fa-solid fa-gem me-1"></i>Costos de Pieza</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label form-label-sm"><small>Costo Bruto (CBPieza)</small></label>
+                        <input type="number" step="0.01" id="txtCB" class="form-control form-control-sm" value="0" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label form-label-sm"><small>Descuento %</small></label>
+                        <input type="number" step="0.01" id="txtDesc" class="form-control form-control-sm" value="0" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label form-label-sm"><small>Costo Neto (CNPieza)</small></label>
+                        <input type="number" step="0.01" id="txtCN" class="form-control form-control-sm" value="0" />
                     </div>
                 </div>
 
-                <h6 class="mt-3">Costos de Pieza</h6>
-                <div class="row g-3 mb-3">
-                    <div class="col-md-4">
-                        <label class="form-label"><small>Bruto (Extranjero)</small></label>
-                        <input type="number" step="0.01" class="form-control form-control-sm" name="CBPieza"
-                               value="@p.CBPieza" id="cbPieza" oninput="calcularNetoPieza()" />
+                <!-- Panel Moneda Extranjera (visible solo cuando IdMoneda != 1) -->
+                <div id="panelExtranjera" class="d-none border rounded p-3 bg-light mb-3">
+                    <h6><i class="fa-solid fa-coins me-1"></i>Moneda Extranjera</h6>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-3">
+                            <label class="form-label form-label-sm"><small>Tipo de Cambio</small></label>
+                            <input type="number" step="0.0001" id="txtTC" class="form-control form-control-sm" value="1" />
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label"><small>Descuento</small></label>
-                        <input type="number" step="0.01" class="form-control form-control-sm" name="DescPieza"
-                               value="@p.DescPieza" id="descPieza" oninput="calcularNetoPieza()" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label"><small>Neto (Nacional)</small></label>
-                        <input type="number" step="0.01" class="form-control form-control-sm" name="CNPieza"
-                               value="@p.CNPieza" id="cnPieza" readonly />
-                    </div>
-                </div>
-
-                <h6 class="mt-3">Costos de Factura</h6>
-                <div class="row g-3 mb-3">
-                    <div class="col-md-4">
-                        <label class="form-label"><small>Bruto (Extranjero)</small></label>
-                        <input type="number" step="0.01" class="form-control form-control-sm" name="CBFactura"
-                               value="@p.CBFactura" id="cbFactura" oninput="calcularNetoFactura()" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label"><small>Descuento</small></label>
-                        <input type="number" step="0.01" class="form-control form-control-sm" name="DescFactura"
-                               value="@p.DescFactura" id="descFactura" oninput="calcularNetoFactura()" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label"><small>Neto (Nacional)</small></label>
-                        <input type="number" step="0.01" class="form-control form-control-sm" name="CNFactura"
-                               value="@p.CNFactura" id="cnFactura" readonly />
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-3">
+                            <label class="form-label form-label-sm"><small>CB Factura (MN)</small></label>
+                            <input type="number" step="0.01" id="txtNuevoBruto"
+                                   class="form-control form-control-sm" value="0" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label form-label-sm"><small>CN Factura (MN)</small></label>
+                            <input type="number" step="0.01" id="txtNuevoNeto"
+                                   class="form-control form-control-sm" value="0" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label form-label-sm"><small>Ant. Bruto MN</small></label>
+                            <input type="text" id="antBruto" class="form-control form-control-sm bg-light" readonly />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label form-label-sm"><small>Ant. Neto MN</small></label>
+                            <input type="text" id="antNeto" class="form-control form-control-sm bg-light" readonly />
+                        </div>
                     </div>
                 </div>
 
-                <div class="text-end mt-3">
-                    <button type="submit" class="btn btn-success btn-sm">
-                        <i class="fa-solid fa-floppy-disk me-1"></i>Guardar Cambios
+                <div class="text-end">
+                    <button type="submit" id="btnGuardar" class="btn btn-success btn-sm" disabled>
+                        <i class="fa-solid fa-floppy-disk me-1"></i>Guardar
                     </button>
                 </div>
             </form>
@@ -207,20 +268,358 @@
 
 @section Scripts {
 <script>
-    function calcularNetoPieza() {
-        var bruto = parseFloat(document.getElementById('cbPieza').value) || 0;
-        var desc = parseFloat(document.getElementById('descPieza').value) || 0;
-        var tc = parseFloat(document.getElementById('tcCosto').value) || 1;
-        var neto = (bruto - desc) * tc;
-        document.getElementById('cnPieza').value = neto.toFixed(2);
+document.addEventListener('DOMContentLoaded', function () {
+    @if (Model.Pieza == null)
+    {
+        @: return;
     }
 
-    function calcularNetoFactura() {
-        var bruto = parseFloat(document.getElementById('cbFactura').value) || 0;
-        var desc = parseFloat(document.getElementById('descFactura').value) || 0;
-        var tc = parseFloat(document.getElementById('tcCosto').value) || 1;
-        var neto = (bruto - desc) * tc;
-        document.getElementById('cnFactura').value = neto.toFixed(2);
+    // ═══════════════════════════════════════════
+    // Datos de la pieza cargada (server → JS)
+    // ═══════════════════════════════════════════
+    var pieza = {
+        codigoBarras: '@Model.Pieza!.CodigoBarras',
+        proveedor: @(Model.Pieza!.Proveedor?.ToString() ?? "0"),
+        idMoneda: @(Model.Pieza!.IdMoneda?.ToString() ?? "1"),
+        tcCosto: @(Model.Pieza!.TCCosto?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "1"),
+        cbPieza: @(Model.Pieza!.CBPieza?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "0"),
+        cnPieza: @(Model.Pieza!.CNPieza?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "0"),
+        descPieza: @(Model.Pieza!.DescPieza?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "0"),
+        costoBrutoMN: @(Model.Pieza!.CostoBrutoMN?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "0"),
+        costoMN: @(Model.Pieza!.CostoMN?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "0")
+    };
+
+    // ═══════════════════════════════════════════
+    // Elementos del DOM
+    // ═══════════════════════════════════════════
+    var folioInput     = document.getElementById('folioFactura');
+    var btnBuscar      = document.getElementById('btnBuscarFactura');
+    var facturaInfoDiv = document.getElementById('facturaInfo');
+    var crearPanel     = document.getElementById('crearFacturaPanel');
+    var cardCostos     = document.getElementById('cardCostos');
+    var selMoneda      = document.getElementById('selMoneda');
+    var txtCB          = document.getElementById('txtCB');
+    var txtDesc        = document.getElementById('txtDesc');
+    var txtCN          = document.getElementById('txtCN');
+    var txtTC          = document.getElementById('txtTC');
+    var antBruto       = document.getElementById('antBruto');
+    var antNeto        = document.getElementById('antNeto');
+    var txtNuevoBruto  = document.getElementById('txtNuevoBruto');
+    var txtNuevoNeto   = document.getElementById('txtNuevoNeto');
+    var panelExtranjera = document.getElementById('panelExtranjera');
+    var btnGuardar     = document.getElementById('btnGuardar');
+
+    // Hidden fields
+    var hdnIdFactura = document.getElementById('hdnIdFactura');
+    var hdnCBPieza   = document.getElementById('hdnCBPieza');
+    var hdnCNPieza   = document.getElementById('hdnCNPieza');
+    var hdnDescPieza = document.getElementById('hdnDescPieza');
+    var hdnIdMoneda  = document.getElementById('hdnIdMoneda');
+    var hdnTC        = document.getElementById('hdnTC');
+    var hdnCBFactura = document.getElementById('hdnCBFactura');
+    var hdnCNFactura = document.getElementById('hdnCNFactura');
+
+    function val(el) { return parseFloat(el.value) || 0; }
+    function getIdMoneda() { return parseInt(selMoneda.value) || 1; }
+    function getTC() { return getIdMoneda() === 1 ? 1 : val(txtTC); }
+
+    // ═══════════════════════════════════════════
+    // Buscar Factura (AJAX GET)
+    // ═══════════════════════════════════════════
+    function buscarFactura() {
+        var folio = folioInput.value.trim();
+        if (!folio) return;
+
+        facturaInfoDiv.classList.add('d-none');
+        crearPanel.classList.add('d-none');
+
+        fetch('?handler=BuscarFactura&folio=' + encodeURIComponent(folio) +
+              '&proveedor=' + pieza.proveedor)
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.error) { alert(data.error); return; }
+                if (data.encontrada) {
+                    mostrarFactura(data.factura);
+                } else {
+                    document.getElementById('nuevaFolio').value = folio;
+                    var sel = document.getElementById('nuevaRazonSocial');
+                    sel.innerHTML = '';
+                    (data.razonesSociales || []).forEach(function (rs) {
+                        var opt = document.createElement('option');
+                        opt.value = rs.idRazonSocialProveedor;
+                        opt.textContent = rs.razonSocialProveedor;
+                        sel.appendChild(opt);
+                    });
+                    document.getElementById('nuevaFecha').value =
+                        new Date().toISOString().split('T')[0];
+                    crearPanel.classList.remove('d-none');
+                }
+            })
+            .catch(function (err) { alert('Error: ' + err); });
     }
+
+    btnBuscar.addEventListener('click', buscarFactura);
+    folioInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); buscarFactura(); }
+    });
+
+    function mostrarFactura(f) {
+        document.getElementById('facturaFolio').textContent = f.folioFactura || '';
+        document.getElementById('facturaRazonSocial').textContent =
+            f.razonSocialProveedor || '';
+        document.getElementById('facturaFecha').textContent =
+            f.fechaFactura
+                ? new Date(f.fechaFactura).toLocaleDateString('es-MX')
+                : '';
+        document.getElementById('facturaIdFound').value = f.idFactura;
+        facturaInfoDiv.classList.remove('d-none');
+        crearPanel.classList.add('d-none');
+
+        // Activar panel de costos
+        hdnIdFactura.value = f.idFactura;
+        cardCostos.style.display = '';
+        pasarCostos();
+    }
+
+    // ═══════════════════════════════════════════
+    // Crear Factura (AJAX POST)
+    // ═══════════════════════════════════════════
+    document.getElementById('btnCrearFactura').addEventListener('click', function () {
+        var folio = document.getElementById('nuevaFolio').value;
+        var proveedor = document.getElementById('nuevaProveedor').value;
+        var razonSocial = document.getElementById('nuevaRazonSocial').value;
+        var fecha = document.getElementById('nuevaFecha').value;
+
+        if (!folio || !proveedor || !razonSocial || !fecha) {
+            alert('Complete todos los campos.');
+            return;
+        }
+
+        var formData = new FormData();
+        formData.append('NuevaFolio', folio);
+        formData.append('NuevaProveedor', proveedor);
+        formData.append('NuevaRazonSocial', razonSocial);
+        formData.append('NuevaFecha', fecha);
+
+        // Anti-forgery token from the Guardar form
+        var token = document.querySelector(
+            '#formGuardar input[name="__RequestVerificationToken"]');
+        if (token) formData.append('__RequestVerificationToken', token.value);
+
+        fetch('?handler=CrearFactura', { method: 'POST', body: formData })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.error) { alert(data.error); return; }
+                if (data.success) { mostrarFactura(data.factura); }
+            })
+            .catch(function (err) { alert('Error: ' + err); });
+    });
+
+    // ═══════════════════════════════════════════
+    // PasarCostos — replica VB6 PasarCostos()
+    // Carga los costos actuales de la pieza en
+    // los campos de edición.
+    // ═══════════════════════════════════════════
+    function pasarCostos() {
+        var idMoneda = pieza.idMoneda;
+        selMoneda.value = idMoneda;
+
+        txtDesc.value = pieza.descPieza || 0;
+        txtCB.value = pieza.cbPieza || 0;
+        txtCN.value = pieza.cnPieza || 0;
+
+        if (idMoneda == 1) {
+            // Nacional: TC=1, extranjera panel hidden
+            txtTC.value = 1;
+            panelExtranjera.classList.add('d-none');
+            antBruto.value = pieza.costoBrutoMN || 0;
+            antNeto.value = pieza.costoMN || 0;
+            txtNuevoBruto.value = pieza.costoBrutoMN || 0;
+            txtNuevoNeto.value = pieza.costoMN || 0;
+        } else {
+            // Extranjera: show TC and MN panel
+            panelExtranjera.classList.remove('d-none');
+            txtTC.value = pieza.tcCosto || 0;
+            antBruto.value = pieza.costoBrutoMN || 0;
+            antNeto.value = pieza.costoMN || 0;
+            txtNuevoBruto.value = pieza.costoBrutoMN || 0;
+            txtNuevoNeto.value = pieza.costoMN || 0;
+        }
+
+        syncHidden();
+        revisarListo();
+    }
+
+    // ═══════════════════════════════════════════
+    // Auto-cálculos (replican lógica VB6)
+    // ═══════════════════════════════════════════
+
+    // txtCB changed → calc CN from desc, then recalc MN
+    // VB6: txtCB_LostFocus
+    txtCB.addEventListener('change', function () {
+        var cb = val(txtCB);
+        var desc = val(txtDesc);
+        if (desc > 0) {
+            txtCN.value = (cb * (1 - desc / 100)).toFixed(2);
+        } else {
+            txtCN.value = cb.toFixed(2);
+        }
+        recalcMN();
+        revisarListo();
+    });
+
+    // txtDesc changed → recalc CN from CB + desc
+    txtDesc.addEventListener('change', function () {
+        var cb = val(txtCB);
+        var desc = val(txtDesc);
+        if (cb > 0 && desc > 0) {
+            txtCN.value = (cb * (1 - desc / 100)).toFixed(2);
+            recalcMN();
+        }
+        revisarListo();
+    });
+
+    // txtCN changed → calc desc from CB, or CB from desc
+    // VB6: txtCN_LostFocus
+    txtCN.addEventListener('change', function () {
+        var cb = val(txtCB);
+        var cn = val(txtCN);
+        if (cb > 0) {
+            txtDesc.value = (100 * (1 - cn / cb)).toFixed(2);
+        } else {
+            var desc = val(txtDesc);
+            if (desc > 0) {
+                txtCB.value = (cn / (1 - desc / 100)).toFixed(2);
+            } else {
+                txtCB.value = cn.toFixed(2);
+            }
+        }
+        recalcMN();
+        revisarListo();
+    });
+
+    // TC changed → recalc MN from foreign × TC
+    // VB6: TC_LostFocus
+    txtTC.addEventListener('change', function () {
+        recalcMN();
+        revisarListo();
+    });
+
+    // NuevoBruto changed (edición directa de MN bruto)
+    // VB6: txtNuevoBruto_LostFocus
+    txtNuevoBruto.addEventListener('change', function () {
+        var nb = val(txtNuevoBruto);
+        var desc = val(txtDesc);
+        if (desc > 0) {
+            txtNuevoNeto.value = (nb * (1 - desc / 100)).toFixed(2);
+        } else {
+            txtNuevoNeto.value = nb.toFixed(2);
+        }
+        syncHidden();
+        revisarListo();
+    });
+
+    // NuevoNeto changed (edición directa de MN neto)
+    // VB6: txtNuevoNeto_LostFocus
+    txtNuevoNeto.addEventListener('change', function () {
+        var nb = val(txtNuevoBruto);
+        var nn = val(txtNuevoNeto);
+        if (nb > 0) {
+            txtDesc.value = ((1 - nn / nb) * 100).toFixed(2);
+        } else {
+            var desc = val(txtDesc);
+            if (desc > 0) {
+                txtNuevoBruto.value = (nn / (1 - desc / 100)).toFixed(2);
+            } else {
+                txtNuevoBruto.value = nn.toFixed(2);
+            }
+        }
+        syncHidden();
+        revisarListo();
+    });
+
+    // Moneda selector changed
+    selMoneda.addEventListener('change', function () {
+        if (getIdMoneda() === 1) {
+            panelExtranjera.classList.add('d-none');
+            txtTC.value = 1;
+        } else {
+            panelExtranjera.classList.remove('d-none');
+        }
+        recalcMN();
+        revisarListo();
+    });
+
+    // ═══════════════════════════════════════════
+    // recalcMN — Recalcula NuevoBruto/NuevoNeto
+    // desde pieza × TC.
+    // VB6: el patrón TC * txtCB / TC * txtCN
+    // ═══════════════════════════════════════════
+    function recalcMN() {
+        var tc = getTC();
+        var cb = val(txtCB);
+        var cn = val(txtCN);
+        if (cb > 0) {
+            txtNuevoBruto.value = (tc * cb).toFixed(2);
+            txtNuevoNeto.value = (tc * cn).toFixed(2);
+        }
+        syncHidden();
+    }
+
+    // ═══════════════════════════════════════════
+    // syncHidden — Sincroniza hidden fields para
+    // el POST de Guardar.
+    // ═══════════════════════════════════════════
+    function syncHidden() {
+        hdnCBPieza.value   = val(txtCB);
+        hdnCNPieza.value   = val(txtCN);
+        hdnDescPieza.value = val(txtDesc);
+        hdnIdMoneda.value  = getIdMoneda();
+        hdnTC.value        = getTC();
+
+        if (getIdMoneda() === 1) {
+            // Nacional: CBFactura = CB, CNFactura = CN (TC=1)
+            hdnCBFactura.value = val(txtCB);
+            hdnCNFactura.value = val(txtCN);
+        } else {
+            // Extranjera: CBFactura = NuevoBruto (MN), CNFactura = NuevoNeto (MN)
+            hdnCBFactura.value = val(txtNuevoBruto);
+            hdnCNFactura.value = val(txtNuevoNeto);
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // revisarListo — Habilita/deshabilita Guardar.
+    // VB6: REVISARLISTO()
+    // ═══════════════════════════════════════════
+    function revisarListo() {
+        syncHidden();
+        var brutoFinal, netoFinal;
+        if (getIdMoneda() === 1) {
+            brutoFinal = val(txtCB);
+            netoFinal  = val(txtCN);
+        } else {
+            brutoFinal = val(txtNuevoBruto);
+            netoFinal  = val(txtNuevoNeto);
+        }
+        btnGuardar.disabled = !(brutoFinal > 0 && netoFinal > 0 && hdnIdFactura.value);
+    }
+
+    // ═══════════════════════════════════════════
+    // Auto-load: si la pieza ya tiene factura
+    // ═══════════════════════════════════════════
+    @if (Model.FacturaActual != null)
+    {
+        var f = Model.FacturaActual;
+        <text>
+        mostrarFactura({
+            idFactura: @f.IdFactura,
+            folioFactura: '@Html.Raw(f.FolioFactura?.Replace("'", "\\'") ?? "")',
+            razonSocialProveedor: '@Html.Raw(f.RazonSocialProveedor?.Replace("'", "\\'") ?? "")',
+            fechaFactura: '@(f.FechaFactura?.ToString("yyyy-MM-ddTHH:mm:ss") ?? "")'
+        });
+        </text>
+    }
+});
 </script>
 }
