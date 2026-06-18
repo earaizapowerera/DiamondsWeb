@@ -1,0 +1,441 @@
+@page
+@model DiamondsWeb.Pages.Procesos.ActualizacionCostoIndividual.IndexModel
+@{
+    ViewData["Title"] = "Actualización de Costos Individual";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="fa-solid fa-check-circle me-2"></i>@TempData["Success"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+@if (TempData["Warning"] != null)
+{
+<div class="alert alert-warning alert-dismissible fade show">
+    <i class="fa-solid fa-triangle-exclamation me-2"></i>@TempData["Warning"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- PASO 1: Búsqueda de Piezas (F6 en VB6)    -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="card mb-3">
+    <div class="card-header bg-primary text-white py-2">
+        <i class="fa-solid fa-magnifying-glass me-2"></i>Buscar Piezas
+    </div>
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label mb-0"><small>Código de barras, descripción o remisión</small></label>
+                <input type="text" class="form-control form-control-sm" name="Buscar"
+                       value="@Model.Buscar" placeholder="Buscar..." autofocus
+                       id="txtBuscar" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-search me-1"></i>Buscar
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="/Procesos/ActualizacionCostoIndividual" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fa-solid fa-eraser me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- PASO 2: Lista de piezas encontradas (LV)   -->
+<!-- ═══════════════════════════════════════════ -->
+@if (Model.Piezas.Count > 0)
+{
+<div class="card mb-3">
+    <div class="card-header bg-secondary text-white py-2">
+        <i class="fa-solid fa-list me-2"></i>Piezas encontradas (@Model.Piezas.Count)
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-hover table-sm table-striped mb-0">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th>Remisión</th>
+                        <th>Proveedor</th>
+                        <th class="text-end">CB Pieza</th>
+                        <th class="text-end">CN Pieza</th>
+                        <th>Moneda</th>
+                        <th class="text-end">TC</th>
+                        <th>Factura</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.Piezas)
+                    {
+                        var isSelected = p.CodigoBarras == Model.CodigoBarrasSeleccionado;
+                        <tr class="@(isSelected ? "table-active" : "")" style="cursor:pointer;"
+                            onclick="seleccionarPieza('@p.CodigoBarras')">
+                            <td><code>@p.CodigoBarras</code></td>
+                            <td>@p.Descripcion</td>
+                            <td>@p.Remision</td>
+                            <td>@p.Proveedor</td>
+                            <td class="text-end">@p.CBPieza?.ToString("N2")</td>
+                            <td class="text-end">@p.CNPieza?.ToString("N2")</td>
+                            <td>@(p.IdMoneda == 1 ? "MN" : p.IdMoneda?.ToString())</td>
+                            <td class="text-end">@p.TCCosto?.ToString("N4")</td>
+                            <td>@p.IdFactura</td>
+                            <td>
+                                <a href="/Procesos/ActualizacionCostoIndividual?Buscar=@Model.Buscar&CodigoBarrasSeleccionado=@p.CodigoBarras"
+                                   class="btn btn-sm @(isSelected ? "btn-primary" : "btn-outline-primary") py-0">
+                                    <i class="fa-solid fa-hand-pointer"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+}
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- PASO 3: Factura + Costos (frameActualizacion) -->
+<!-- ═══════════════════════════════════════════ -->
+@if (Model.PiezaSeleccionada != null)
+{
+    var pieza = Model.PiezaSeleccionada;
+
+    <div class="card mb-3">
+        <div class="card-header bg-info text-white py-2">
+            <i class="fa-solid fa-barcode me-2"></i>Pieza: <strong>@pieza.CodigoBarras</strong>
+            — @pieza.Descripcion
+            <span class="float-end badge bg-light text-dark">
+                Proveedor: @pieza.Proveedor
+            </span>
+        </div>
+        <div class="card-body">
+
+            <!-- Sección de Factura -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <form method="get" id="formBuscarFactura">
+                        <input type="hidden" name="Buscar" value="@Model.Buscar" />
+                        <input type="hidden" name="CodigoBarrasSeleccionado" value="@pieza.CodigoBarras" />
+                        <label class="form-label mb-0"><small>Folio Factura</small></label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control" name="FolioFactura"
+                                   value="@Model.FolioFactura" placeholder="Ingrese folio..."
+                                   id="txtFolioFactura" />
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="fa-solid fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                @if (Model.FacturaEncontrada != null)
+                {
+                    <div class="col-md-4">
+                        <label class="form-label mb-0"><small>ID Factura</small></label>
+                        <input type="text" class="form-control form-control-sm" readonly
+                               value="@Model.FacturaEncontrada.IdFactura" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label mb-0"><small>Razón Social</small></label>
+                        <input type="text" class="form-control form-control-sm" readonly
+                               value="@Model.FacturaEncontrada.RazonSocialProveedor" />
+                    </div>
+                }
+            </div>
+
+            <!-- ═══ Formulario de Alta de Factura (si no existe) ═══ -->
+            @if (Model.MostrarFormFactura)
+            {
+                <div class="card border-warning mb-3">
+                    <div class="card-header bg-warning text-dark py-2">
+                        <i class="fa-solid fa-plus me-2"></i>Registrar Nueva Factura
+                        <small class="text-muted">(No se encontró factura "@Model.FolioFactura" para proveedor @pieza.Proveedor)</small>
+                    </div>
+                    <div class="card-body py-2">
+                        <form method="post" asp-page-handler="CrearFactura">
+                            <input type="hidden" name="codigoBarras" value="@pieza.CodigoBarras" />
+                            <input type="hidden" name="buscar" value="@Model.Buscar" />
+                            <input type="hidden" name="folioFactura" value="@Model.FolioFactura" />
+                            <input type="hidden" name="proveedor" value="@pieza.Proveedor" />
+
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-3">
+                                    <label class="form-label mb-0"><small>Folio</small></label>
+                                    <input type="text" class="form-control form-control-sm" readonly
+                                           value="@Model.FolioFactura" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label mb-0"><small>Fecha Factura</small></label>
+                                    <input type="date" class="form-control form-control-sm"
+                                           name="fechaFactura" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" required />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label mb-0"><small>Razón Social</small></label>
+                                    <select name="idRazonSocial" class="form-select form-select-sm" id="selRazonSocial" required>
+                                        <option value="">-- Seleccione --</option>
+                                        @foreach (var rs in Model.RazonesSociales)
+                                        {
+                                            <option value="@rs.IdRazonSocialProveedor">
+                                                @rs.RazonSocialProveedor
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-warning btn-sm w-100">
+                                        <i class="fa-solid fa-floppy-disk me-1"></i>Registrar
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            }
+
+            <!-- ═══ Formulario de Actualización de Costos ═══ -->
+            @if (Model.FacturaEncontrada != null)
+            {
+                var esExtranjera = pieza.IdMoneda.HasValue && pieza.IdMoneda.Value != 1;
+                var tc = pieza.TCCosto ?? (esExtranjera ? 0m : 1m);
+
+                <form method="post" asp-page-handler="Guardar" id="formGuardar">
+                    <input type="hidden" name="codigoBarras" value="@pieza.CodigoBarras" />
+                    <input type="hidden" name="buscar" value="@Model.Buscar" />
+                    <input type="hidden" name="idFactura" value="@Model.FacturaEncontrada.IdFactura" />
+
+                    <h6 class="mb-2"><i class="fa-solid fa-coins me-2"></i>Costos de la Pieza</h6>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-3">
+                            <label class="form-label mb-0"><small>Moneda</small></label>
+                            <select name="idMoneda" class="form-select form-select-sm"
+                                    id="selMoneda" onchange="cambiarMoneda()">
+                                @foreach (var m in Model.Monedas)
+                                {
+                                    <option value="@m.IdMoneda"
+                                            data-extranjera="@m.Extranjera.ToString().ToLower()"
+                                            selected="@(m.IdMoneda == pieza.IdMoneda ? "selected" : null)">
+                                        @m.Moneda
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3" id="divTC">
+                            <label class="form-label mb-0"><small>Tipo de Cambio</small></label>
+                            <input type="number" step="0.0001" class="form-control form-control-sm"
+                                   name="tcCosto" id="txtTC" value="@tc" oninput="recalcular()" />
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-3">
+                            <label class="form-label mb-0"><small>CB Pieza (Costo Bruto)</small></label>
+                            <input type="number" step="0.01" class="form-control form-control-sm"
+                                   name="cbPieza" id="txtCB" value="@pieza.CBPieza" oninput="calcularDesdeCB()" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label mb-0"><small>Descuento %</small></label>
+                            <input type="number" step="0.01" class="form-control form-control-sm"
+                                   id="txtDesc" value="@pieza.DescPieza" oninput="calcularDesdeDesc()" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label mb-0"><small>CN Pieza (Costo Neto)</small></label>
+                            <input type="number" step="0.01" class="form-control form-control-sm"
+                                   name="cnPieza" id="txtCN" value="@pieza.CNPieza" oninput="calcularDesdeCN()" />
+                        </div>
+                    </div>
+
+                    <!-- Costos en Moneda Nacional (cbfactura / cnfactura) -->
+                    <div id="divExtranjera">
+                        <h6 class="mb-2 mt-3"><i class="fa-solid fa-money-bill-wave me-2"></i>Costos Moneda Nacional</h6>
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-3">
+                                <label class="form-label mb-0"><small>CB Factura (Bruto MN)</small></label>
+                                <input type="number" step="0.01" class="form-control form-control-sm"
+                                       name="cbFactura" id="txtCBFactura"
+                                       value="@(pieza.CostoBrutoMN ?? 0)" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-0"><small>Desc. Factura %</small></label>
+                                <input type="number" step="0.01" class="form-control form-control-sm"
+                                       name="descFactura" id="txtDescFactura"
+                                       value="@(pieza.CostoMN.HasValue && pieza.CostoBrutoMN.HasValue && pieza.CostoBrutoMN > 0
+                                           ? (100m * (1m - (pieza.CostoMN.Value / pieza.CostoBrutoMN.Value))).ToString("N2")
+                                           : "0")"
+                                       readonly />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-0"><small>CN Factura (Neto MN)</small></label>
+                                <input type="number" step="0.01" class="form-control form-control-sm"
+                                       name="cnFactura" id="txtCNFactura"
+                                       value="@(pieza.CostoMN ?? 0)" />
+                            </div>
+                        </div>
+
+                        @if (esExtranjera)
+                        {
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-3">
+                                    <label class="form-label mb-0 text-muted"><small>Ant. Bruto MN</small></label>
+                                    <input type="text" class="form-control form-control-sm bg-light" readonly
+                                           value="@pieza.CostoBrutoMN?.ToString("N2")" />
+                                </div>
+                                <div class="col-md-3 offset-md-3">
+                                    <label class="form-label mb-0 text-muted"><small>Ant. Neto MN</small></label>
+                                    <input type="text" class="form-control form-control-sm bg-light" readonly
+                                           value="@pieza.CostoMN?.ToString("N2")" />
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="text-end mt-3">
+                        <button type="submit" class="btn btn-success btn-sm" id="btnGuardar">
+                            <i class="fa-solid fa-floppy-disk me-1"></i>Guardar Costos
+                        </button>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+    // ═══════════════════════════════════════════════
+    // Seleccionar pieza desde la tabla
+    // ═══════════════════════════════════════════════
+    function seleccionarPieza(codigoBarras) {
+        var buscar = '@(Model.Buscar ?? "")';
+        window.location.href = '/Procesos/ActualizacionCostoIndividual?Buscar=' +
+            encodeURIComponent(buscar) + '&CodigoBarrasSeleccionado=' + encodeURIComponent(codigoBarras);
+    }
+
+    // ═══════════════════════════════════════════════
+    // Lógica de cálculo de costos (replica VB6)
+    // ═══════════════════════════════════════════════
+    function getVal(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
+    function setVal(id, v) { var el = document.getElementById(id); if (el) el.value = v.toFixed(2); }
+
+    // CB → CN con descuento; luego recalcular MN con TC
+    function calcularDesdeCP() {
+        var cb = getVal('txtCB');
+        var desc = getVal('txtDesc');
+        var cn = desc > 0 ? cb * (1 - desc / 100) : cb;
+        setVal('txtCN', cn);
+        recalcularMN();
+    }
+
+    // Alias para compatibilidad
+    function calcularDesdeCB() { calcularDesdeCP(); }
+
+    // Descuento cambió → recalcular CN
+    function calcularDesdeDesc() {
+        var cb = getVal('txtCB');
+        var desc = getVal('txtDesc');
+        if (cb > 0) {
+            var cn = cb * (1 - desc / 100);
+            setVal('txtCN', cn);
+        }
+        recalcularMN();
+    }
+
+    // CN cambió → recalcular descuento
+    function calcularDesdeCN() {
+        var cb = getVal('txtCB');
+        var cn = getVal('txtCN');
+        if (cb > 0) {
+            var desc = 100 * (1 - cn / cb);
+            setVal('txtDesc', desc);
+        } else {
+            setVal('txtCB', cn);
+        }
+        recalcularMN();
+    }
+
+    // Recalcular costos en MN usando TC
+    function recalcular() { recalcularMN(); }
+
+    function recalcularMN() {
+        var tc = getVal('txtTC');
+        var cb = getVal('txtCB');
+        var cn = getVal('txtCN');
+
+        if (tc > 0 && cb > 0) {
+            setVal('txtCBFactura', tc * cb);
+            setVal('txtCNFactura', tc * cn);
+            // Descuento factura = 100 * (1 - neto/bruto)
+            var cbf = tc * cb;
+            var cnf = tc * cn;
+            if (cbf > 0) {
+                setVal('txtDescFactura', 100 * (1 - cnf / cbf));
+            }
+        }
+        validarGuardar();
+    }
+
+    // Cambiar moneda → mostrar/ocultar TC
+    function cambiarMoneda() {
+        var sel = document.getElementById('selMoneda');
+        var opt = sel.options[sel.selectedIndex];
+        var esExtranjera = opt.getAttribute('data-extranjera') === 'true';
+        var divTC = document.getElementById('divTC');
+
+        if (!esExtranjera) {
+            document.getElementById('txtTC').value = '1';
+            recalcularMN();
+        }
+    }
+
+    // Habilitar guardar solo si hay costos válidos
+    function validarGuardar() {
+        var cbf = getVal('txtCBFactura');
+        var cnf = getVal('txtCNFactura');
+        var btn = document.getElementById('btnGuardar');
+        if (btn) {
+            btn.disabled = (cbf === 0 && cnf === 0);
+        }
+    }
+
+    // Inicializar TomSelect en dropdowns con más de 5 opciones
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof TomSelect !== 'undefined') {
+            var selMoneda = document.getElementById('selMoneda');
+            if (selMoneda && selMoneda.options.length > 5) {
+                new TomSelect(selMoneda, { allowEmptyOption: true });
+            }
+            var selRS = document.getElementById('selRazonSocial');
+            if (selRS && selRS.options.length > 5) {
+                new TomSelect(selRS, { allowEmptyOption: true });
+            }
+        }
+        validarGuardar();
+    });
+
+    // Atajos de teclado (como VB6: F6 = buscar, Enter en folio = buscar factura)
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F6') {
+            e.preventDefault();
+            document.getElementById('txtBuscar')?.focus();
+        }
+    });
+</script>
+}

@@ -244,16 +244,22 @@ public class RemisionService
 
         var sql = @"
             SELECT TOP 50
-                CodigoBarras,
-                Obs2,
-                CBTotal,
-                CNTotal,
-                TCCosto,
-                CBTotal * ISNULL(TCCosto, 1) AS Bruto,
-                CNTotal * ISNULL(TCCosto, 1) AS Neto
-            FROM PIEZAS
-            WHERE IdRemision = @IdRemision
-            ORDER BY CodigoBarras";
+                p.CodigoBarras,
+                p.Obs2,
+                p.Descripcion,
+                g.NombreGrupo,
+                p.Precio,
+                p.Peso,
+                p.Quilates AS Kilates,
+                p.CBTotal,
+                p.CNTotal,
+                p.TCCosto,
+                p.CBTotal * ISNULL(p.TCCosto, 1) AS Bruto,
+                p.CNTotal * ISNULL(p.TCCosto, 1) AS Neto
+            FROM PIEZAS p
+            LEFT JOIN GRUPOS g ON g.Grupo = p.Grupo
+            WHERE p.IdRemision = @IdRemision
+            ORDER BY p.CodigoBarras";
 
         var result = await conn.QueryAsync<PiezaRemision>(sql, new { IdRemision = idRemision });
         return result.ToList();

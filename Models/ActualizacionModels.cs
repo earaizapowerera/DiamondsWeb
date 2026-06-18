@@ -34,6 +34,7 @@ public class FacturaBusqueda
     public DateTime? FechaUltEdicion { get; set; }
     public int? IdUsuario { get; set; }
     public string? RazonSocialProveedor { get; set; }
+    public string? NombreProveedor { get; set; }
     public int? IdRazonSocialProveedor { get; set; }
     public int? Proveedor { get; set; }
     public int? IdTienda { get; set; }

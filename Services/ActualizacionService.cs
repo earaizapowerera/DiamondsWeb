@@ -68,10 +68,12 @@ public class ActualizacionService
         return await conn.QueryFirstOrDefaultAsync<FacturaBusqueda>(@"
             SELECT f.IdFactura, f.FolioFactura, f.FechaFactura,
                    f.FechaCaptura, f.FechaUltEdicion, f.IdUsuario,
-                   rsp.RazonSocialProveedor, f.IdRazonSocialProveedor, f.Proveedor
+                   rsp.RazonSocialProveedor, p.NombreProveedor,
+                   f.IdRazonSocialProveedor, f.Proveedor
             FROM facturas f
             INNER JOIN razones_sociales_proveedores rsp
                 ON rsp.IdRazonSocialProveedor = f.IdRazonSocialProveedor
+            LEFT JOIN proveedores p ON p.Proveedor = f.Proveedor
             WHERE f.IdFactura = @Id",
             new { Id = idFactura });
     }
