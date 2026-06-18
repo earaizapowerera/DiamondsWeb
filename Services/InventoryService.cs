@@ -267,6 +267,221 @@ public class InventoryService
     }
 
     // ══════════════════════════════════════════════
+    // ELIMINACION DE PIEZAS (con permisos y bitacora)
+    // Reglas de negocio migradas de frmSencillas.frm VB6:
+    // 1. Ventana de 2 horas desde FechaCaptura = exento de permisos
+    // 2. Si etiqueta impresa = siempre requiere permisos (sin importar tiempo)
+    // 3. PermisoUsuarios=1 en tabla usuarios = puede eliminar siempre
+    // 4. PermisoUsuarios=0 = requiere autorizacion previa (tabla permisocancelar)
+    // 5. Bitacora completa en piezascanceladas con FechaBorrado e IdUsuarioBorrado
+    // ══════════════════════════════════════════════
+
+    /// <summary>
+    /// Verifica si el usuario tiene permiso para eliminar la pieza y la elimina si procede.
+    /// Replica la logica de EliminarPieza() del VB6.
+    /// </summary>
+    public async Task<EliminarPiezaResult> EliminarPiezaConPermisosAsync(string codigoBarras, int idUsuario)
+    {
+        using var conn = CreateConnection();
+        conn.Open();
+        using var tx = ((SqlConnection)conn).BeginTransaction();
+
+        try
+        {
+            // 1. Verificar que la pieza existe
+            var pieza = await conn.QueryFirstOrDefaultAsync<Pieza>(
+                "SELECT TOP 1 CodigoBarras, FechaCaptura FROM piezas WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+
+            if (pieza == null)
+                return new EliminarPiezaResult { Denegado = true, Mensaje = "La pieza no existe." };
+
+            // 2. Verificar si la etiqueta ya fue impresa
+            var etiquetaImpresa = await conn.QueryFirstOrDefaultAsync<int?>(
+                "SELECT TOP 1 1 FROM etiquetasimpresas WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+
+            // 3. Verificar ventana de 2 horas (solo si etiqueta NO fue impresa)
+            var dentroDeVentana = false;
+            if (etiquetaImpresa == null && pieza.FechaCaptura.HasValue)
+            {
+                var horasTranscurridas = (DateTime.UtcNow - pieza.FechaCaptura.Value).TotalHours;
+                dentroDeVentana = horasTranscurridas < 2;
+            }
+
+            // 4. Si no esta dentro de ventana, verificar permisos del usuario
+            if (!dentroDeVentana)
+            {
+                var permisoUsuario = await conn.QueryFirstOrDefaultAsync<bool?>(
+                    "SELECT TOP 1 PermisoUsuarios FROM usuarios WHERE IdUsuario = @Id",
+                    new { Id = idUsuario }, tx);
+
+                if (permisoUsuario != true)
+                {
+                    // Verificar si existe autorizacion previa en permisocancelar
+                    var autorizado = await conn.QueryFirstOrDefaultAsync<int?>(
+                        "SELECT TOP 1 1 FROM permisocancelar WHERE CodigoBarras = @CB",
+                        new { CB = codigoBarras }, tx);
+
+                    if (autorizado == null)
+                    {
+                        tx.Rollback();
+                        return new EliminarPiezaResult
+                        {
+                            Denegado = true,
+                            Mensaje = etiquetaImpresa != null
+                                ? "La etiqueta ya fue impresa. Se requiere autorizacion especial para eliminar esta pieza."
+                                : "Han pasado mas de 2 horas desde la captura. Se requiere autorizacion especial para eliminar esta pieza."
+                        };
+                    }
+                }
+            }
+
+            // 5. Proceder con eliminacion — copiar a bitacora
+            await conn.ExecuteAsync(@"
+                INSERT INTO piezascanceladas
+                    (CodigoBarras, Descripcion, IdRemision, IdFactura, IdGrupo,
+                     CBPieza, DescPieza, CNPieza, Peso, PrecioGramo, CBPeso, DescPeso, CNPeso,
+                     CBManoObra, DescManoObra, CNManoObra, DescripcionManoObra,
+                     CBTotal, CNTotal, CBFactura, DescFactura, CNFactura,
+                     IdMoneda, TCCotizacion, TCCosto, Utilidad, UtilidadExtra, Impuesto, Divisor, Precio,
+                     Kilates, Modelo, Linea, Quilates, Color, Pureza, Corte,
+                     NumSerie, Obs1, Obs2, FechaCaptura, IdUsuario, FechaUltEdicion,
+                     IdDivisor, IdTienda, IdLocalizacion, ArchivoFoto, Faltante, IdStatus, CBPadre,
+                     FechaBorrado, IdUsuarioBorrado)
+                SELECT CodigoBarras, Descripcion, IdRemision, IdFactura, IdGrupo,
+                     CBPieza, DescPieza, CNPieza, Peso, PrecioGramo, CBPeso, DescPeso, CNPeso,
+                     CBManoObra, DescManoObra, CNManoObra, DescripcionManoObra,
+                     CBTotal, CNTotal, CBFactura, DescFactura, CNFactura,
+                     IdMoneda, TCCotizacion, TCCosto, Utilidad, UtilidadExtra, Impuesto, Divisor, Precio,
+                     Kilates, Modelo, Linea, Quilates, Color, Pureza, Corte,
+                     NumSerie, Obs1, Obs2, FechaCaptura, IdUsuario, FechaUltEdicion,
+                     IdDivisor, IdTienda, IdLocalizacion, ArchivoFoto, Faltante, IdStatus, CBPadre,
+                     GETUTCDATE(), @UserId
+                FROM piezas WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras, UserId = idUsuario }, tx);
+
+            // 6. Eliminar registros relacionados
+            await conn.ExecuteAsync(
+                "DELETE FROM observaciones WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+
+            // Eliminar etiqueta solo si no hay otras piezas con el mismo codigo
+            var otrasPiezas = await conn.QueryFirstOrDefaultAsync<int>(
+                "SELECT TOP 1 COUNT(*) FROM piezas WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+            if (otrasPiezas <= 1)
+            {
+                await conn.ExecuteAsync(
+                    "DELETE FROM etiquetas WHERE CodigoBarras = @CB",
+                    new { CB = codigoBarras }, tx);
+            }
+
+            // Limpiar autorizacion usada
+            await conn.ExecuteAsync(
+                "DELETE FROM permisocancelar WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+
+            // 7. Eliminar la pieza
+            await conn.ExecuteAsync(
+                "DELETE FROM piezas WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+
+            tx.Commit();
+            _logger.LogInformation("Pieza eliminada con bitacora: {CB} por usuario {User} (dentroVentana={V})",
+                codigoBarras, idUsuario, dentroDeVentana);
+
+            return new EliminarPiezaResult
+            {
+                Success = true,
+                Mensaje = "Pieza eliminada exitosamente y registrada en bitacora."
+            };
+        }
+        catch (Exception ex)
+        {
+            tx.Rollback();
+            _logger.LogError(ex, "Error al eliminar pieza {CB}", codigoBarras);
+            return new EliminarPiezaResult { Mensaje = $"Error interno: {ex.Message}" };
+        }
+    }
+
+    /// <summary>
+    /// Verifica si el usuario puede eliminar una pieza sin ejecutar la eliminacion.
+    /// Util para mostrar/ocultar el boton de eliminar en la UI.
+    /// </summary>
+    public async Task<(bool Permitido, string Razon)> VerificarPermisoEliminacionAsync(string codigoBarras, int idUsuario)
+    {
+        using var conn = CreateConnection();
+
+        var pieza = await conn.QueryFirstOrDefaultAsync<Pieza>(
+            "SELECT TOP 1 CodigoBarras, FechaCaptura FROM piezas WHERE CodigoBarras = @CB",
+            new { CB = codigoBarras });
+        if (pieza == null) return (false, "Pieza no existe");
+
+        // Etiqueta impresa?
+        var etiquetaImpresa = await conn.QueryFirstOrDefaultAsync<int?>(
+            "SELECT TOP 1 1 FROM etiquetasimpresas WHERE CodigoBarras = @CB",
+            new { CB = codigoBarras });
+
+        // Ventana de 2 horas
+        if (etiquetaImpresa == null && pieza.FechaCaptura.HasValue)
+        {
+            var horas = (DateTime.UtcNow - pieza.FechaCaptura.Value).TotalHours;
+            if (horas < 2) return (true, "Dentro de ventana de 2 horas");
+        }
+
+        // Verificar permisos
+        var permisoUsuario = await conn.QueryFirstOrDefaultAsync<bool?>(
+            "SELECT TOP 1 PermisoUsuarios FROM usuarios WHERE IdUsuario = @Id",
+            new { Id = idUsuario });
+        if (permisoUsuario == true) return (true, "Usuario con permisos");
+
+        // Verificar autorizacion previa
+        var autorizado = await conn.QueryFirstOrDefaultAsync<int?>(
+            "SELECT TOP 1 1 FROM permisocancelar WHERE CodigoBarras = @CB",
+            new { CB = codigoBarras });
+        if (autorizado != null) return (true, "Autorizacion previa existente");
+
+        return (false, "Requiere autorizacion especial");
+    }
+
+    /// <summary>
+    /// Obtiene la bitacora de piezas canceladas, con filtros opcionales.
+    /// </summary>
+    public async Task<List<PiezaCancelada>> ObtenerPiezasCanceladasAsync(string? buscar, DateTime? desde, DateTime? hasta)
+    {
+        using var conn = CreateConnection();
+        var where = "WHERE 1=1";
+        var p = new DynamicParameters();
+
+        if (!string.IsNullOrWhiteSpace(buscar))
+        {
+            where += " AND (pc.CodigoBarras LIKE @Buscar OR pc.Descripcion LIKE @Buscar)";
+            p.Add("Buscar", $"%{buscar}%");
+        }
+        if (desde.HasValue)
+        {
+            where += " AND pc.FechaBorrado >= @Desde";
+            p.Add("Desde", desde.Value);
+        }
+        if (hasta.HasValue)
+        {
+            where += " AND pc.FechaBorrado <= @Hasta";
+            p.Add("Hasta", hasta.Value);
+        }
+
+        var sql = $@"SELECT TOP 50
+                pc.CodigoBarras, pc.Descripcion, pc.CBTotal, pc.Precio,
+                pc.FechaCaptura, pc.FechaBorrado, pc.IdUsuarioBorrado,
+                u.Nombre AS NombreUsuarioBorrado
+            FROM piezascanceladas pc
+            LEFT JOIN usuarios u ON u.IdUsuario = pc.IdUsuarioBorrado
+            {where}
+            ORDER BY pc.FechaBorrado DESC";
+        return (await conn.QueryAsync<PiezaCancelada>(sql, p)).ToList();
+    }
+
+    // ══════════════════════════════════════════════
     // INVENTARIO FISICO
     // ══════════════════════════════════════════════
 

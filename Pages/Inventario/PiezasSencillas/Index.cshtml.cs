@@ -47,4 +47,39 @@ public class IndexModel : PageModel
             TempData["Error"] = $"Error al cargar piezas: {ex.Message}";
         }
     }
+
+    /// <summary>
+    /// Elimina una pieza aplicando reglas de negocio:
+    /// ventana de 2hrs, permisos por usuario, bitacora.
+    /// </summary>
+    public async Task<IActionResult> OnPostDeleteAsync(string codigoBarras)
+    {
+        try
+        {
+            var idUsuario = int.TryParse(User.FindFirst("IdUsuario")?.Value, out var uid) ? uid
+                : throw new UnauthorizedAccessException("IdUsuario claim not found");
+
+            var resultado = await _inventoryService.EliminarPiezaConPermisosAsync(codigoBarras, idUsuario);
+
+            if (resultado.Denegado)
+            {
+                TempData["Error"] = resultado.Mensaje;
+            }
+            else if (resultado.Success)
+            {
+                TempData["Success"] = resultado.Mensaje;
+            }
+            else
+            {
+                TempData["Error"] = resultado.Mensaje;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al eliminar pieza {CB}", codigoBarras);
+            TempData["Error"] = $"Error al eliminar pieza: {ex.Message}";
+        }
+
+        return RedirectToPage(new { Buscar, IdGrupo, Proveedor });
+    }
 }

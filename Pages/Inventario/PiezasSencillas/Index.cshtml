@@ -23,9 +23,14 @@
 <div class="card mb-4 shadow-sm">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <span><i class="fa-solid fa-ring me-2"></i>Piezas Sencillas</span>
-        <a asp-page="Detalle" class="btn btn-light btn-sm">
-            <i class="fa-solid fa-plus me-1"></i>Nueva Pieza
-        </a>
+        <div>
+            <a asp-page="/Inventario/BitacoraCancelaciones/Index" class="btn btn-outline-light btn-sm me-1">
+                <i class="fa-solid fa-ban me-1"></i>Bitacora
+            </a>
+            <a asp-page="Detalle" class="btn btn-light btn-sm">
+                <i class="fa-solid fa-plus me-1"></i>Nueva Pieza
+            </a>
+        </div>
     </div>
     <div class="card-body">
         <form method="get" class="row g-3 align-items-end mb-4">
@@ -106,10 +111,20 @@
                                 </td>
                                 <td>@p.FechaCaptura?.ToString("dd/MM/yyyy")</td>
                                 <td class="text-center">
-                                    <a asp-page="Detalle" asp-route-codigoBarras="@p.CodigoBarras"
-                                       class="btn btn-outline-primary btn-sm" title="Ver / Editar">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                    </a>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a asp-page="Detalle" asp-route-codigoBarras="@p.CodigoBarras"
+                                           class="btn btn-outline-primary" title="Ver / Editar">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-danger"
+                                                title="Eliminar pieza"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#modalEliminar"
+                                                data-codigo="@p.CodigoBarras"
+                                                data-descripcion="@p.Descripcion">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -132,3 +147,55 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de confirmacion de eliminacion -->
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalEliminarLabel">
+                    <i class="fa-solid fa-exclamation-triangle me-2"></i>Confirmar Eliminacion
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form method="post" asp-page-handler="Delete">
+                <div class="modal-body">
+                    <p>Esta a punto de eliminar la pieza:</p>
+                    <div class="alert alert-warning">
+                        <strong>Codigo:</strong> <span id="eliminar-codigo"></span><br />
+                        <strong>Descripcion:</strong> <span id="eliminar-descripcion"></span>
+                    </div>
+                    <p class="text-muted small mb-0">
+                        <i class="fa-solid fa-info-circle me-1"></i>
+                        La pieza sera movida a la bitacora de cancelaciones. Esta accion no se puede deshacer.
+                    </p>
+                    <input type="hidden" name="codigoBarras" id="eliminar-codigoBarras" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa-solid fa-trash me-1"></i>Eliminar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Pasar datos de la pieza al modal de eliminacion
+    var modalEliminar = document.getElementById('modalEliminar');
+    if (modalEliminar) {
+        modalEliminar.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var codigo = button.getAttribute('data-codigo');
+            var descripcion = button.getAttribute('data-descripcion');
+
+            document.getElementById('eliminar-codigo').textContent = codigo;
+            document.getElementById('eliminar-descripcion').textContent = descripcion;
+            document.getElementById('eliminar-codigoBarras').value = codigo;
+        });
+    }
+</script>
+}

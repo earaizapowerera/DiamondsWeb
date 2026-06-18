@@ -198,3 +198,29 @@ public class GuardarPiezaResult
     public string? CodigoBarras { get; set; }
     public string? Error { get; set; }
 }
+
+/// <summary>
+/// Resultado de intento de eliminacion de pieza.
+/// Encapsula la logica de permisos (ventana 2hrs, etiqueta impresa, PermisoUsuarios).
+/// </summary>
+public class EliminarPiezaResult
+{
+    public bool Success { get; set; }
+    public bool Denegado { get; set; }
+    public string Mensaje { get; set; } = "";
+}
+
+/// <summary>
+/// Registro de pieza cancelada (bitacora) para consulta.
+/// </summary>
+public class PiezaCancelada
+{
+    public string CodigoBarras { get; set; } = "";
+    public string? Descripcion { get; set; }
+    public decimal? CBTotal { get; set; }
+    public decimal? Precio { get; set; }
+    public DateTime? FechaCaptura { get; set; }
+    public DateTime? FechaBorrado { get; set; }
+    public int? IdUsuarioBorrado { get; set; }
+    public string? NombreUsuarioBorrado { get; set; }
+}
