@@ -1,3 +1,4 @@
+using DiamondsWeb.Extensions;
 using DiamondsWeb.Models;
 using DiamondsWeb.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -123,7 +124,6 @@ public class IndexModel : PageModel
 
     private int GetUsuarioId()
     {
-        var claim = User.FindFirst("IdUsuario")?.Value;
-        return int.TryParse(claim, out var id) ? id : 1;
+        return User.GetRequiredIdUsuario();
     }
 }
