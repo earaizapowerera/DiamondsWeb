@@ -181,6 +181,15 @@ public class FotoService
             new { CB = codigoBarras, SF = storedFileName });
     }
 
+    // ==================== RUTA FISICA ====================
+
+    /// <summary>
+    /// Devuelve la ruta fisica completa de un archivo de foto.
+    /// Util para leer bytes (ej: enviar al LLM para vision).
+    /// </summary>
+    public string ObtenerRutaFisica(string storedFileName)
+        => Path.Combine(_fotosPath, storedFileName);
+
     // ==================== ELIMINAR ====================
 
     /// <summary>

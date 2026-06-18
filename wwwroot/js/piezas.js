@@ -639,3 +639,137 @@ function cargarRazonesSociales(proveedorId) {
         })
         .catch(function() { sel.innerHTML = '<option value="0">--</option>'; });
 }
+
+// ==================== DESCRIPCION INTELIGENTE (IA) ====================
+
+/**
+ * Llama al endpoint de mejora de descripcion via Claude.
+ * Recopila datos del formulario y envia por AJAX.
+ * Si hay foto seleccionada, envia su referencia para vision.
+ */
+function mejorarDescripcionIA() {
+    var descripcion = document.getElementById('txtDescripcion');
+    if (!descripcion || !descripcion.value.trim()) {
+        alert('Escribe una descripcion antes de mejorarla con IA.');
+        descripcion && descripcion.focus();
+        return;
+    }
+
+    var btn = document.getElementById('btnMejorarIA');
+    var icon = document.getElementById('iconMejorarIA');
+    if (btn) btn.disabled = true;
+    if (icon) {
+        icon.className = 'fa-solid fa-spinner fa-spin';
+    }
+
+    // Determinar tab de caracteristica activa
+    var tipoCaracteristica = 'Oro';
+    var hidTab = document.getElementById('hidTabCaracteristica');
+    if (hidTab) tipoCaracteristica = hidTab.value;
+
+    // Obtener grupo seleccionado (texto)
+    var selGrupo = document.getElementById('selGrupo');
+    var grupoTexto = '';
+    if (selGrupo && selGrupo.selectedIndex >= 0) {
+        grupoTexto = selGrupo.options[selGrupo.selectedIndex].text;
+    }
+
+    // Obtener archivo de foto (si hay)
+    var archivoFoto = '';
+    var hidFoto = document.getElementById('hidArchivoFoto');
+    if (hidFoto) archivoFoto = hidFoto.value;
+
+    // Construir form data
+    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+    var formData = new FormData();
+    formData.append('descripcion', descripcion.value);
+    formData.append('grupo', grupoTexto);
+    formData.append('tipoCaracteristica', tipoCaracteristica);
+    formData.append('archivoFoto', archivoFoto);
+
+    // Campos segun tipo
+    formData.append('kilates', getFieldValue('Pieza.Kilates') || getSelectValue('selKilatesOro'));
+    formData.append('modelo', getFieldValue('Pieza.Modelo') || '');
+    formData.append('linea', getFieldValue('Pieza.Linea') || '');
+    formData.append('quilates', getFieldValue('Pieza.Quilates') || '0');
+    formData.append('color', getFieldValue('Pieza.Color') || '');
+    formData.append('pureza', getFieldValue('Pieza.Pureza') || '');
+    formData.append('corte', getFieldValue('Pieza.Corte') || '');
+    formData.append('numSerie', getFieldValue('Pieza.NumSerie') || '');
+    formData.append('obs1', getFieldValue('Pieza.Obs1') || '');
+    formData.append('obs2', getFieldValue('Pieza.Obs2') || '');
+    formData.append('descripcionManoObra', getFieldValue('Pieza.DescripcionManoObra') || '');
+    formData.append('observaciones', getFieldValue('Observaciones') || '');
+    formData.append('peso', val('peso') || '0');
+
+    if (token) formData.append('__RequestVerificationToken', token.value);
+
+    fetch('?handler=MejorarDescripcion', { method: 'POST', body: formData })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            restaurarBotonIA();
+            if (data.success) {
+                mostrarPreviewIA(data.descripcionOriginal, data.descripcionMejorada, archivoFoto);
+            } else {
+                alert('No se pudo mejorar la descripcion: ' + (data.error || 'Error desconocido'));
+            }
+        })
+        .catch(function(err) {
+            restaurarBotonIA();
+            alert('Error de conexion: ' + err.message);
+        });
+}
+
+function restaurarBotonIA() {
+    var btn = document.getElementById('btnMejorarIA');
+    var icon = document.getElementById('iconMejorarIA');
+    if (btn) btn.disabled = false;
+    if (icon) icon.className = 'fa-solid fa-wand-magic-sparkles';
+}
+
+function mostrarPreviewIA(original, mejorada, tienesFoto) {
+    var elOriginal = document.getElementById('iaDescOriginal');
+    var elMejorada = document.getElementById('iaDescMejorada');
+    var elContador = document.getElementById('iaDescContador');
+    var elFotoInfo = document.getElementById('iaFotoInfo');
+
+    if (elOriginal) elOriginal.textContent = original;
+    if (elMejorada) {
+        elMejorada.value = mejorada;
+        elMejorada.select();
+    }
+    if (elContador) elContador.textContent = mejorada.length + '/100';
+    if (elFotoInfo) {
+        elFotoInfo.classList.toggle('d-none', !tienesFoto);
+    }
+
+    var modal = new bootstrap.Modal(document.getElementById('modalDescripcionIA'));
+    modal.show();
+}
+
+function aceptarDescripcionIA() {
+    var elMejorada = document.getElementById('iaDescMejorada');
+    var txtDescripcion = document.getElementById('txtDescripcion');
+    if (elMejorada && txtDescripcion) {
+        txtDescripcion.value = elMejorada.value;
+    }
+    var modal = bootstrap.Modal.getInstance(document.getElementById('modalDescripcionIA'));
+    if (modal) modal.hide();
+}
+
+function regenerarDescripcionIA() {
+    var modal = bootstrap.Modal.getInstance(document.getElementById('modalDescripcionIA'));
+    if (modal) modal.hide();
+    mejorarDescripcionIA();
+}
+
+// Helpers para obtener valores de campos del formulario
+function getFieldValue(name) {
+    var el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+}
+
+function getSelectValue(id) {
+    var el = document.getElementById(id);
+    return el ? el.value : '';
+}
