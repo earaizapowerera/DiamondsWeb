@@ -1,0 +1,312 @@
+@page
+@model DiamondsWeb.Pages.Inventario.ConsultaRapida.IndexModel
+@{
+    ViewData["Title"] = "Consulta Rapida de Piezas";
+}
+
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+}
+
+<!-- Busqueda -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fa-solid fa-magnifying-glass me-2"></i>Consulta Rapida de Piezas (Aclaraciones)
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-8 col-lg-6">
+                <label class="form-label"><small>Codigo de Barras</small></label>
+                <input type="text" class="form-control form-control-sm" name="CodigoBarras"
+                       id="inputCodigoBarras" value="@Model.CodigoBarras"
+                       placeholder="Escanear o escribir codigo de barras..." maxlength="8" autofocus />
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fa-solid fa-search me-1"></i>Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.BusquedaRealizada && Model.Resultado != null)
+{
+    var r = Model.Resultado;
+
+    if (!r.TieneResultados)
+    {
+        <div class="alert alert-warning">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i>
+            No se encontraron registros para el codigo de barras <strong>@r.CodigoBarras</strong>.
+        </div>
+    }
+    else
+    {
+        <!-- Resumen -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card text-center @(r.Existencias.Any() ? "border-success" : "")">
+                    <div class="card-body py-2">
+                        <div class="fs-3 fw-bold @(r.Existencias.Any() ? "text-success" : "text-muted")">@r.Existencias.Count</div>
+                        <small class="text-muted">Existencias</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card text-center @(r.Vendidas.Any() ? "border-info" : "")">
+                    <div class="card-body py-2">
+                        <div class="fs-3 fw-bold @(r.Vendidas.Any() ? "text-info" : "text-muted")">@r.Vendidas.Count</div>
+                        <small class="text-muted">Vendidas</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card text-center @(r.Canceladas.Any() ? "border-warning" : "")">
+                    <div class="card-body py-2">
+                        <div class="fs-3 fw-bold @(r.Canceladas.Any() ? "text-warning" : "text-muted")">@r.Canceladas.Count</div>
+                        <small class="text-muted">Canceladas</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card text-center @(r.Devoluciones.Any() ? "border-danger" : "")">
+                    <div class="card-body py-2">
+                        <div class="fs-3 fw-bold @(r.Devoluciones.Any() ? "text-danger" : "text-muted")">@r.Devoluciones.Count</div>
+                        <small class="text-muted">Devoluciones</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid 1: Existencias -->
+        @if (r.Existencias.Any())
+        {
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white py-2">
+                <i class="fa-solid fa-boxes-stacked me-2"></i>Existencias
+                <span class="badge bg-light text-dark ms-2">@r.Existencias.Count</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped table-sm mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>CB</th>
+                                <th>Descripcion</th>
+                                <th>Grupo</th>
+                                <th>Modelo</th>
+                                <th>Linea</th>
+                                <th>Kilates</th>
+                                <th>Quilates</th>
+                                <th>Color</th>
+                                <th>Pureza</th>
+                                <th>Corte</th>
+                                <th class="text-end">Peso</th>
+                                <th class="text-end">CN Total</th>
+                                <th>Moneda</th>
+                                <th>Precio</th>
+                                <th>Serie</th>
+                                <th>Remision</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in r.Existencias)
+                            {
+                            <tr>
+                                <td><code>@p.CodigoBarras</code></td>
+                                <td>@p.Descripcion</td>
+                                <td>@p.Grupo</td>
+                                <td>@p.Modelo</td>
+                                <td>@p.Linea</td>
+                                <td>@p.Kilates</td>
+                                <td>@p.Quilates</td>
+                                <td>@p.Color</td>
+                                <td>@p.Pureza</td>
+                                <td>@p.Corte</td>
+                                <td class="text-end">@p.Peso</td>
+                                <td class="text-end">@(p.CNTotal?.ToString("N2"))</td>
+                                <td>@p.Moneda</td>
+                                <td>@p.Precio</td>
+                                <td>@p.NumSerie</td>
+                                <td>@p.Remision</td>
+                                <td class="text-nowrap">@p.FechaCaptura?.ToString("dd/MM/yyyy")</td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        }
+
+        <!-- Grid 2: Piezas Vendidas o Devueltas -->
+        @if (r.Vendidas.Any())
+        {
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white py-2">
+                <i class="fa-solid fa-cash-register me-2"></i>Piezas Vendidas o Devueltas
+                <span class="badge bg-light text-dark ms-2">@r.Vendidas.Count</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped table-sm mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>CB</th>
+                                <th>Nota</th>
+                                <th>Cliente</th>
+                                <th>Descripcion</th>
+                                <th>Modelo</th>
+                                <th>Linea</th>
+                                <th class="text-end">Peso</th>
+                                <th class="text-end">CN Total</th>
+                                <th>Precio</th>
+                                <th>Kilates</th>
+                                <th>Quilates</th>
+                                <th>Color</th>
+                                <th>Pureza</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in r.Vendidas)
+                            {
+                            <tr>
+                                <td><code>@p.CodigoBarras</code></td>
+                                <td><strong>@p.IdNota</strong></td>
+                                <td>@p.NombreCliente</td>
+                                <td>@p.Descripcion</td>
+                                <td>@p.Modelo</td>
+                                <td>@p.Linea</td>
+                                <td class="text-end">@p.Peso</td>
+                                <td class="text-end">@(p.CNTotal?.ToString("N2"))</td>
+                                <td>@p.Precio</td>
+                                <td>@p.Kilates</td>
+                                <td>@p.Quilates</td>
+                                <td>@p.Color</td>
+                                <td>@p.Pureza</td>
+                                <td class="text-nowrap">@p.FechaCaptura?.ToString("dd/MM/yyyy")</td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        }
+
+        <!-- Grid 3: Piezas Canceladas -->
+        @if (r.Canceladas.Any())
+        {
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark py-2">
+                <i class="fa-solid fa-ban me-2"></i>Piezas Canceladas
+                <span class="badge bg-dark text-white ms-2">@r.Canceladas.Count</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped table-sm mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>CB</th>
+                                <th>Descripcion</th>
+                                <th>Modelo</th>
+                                <th>Linea</th>
+                                <th class="text-end">Peso</th>
+                                <th class="text-end">CN Total</th>
+                                <th>Precio</th>
+                                <th>Kilates</th>
+                                <th>Status</th>
+                                <th>Usuario</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in r.Canceladas)
+                            {
+                            <tr>
+                                <td><code>@p.CodigoBarras</code></td>
+                                <td>@p.Descripcion</td>
+                                <td>@p.Modelo</td>
+                                <td>@p.Linea</td>
+                                <td class="text-end">@p.Peso</td>
+                                <td class="text-end">@(p.CNTotal?.ToString("N2"))</td>
+                                <td>@p.Precio</td>
+                                <td>@p.Kilates</td>
+                                <td>@p.IdStatus</td>
+                                <td>@p.IdUsuario</td>
+                                <td class="text-nowrap">@p.FechaCaptura?.ToString("dd/MM/yyyy")</td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        }
+
+        <!-- Grid 4: Devoluciones -->
+        @if (r.Devoluciones.Any())
+        {
+        <div class="card mb-4">
+            <div class="card-header bg-danger text-white py-2">
+                <i class="fa-solid fa-rotate-left me-2"></i>Devoluciones a Proveedor
+                <span class="badge bg-light text-dark ms-2">@r.Devoluciones.Count</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped table-sm mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>CB</th>
+                                <th>Motivo</th>
+                                <th>Remision</th>
+                                <th>Usuario</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var d in r.Devoluciones)
+                            {
+                            <tr>
+                                <td><code>@d.CodigoBarras</code></td>
+                                <td>@d.MotivoDevolucion</td>
+                                <td>@d.Remision</td>
+                                <td>@d.IdUsuario</td>
+                                <td class="text-nowrap">@d.FechaDevolucion?.ToString("dd/MM/yyyy")</td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        }
+    }
+}
+else if (!Model.BusquedaRealizada)
+{
+    <div class="text-center text-muted py-5">
+        <i class="fa-solid fa-barcode fa-3x mb-3 d-block"></i>
+        <p>Ingresa un codigo de barras para consultar el historial completo de la pieza.</p>
+        <small>Se mostraran existencias, ventas, cancelaciones y devoluciones.</small>
+    </div>
+}
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var input = document.getElementById('inputCodigoBarras');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    });
+</script>
+}

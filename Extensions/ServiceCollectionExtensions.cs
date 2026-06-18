@@ -48,6 +48,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped(sp => new OpcionPagoService(connectionString, sp.GetRequiredService<ILogger<OpcionPagoService>>()));
         services.AddScoped(sp => new TiposCambioService(connectionString, sp.GetRequiredService<ILogger<TiposCambioService>>()));
         services.AddScoped(sp => new AsistenciaService(connectionString, sp.GetRequiredService<ILogger<AsistenciaService>>()));
+        services.AddScoped(sp => new ConsultaRapidaService(connectionString, sp.GetRequiredService<ILogger<ConsultaRapidaService>>()));
         services.AddScoped(sp =>
         {
             var env = sp.GetRequiredService<IWebHostEnvironment>();
