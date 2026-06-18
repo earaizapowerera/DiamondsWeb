@@ -54,6 +54,7 @@ public static class ServiceCollectionExtensions
             var fotosPath = Path.Combine(env.WebRootPath, "fotos-piezas");
             return new FotoService(connectionString, fotosPath, sp.GetRequiredService<ILogger<FotoService>>());
         });
+        services.AddScoped(sp => new ReportePiezasService(connectionString, sp.GetRequiredService<ILogger<ReportePiezasService>>()));
 
         // Servicios con constructor especial
         services.AddScoped(sp => new AmlService(
