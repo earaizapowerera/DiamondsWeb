@@ -13,6 +13,7 @@ public class ConsignacionService
 {
     private readonly string _connectionString;
     private readonly ILogger<ConsignacionService> _logger;
+    public const int PageSize = 50;
 
     public ConsignacionService(string connectionString, ILogger<ConsignacionService> logger)
     {
@@ -24,12 +25,14 @@ public class ConsignacionService
 
     /// <summary>
     /// Piezas en existencia: están en PIEZAS y su remisión es de consignación.
-    /// Filtro opcional por IdRemision y fecha desde.
+    /// Paginación server-side con OFFSET/FETCH.
     /// </summary>
-    public async Task<List<PiezaConsignacion>> ObtenerEnExistenciaAsync(int? idRemision, DateTime? fechaDesde)
+    public async Task<List<PiezaConsignacion>> ObtenerEnExistenciaAsync(
+        int? idRemision, DateTime? fechaDesde, int page = 1)
     {
+        int offset = (Math.Max(page, 1) - 1) * PageSize;
         var sql = @"
-            SELECT TOP 50
+            SELECT
                 p.CodigoBarras, p.Descripcion, p.IdRemision,
                 r.Remision, pr.NombreProveedor,
                 r.FechaRemision, p.Peso, p.CBTotal,
@@ -42,7 +45,8 @@ public class ConsignacionService
             WHERE r.Consignacion = 1
               AND (@IdRemision IS NULL OR p.IdRemision = @IdRemision)
               AND (@FechaDesde IS NULL OR r.FechaRemision >= @FechaDesde)
-            ORDER BY r.FechaRemision DESC, p.CodigoBarras";
+            ORDER BY r.FechaRemision DESC, p.CodigoBarras
+            OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
 
         try
         {
@@ -50,7 +54,9 @@ public class ConsignacionService
             return (await conn.QueryAsync<PiezaConsignacion>(sql, new
             {
                 IdRemision = idRemision,
-                FechaDesde = fechaDesde
+                FechaDesde = fechaDesde,
+                Offset = offset,
+                PageSize
             })).ToList();
         }
         catch (Exception ex)
@@ -63,11 +69,14 @@ public class ConsignacionService
     /// <summary>
     /// Piezas vendidas (baja): están en BAJASPIEZAS y su remisión es de consignación.
     /// Representan piezas que se vendieron y se debe liquidar con el proveedor.
+    /// Paginación server-side con OFFSET/FETCH.
     /// </summary>
-    public async Task<List<PiezaConsignacion>> ObtenerPorDevolverAsync(int? idRemision, DateTime? fechaDesde)
+    public async Task<List<PiezaConsignacion>> ObtenerPorDevolverAsync(
+        int? idRemision, DateTime? fechaDesde, int page = 1)
     {
+        int offset = (Math.Max(page, 1) - 1) * PageSize;
         var sql = @"
-            SELECT TOP 50
+            SELECT
                 bp.CodigoBarras, bp.Descripcion, bp.IdRemision,
                 r.Remision, pr.NombreProveedor,
                 r.FechaRemision, bp.Peso, bp.CBTotal,
@@ -81,7 +90,8 @@ public class ConsignacionService
               AND NOT EXISTS (SELECT 1 FROM BAJASREMISIONES br WHERE br.IdRemision = bp.IdRemision)
               AND (@IdRemision IS NULL OR bp.IdRemision = @IdRemision)
               AND (@FechaDesde IS NULL OR r.FechaRemision >= @FechaDesde)
-            ORDER BY r.FechaRemision DESC, bp.CodigoBarras";
+            ORDER BY r.FechaRemision DESC, bp.CodigoBarras
+            OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
 
         try
         {
@@ -89,7 +99,9 @@ public class ConsignacionService
             return (await conn.QueryAsync<PiezaConsignacion>(sql, new
             {
                 IdRemision = idRemision,
-                FechaDesde = fechaDesde
+                FechaDesde = fechaDesde,
+                Offset = offset,
+                PageSize
             })).ToList();
         }
         catch (Exception ex)
@@ -101,11 +113,14 @@ public class ConsignacionService
 
     /// <summary>
     /// Piezas devueltas: están en BAJASPIEZAS y su remisión está en BAJASREMISIONES (liquidada/devuelta).
+    /// Paginación server-side con OFFSET/FETCH.
     /// </summary>
-    public async Task<List<PiezaConsignacion>> ObtenerDevueltasAsync(int? idRemision, DateTime? fechaDesde)
+    public async Task<List<PiezaConsignacion>> ObtenerDevueltasAsync(
+        int? idRemision, DateTime? fechaDesde, int page = 1)
     {
+        int offset = (Math.Max(page, 1) - 1) * PageSize;
         var sql = @"
-            SELECT TOP 50
+            SELECT
                 bp.CodigoBarras, bp.Descripcion, bp.IdRemision,
                 r.Remision, pr.NombreProveedor,
                 r.FechaRemision, bp.Peso, bp.CBTotal,
@@ -119,7 +134,8 @@ public class ConsignacionService
             WHERE r.Consignacion = 1
               AND (@IdRemision IS NULL OR bp.IdRemision = @IdRemision)
               AND (@FechaDesde IS NULL OR r.FechaRemision >= @FechaDesde)
-            ORDER BY r.FechaRemision DESC, bp.CodigoBarras";
+            ORDER BY r.FechaRemision DESC, bp.CodigoBarras
+            OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
 
         try
         {
@@ -127,7 +143,9 @@ public class ConsignacionService
             return (await conn.QueryAsync<PiezaConsignacion>(sql, new
             {
                 IdRemision = idRemision,
-                FechaDesde = fechaDesde
+                FechaDesde = fechaDesde,
+                Offset = offset,
+                PageSize
             })).ToList();
         }
         catch (Exception ex)
@@ -207,12 +225,13 @@ public class ConsignacionService
     }
 
     /// <summary>
-    /// Lista de remisiones de consignación para el dropdown de filtro
+    /// Lista de remisiones de consignación para el dropdown de filtro.
+    /// Sin límite — el dropdown usa TomSelect para filtrar.
     /// </summary>
     public async Task<List<RemisionConsignacionResumen>> ObtenerRemisionesAsync()
     {
         var sql = @"
-            SELECT TOP 50
+            SELECT
                 r.IdRemision, r.Remision, pr.NombreProveedor,
                 r.FechaRemision,
                 COUNT(p.CodigoBarras) AS TotalPiezas,
