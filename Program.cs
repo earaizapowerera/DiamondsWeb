@@ -155,6 +155,11 @@ builder.Services.AddScoped<TiposCambioService>(sp => new TiposCambioService(
     diamondsConnStr,
     sp.GetRequiredService<ILogger<TiposCambioService>>()));
 
+// Sales Service (Ventas, Devoluciones, etc.)
+builder.Services.AddScoped<SalesService>(sp => new SalesService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<SalesService>>()));
+
 var app = builder.Build();
 
 // Middleware
