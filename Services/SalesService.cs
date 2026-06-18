@@ -89,35 +89,128 @@ public class SalesService
 
     // ══════════════════════════════════════════════
     // DEVOLUCIONES A PROVEEDOR
+    // Tabla: devoluciones (CodigoBarras PK, MotivoDevolucion, Remision, FechaDevolucion, IdUsuario)
+    // SP: sp_devolucion (sin parametros) — procesa devoluciones pendientes masivamente
+    // SP: restauradevolucion @CodigoBarras — revierte una devolucion individual
     // ══════════════════════════════════════════════
     public async Task<List<Devolucion>> ObtenerDevolucionesAsync()
     {
         using var conn = CreateConnection();
         return (await conn.QueryAsync<Devolucion>(@"
-            SELECT d.IdDevolucion, d.CodigoBarras, p.Descripcion, d.Motivo, d.Remision, d.IdUsuario, d.FechaCaptura
+            SELECT d.CodigoBarras, p.Descripcion, d.MotivoDevolucion, d.Remision,
+                   d.IdUsuario, d.FechaDevolucion
             FROM Devoluciones d
             LEFT JOIN Piezas p ON d.CodigoBarras = p.CodigoBarras
-            ORDER BY d.FechaCaptura DESC")).ToList();
+            ORDER BY d.FechaDevolucion DESC")).ToList();
     }
 
+    /// <summary>
+    /// Registra una devolucion a proveedor:
+    /// 1. Valida que la pieza exista en inventario
+    /// 2. Verifica que no tenga devolucion previa
+    /// 3. Backup etiquetas a bajasetiquetas
+    /// 4. INSERT en devoluciones
+    /// 5. EXEC sp_devolucion (mueve piezas a bajaspiezas)
+    /// </summary>
     public async Task<string> CrearDevolucionAsync(string codigoBarras, string motivo, int idUsuario)
     {
         using var conn = CreateConnection();
-        var existe = await conn.ExecuteScalarAsync<int>(
-            "SELECT COUNT(*) FROM Piezas WHERE CodigoBarras = @CB", new { CB = codigoBarras });
-        if (existe == 0) return "Pieza no encontrada";
+        conn.Open();
+        using var tx = conn.BeginTransaction();
 
-        await conn.ExecuteAsync("EXEC sp_devolucion @CB, @Motivo, @IdUsuario",
-            new { CB = codigoBarras, Motivo = motivo, IdUsuario = idUsuario });
-        return "Devolución registrada";
+        try
+        {
+            // Validar que la pieza existe en inventario
+            var existe = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM Piezas WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+            if (existe == 0) return "Pieza no encontrada";
+
+            // Verificar que no tenga devolucion previa
+            var yaDevuelta = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM Devoluciones WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+            if (yaDevuelta > 0) return "Esta pieza ya tiene una devolucion registrada.";
+
+            // Backup etiquetas a bajasetiquetas
+            await conn.ExecuteAsync(
+                "DELETE bajasetiquetas WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+            await conn.ExecuteAsync(
+                @"INSERT INTO bajasetiquetas
+                  SELECT e.*, GETUTCDATE(), 1
+                  FROM etiquetas e
+                  WHERE e.CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+
+            // INSERT en devoluciones
+            await conn.ExecuteAsync(
+                @"INSERT INTO devoluciones (CodigoBarras, MotivoDevolucion, Remision, FechaDevolucion, IdUsuario)
+                  VALUES (@CB, @Motivo, NULL, GETUTCDATE(), @IdUsuario)",
+                new { CB = codigoBarras, Motivo = motivo, IdUsuario = idUsuario }, tx);
+
+            // sp_devolucion (sin parametros) — mueve piezas de devoluciones a bajaspiezas
+            await conn.ExecuteAsync("sp_devolucion", transaction: tx,
+                commandType: System.Data.CommandType.StoredProcedure);
+
+            tx.Commit();
+            return "Devolución registrada exitosamente.";
+        }
+        catch (Exception)
+        {
+            tx.Rollback();
+            throw;
+        }
     }
 
-    public async Task AplicarRemisionDevolucionAsync(int idDevolucion, string remision)
+    /// <summary>
+    /// Aplica remision a una devolucion usando CodigoBarras como clave
+    /// (la tabla devoluciones no tiene identity column).
+    /// </summary>
+    public async Task AplicarRemisionDevolucionAsync(string codigoBarras, string remision)
     {
         using var conn = CreateConnection();
         await conn.ExecuteAsync(
-            "UPDATE Devoluciones SET Remision = @R WHERE IdDevolucion = @Id",
-            new { R = remision, Id = idDevolucion });
+            "UPDATE Devoluciones SET Remision = @R WHERE CodigoBarras = @CB",
+            new { R = remision, CB = codigoBarras });
+    }
+
+    /// <summary>
+    /// Elimina una devolucion y restaura la pieza al inventario:
+    /// 1. Ejecuta restauradevolucion SP (mueve bajaspiezas→piezas, bajasetiquetas→etiquetas)
+    /// 2. Elimina el registro de devoluciones
+    /// </summary>
+    public async Task<string> EliminarDevolucionAsync(string codigoBarras)
+    {
+        using var conn = CreateConnection();
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+
+        try
+        {
+            var existe = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM Devoluciones WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+            if (existe == 0) return "No se encontro la devolucion.";
+
+            // Restaurar pieza (SP mueve bajaspiezas→piezas, bajasetiquetas→etiquetas)
+            await conn.ExecuteAsync(
+                "restauradevolucion @CodigoBarras",
+                new { CodigoBarras = codigoBarras }, tx);
+
+            // Eliminar registro de devolucion
+            await conn.ExecuteAsync(
+                "DELETE devoluciones WHERE CodigoBarras = @CB",
+                new { CB = codigoBarras }, tx);
+
+            tx.Commit();
+            return $"Pieza {codigoBarras} restaurada al inventario.";
+        }
+        catch (Exception)
+        {
+            tx.Rollback();
+            throw;
+        }
     }
 
     // ══════════════════════════════════════════════

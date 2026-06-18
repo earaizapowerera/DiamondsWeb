@@ -51,13 +51,13 @@
             <table class="table table-hover table-striped mb-0">
                 <thead class="table-dark">
                     <tr>
-                        <th>ID</th>
                         <th>Codigo</th>
                         <th>Descripcion</th>
                         <th>Motivo</th>
                         <th>Remision</th>
                         <th>Usuario</th>
                         <th>Fecha</th>
+                        <th style="width:80px">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -66,15 +66,14 @@
                         @foreach (var d in Model.Devoluciones)
                         {
                             <tr>
-                                <td>@d.IdDevolucion</td>
-                                <td>@d.CodigoBarras</td>
+                                <td><code>@d.CodigoBarras</code></td>
                                 <td>@d.Descripcion</td>
-                                <td>@d.Motivo</td>
+                                <td>@d.MotivoDevolucion</td>
                                 <td>
                                     @if (string.IsNullOrWhiteSpace(d.Remision))
                                     {
                                         <form method="post" asp-page-handler="Remision" class="d-flex gap-1">
-                                            <input type="hidden" name="RemisionDevolucionId" value="@d.IdDevolucion" />
+                                            <input type="hidden" name="RemisionCodigoBarras" value="@d.CodigoBarras" />
                                             <input type="text" class="form-control form-control-sm" name="RemisionValor"
                                                    placeholder="Remision..." style="min-width:100px;" required />
                                             <button type="submit" class="btn btn-outline-primary btn-sm" title="Asignar remision">
@@ -88,7 +87,17 @@
                                     }
                                 </td>
                                 <td>@d.IdUsuario</td>
-                                <td>@d.FechaCaptura?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@d.FechaDevolucion?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    <form method="post" asp-page-handler="Eliminar">
+                                        <input type="hidden" name="EliminarCodigoBarras" value="@d.CodigoBarras" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                title="Eliminar devolucion y restaurar pieza"
+                                                onclick="return confirm('Confirmar: Eliminar devolucion y restaurar pieza @d.CodigoBarras al inventario?')">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </form>
+                                </td>
                             </tr>
                         }
                     }

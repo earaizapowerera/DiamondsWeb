@@ -13,16 +13,17 @@ public class BajaPieza
     public string IdNota { get; set; } = "";
 }
 
-// ── Devoluciones ──
+// ── Devoluciones a Proveedor ──
+// Tabla: devoluciones (CodigoBarras PK, MotivoDevolucion, Remision, FechaDevolucion, IdUsuario)
+// No tiene identity column — CodigoBarras es la clave.
 public class Devolucion
 {
-    public int IdDevolucion { get; set; }
     public string CodigoBarras { get; set; } = "";
     public string? Descripcion { get; set; }
-    public string? Motivo { get; set; }
+    public string? MotivoDevolucion { get; set; }
     public string? Remision { get; set; }
     public int? IdUsuario { get; set; }
-    public DateTime? FechaCaptura { get; set; }
+    public DateTime? FechaDevolucion { get; set; }
 }
 
 public class DevolucionCliente
