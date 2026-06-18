@@ -31,8 +31,9 @@ public class IndexModel : PageModel
     public string? ComentarioTexto { get; set; }
 
     public int TotalFaltantes => Faltantes.Count;
-
     public decimal SumaPrecios => Faltantes.Sum(f => f.Precio ?? 0);
+    public int ConComentario => Faltantes.Count(f => !string.IsNullOrWhiteSpace(f.Comentario));
+    public int SinComentario => Faltantes.Count(f => string.IsNullOrWhiteSpace(f.Comentario));
 
     public async Task OnGetAsync()
     {
@@ -80,13 +81,12 @@ public class IndexModel : PageModel
             var ws = workbook.Worksheets.Add("Faltantes");
 
             // Encabezados
-            ws.Cell(1, 1).Value = "Codigo Barras";
-            ws.Cell(1, 2).Value = "Descripcion";
-            ws.Cell(1, 3).Value = "Precio";
-            ws.Cell(1, 4).Value = "Grupo";
-            ws.Cell(1, 5).Value = "Comentario";
+            string[] headers = { "Codigo Barras", "Descripcion", "Modelo", "Linea",
+                                 "Kilates", "Peso", "Precio", "Grupo", "Num Serie", "Comentario" };
+            for (int c = 0; c < headers.Length; c++)
+                ws.Cell(1, c + 1).Value = headers[c];
 
-            var headerRange = ws.Range(1, 1, 1, 5);
+            var headerRange = ws.Range(1, 1, 1, headers.Length);
             headerRange.Style.Font.Bold = true;
             headerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#343a40");
             headerRange.Style.Font.FontColor = XLColor.White;
@@ -98,27 +98,33 @@ public class IndexModel : PageModel
                 int row = i + 2;
                 ws.Cell(row, 1).Value = f.CodigoBarras;
                 ws.Cell(row, 2).Value = f.Descripcion ?? "";
-                ws.Cell(row, 3).Value = f.Precio ?? 0;
-                ws.Cell(row, 4).Value = f.Grupo ?? "";
-                ws.Cell(row, 5).Value = f.Comentario ?? "";
+                ws.Cell(row, 3).Value = f.Modelo ?? "";
+                ws.Cell(row, 4).Value = f.Linea ?? "";
+                ws.Cell(row, 5).Value = f.Kilates ?? "";
+                ws.Cell(row, 6).Value = f.Peso ?? 0;
+                ws.Cell(row, 7).Value = f.Precio ?? 0;
+                ws.Cell(row, 8).Value = f.Grupo ?? "";
+                ws.Cell(row, 9).Value = f.NumSerie ?? "";
+                ws.Cell(row, 10).Value = f.Comentario ?? "";
             }
 
-            // Formato de columna precio
-            ws.Column(3).Style.NumberFormat.Format = "$#,##0.00";
+            // Formato columnas numericas
+            ws.Column(6).Style.NumberFormat.Format = "#,##0.00";
+            ws.Column(7).Style.NumberFormat.Format = "$#,##0.00";
 
             // Resumen al final
             int totalRow = datos.Count + 3;
-            ws.Cell(totalRow, 2).Value = "Total Faltantes:";
+            ws.Cell(totalRow, 1).Value = "Total Faltantes:";
+            ws.Cell(totalRow, 1).Style.Font.Bold = true;
+            ws.Cell(totalRow, 2).Value = datos.Count;
             ws.Cell(totalRow, 2).Style.Font.Bold = true;
-            ws.Cell(totalRow, 3).FormulaA1 = $"COUNTA(A2:A{datos.Count + 1})";
-            ws.Cell(totalRow, 3).Style.Font.Bold = true;
 
             int sumaRow = totalRow + 1;
-            ws.Cell(sumaRow, 2).Value = "Suma Precios:";
-            ws.Cell(sumaRow, 2).Style.Font.Bold = true;
-            ws.Cell(sumaRow, 3).FormulaA1 = $"SUM(C2:C{datos.Count + 1})";
-            ws.Cell(sumaRow, 3).Style.Font.Bold = true;
-            ws.Cell(sumaRow, 3).Style.NumberFormat.Format = "$#,##0.00";
+            ws.Cell(sumaRow, 1).Value = "Suma Precios:";
+            ws.Cell(sumaRow, 1).Style.Font.Bold = true;
+            ws.Cell(sumaRow, 7).FormulaA1 = $"SUM(G2:G{datos.Count + 1})";
+            ws.Cell(sumaRow, 7).Style.Font.Bold = true;
+            ws.Cell(sumaRow, 7).Style.NumberFormat.Format = "$#,##0.00";
 
             ws.Columns().AdjustToContents();
 
