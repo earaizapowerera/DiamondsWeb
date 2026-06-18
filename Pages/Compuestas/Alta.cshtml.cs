@@ -160,7 +160,8 @@ public class AltaModel : PageModel
     {
         var pieza = await _service.BuscarPiezaDisponibleAsync(cb, CB);
         if (pieza == null)
-            return new JsonResult(new { ok = false, error = "Pieza no encontrada o ya es componente de otra compuesta." });
+            return new JsonResult(new { ok = false, error = "Pieza no encontrada o ya es componente de otra compuesta." },
+                new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = null });
 
         return new JsonResult(new
         {
@@ -182,7 +183,7 @@ public class AltaModel : PageModel
                 pieza.Proveedor,
                 pieza.NumSerie
             }
-        });
+        }, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = null });
     }
 
     private async Task RecargarComponentes()

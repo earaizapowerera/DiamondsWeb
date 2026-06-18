@@ -137,10 +137,12 @@ public class CompuestaService
             await conn.ExecuteAsync(@"
                 INSERT INTO compuestas
                     (CodigoBarras, Descripcion, IdGrupo, EtiquetaK,
-                     Linea1, Linea2, Linea3, Componentes, IdUsuario, IdLocalizacion)
+                     Linea1, Linea2, Linea3, Componentes, IdUsuario, IdLocalizacion,
+                     FechaCaptura, FechaUltEdicion)
                 VALUES
                     (@CB, @Descripcion, @IdGrupo, @EtiquetaK,
-                     @Linea1, @Linea2, @Linea3, @Componentes, @IdUsuario, @IdTienda)",
+                     @Linea1, @Linea2, @Linea3, @Componentes, @IdUsuario, @IdTienda,
+                     GETUTCDATE(), GETUTCDATE())",
                 new
                 {
                     CB = cb,
@@ -159,8 +161,8 @@ public class CompuestaService
             for (int i = 0; i < req.ComponentesCB.Count; i++)
             {
                 await conn.ExecuteAsync(@"
-                    INSERT INTO componentescompuestas (CodigoBarras, CBPadre, Indice)
-                    VALUES (@CompCB, @CB, @Indice)",
+                    INSERT INTO componentescompuestas (CodigoBarras, CBPadre, Indice, FechaCaptura)
+                    VALUES (@CompCB, @CB, @Indice, GETUTCDATE())",
                     new { CompCB = req.ComponentesCB[i], CB = cb, Indice = i + 1 }, tx);
             }
 
@@ -241,8 +243,8 @@ public class CompuestaService
             for (int i = 0; i < req.ComponentesCB.Count; i++)
             {
                 await conn.ExecuteAsync(@"
-                    INSERT INTO componentescompuestas (CodigoBarras, CBPadre, Indice)
-                    VALUES (@CompCB, @CB, @Indice)",
+                    INSERT INTO componentescompuestas (CodigoBarras, CBPadre, Indice, FechaCaptura)
+                    VALUES (@CompCB, @CB, @Indice, GETUTCDATE())",
                     new { CompCB = req.ComponentesCB[i], CB = req.CodigoBarras, Indice = i + 1 }, tx);
             }
 
