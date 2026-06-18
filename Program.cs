@@ -45,6 +45,11 @@ builder.Services.AddScoped<IClaimsTransformation, DiamondsClaimsTransformation>(
 var diamondsConnStr = builder.Configuration.GetConnectionString("DiamondsDb")!;
 builder.Services.AddDiamondsServices(diamondsConnStr);
 
+// Lotes Repetidas Service (Alta masiva de piezas estándar)
+builder.Services.AddScoped<LotesRepetidasService>(sp => new LotesRepetidasService(
+    diamondsConnStr,
+    sp.GetRequiredService<ILogger<LotesRepetidasService>>()));
+
 var app = builder.Build();
 
 // Middleware
